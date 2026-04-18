@@ -1,13 +1,19 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { Sidebar, BottomNav } from "@/components/layout/Navigation";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { CITTButton } from "@/components/layout/CITTButton";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useUIStore } from "@/store/uiStore";
 
-const ONBOARDING_STEPS = ["/onboarding/home", "/onboarding/mileage", "/onboarding/durations", "/onboarding/booking"];
+const ONBOARDING_STEPS = [
+  "/onboarding/home",
+  "/onboarding/scanback",
+  "/onboarding/signing-types",
+  "/onboarding/booking",
+];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoadingUser, isAuthenticated } = useAuth();
@@ -16,7 +22,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Redirect to onboarding if authenticated but onboarding not complete
   useEffect(() => {
-    if (!isLoadingUser && isAuthenticated && user && !user.onboarding_completed) {
+    if (
+      !isLoadingUser &&
+      isAuthenticated &&
+      user &&
+      !user.onboarding_completed
+    ) {
       const step = user.onboarding_step ?? 1;
       setOnboardingStep(step);
       const targetStep = ONBOARDING_STEPS[step - 1] ?? "/onboarding/home";
@@ -30,7 +41,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-bg">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
-          <span className="font-inter text-sm text-slate-secondary">Loading…</span>
+          <span className="font-inter text-sm text-slate-secondary">
+            Loading…
+          </span>
         </div>
       </div>
     );
@@ -53,13 +66,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 lg:ml-0">
         {/* Mobile top bar — 56px height per prototype */}
         <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-border h-[56px] flex items-center justify-between px-4 safe-area-top">
-          <span className="font-sora font-semibold text-base text-primary-navy">Notary Day</span>
+          <span className="font-sora font-semibold text-base text-primary-navy">
+            Notary Day
+          </span>
         </div>
 
         {/* Page content — offset for mobile top bar (56px) */}
-        <div className="pt-[56px] lg:pt-0 pb-[60px] lg:pb-0">
-          {children}
-        </div>
+        <div className="pt-[56px] lg:pt-0 pb-[60px] lg:pb-0">{children}</div>
 
         {/* Mobile bottom nav — 60px height */}
         <BottomNav isPro={isPro} username={user?.username} />

@@ -44,8 +44,8 @@ src/
 │   ├── (onboarding)/                 ← Onboarding route group
 │   │   └── onboarding/
 │   │       ├── home/page.tsx         ← Step 1: home base + username
-│   │       ├── mileage/page.tsx      ← Step 2: IRS rate
-│   │       ├── durations/page.tsx    ← Step 3: signing type defaults
+│   │       ├── scanback/page.tsx      ← Step 2: scanback
+│   │       ├── signing-types/page.tsx    ← Step 3: signing type defaults
 │   │       └── booking/page.tsx      ← Step 4: booking page setup (skippable)
 │   ├── (app)/                        ← Main app route group (sidebar layout)
 │   │   ├── layout.tsx                ← Sidebar + bottom nav
@@ -83,8 +83,7 @@ src/
 │   │   ├── EmptyState.tsx
 │   │   └── ProGate.tsx               ← Locked overlay for Pro-only features
 │   ├── layout/
-│   │   ├── BottomNav.tsx             ← Mobile bottom navigation
-│   │   ├── Sidebar.tsx               ← Desktop sidebar
+│   │   ├── BottomNav.tsx             ← Mobile bottom navigation and Desktop sidebar
 │   │   ├── TopNav.tsx
 │   │   └── CITTButton.tsx            ← Floating CITT button (always visible)
 │   ├── jobs/
