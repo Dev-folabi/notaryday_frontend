@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authApi, usersApi } from "@/lib/api";
+import { authApi } from "@/api/auth.api";
+import { usersApi } from "@/api/users.api";
 import { queryKeys } from "@/lib/queryClient";
 import type { User, SessionUser, UserSettings } from "@/types/user";
 import { useRouter } from "next/navigation";
@@ -12,10 +13,10 @@ export function useAuth() {
 
   // Fetch current user from session
   const { data: user, isLoading: isLoadingUser } = useQuery({
-    queryKey: queryKeys.me,
+    queryKey: queryKeys.auth.me,
     queryFn: async () => {
       try {
-        return await authApi.me() as User;
+        return (await authApi.me()) as unknown as User;
       } catch {
         return null;
       }
@@ -25,24 +26,36 @@ export function useAuth() {
   });
 
   const sessionUser: SessionUser | null = user
-    ? { id: user.id, email: user.email, username: user.username, plan: user.plan }
+    ? {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        plan: user.plan,
+      }
     : null;
 
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: (data: { email: string; password: string; rememberMe?: boolean }) =>
-      authApi.login(data),
+    mutationFn: (data: {
+      email: string;
+      password: string;
+      rememberMe?: boolean;
+    }) => authApi.login(data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },
   });
 
   // Register mutation
   const registerMutation = useMutation({
-    mutationFn: (data: { email: string; password: string; username: string; fullName?: string }) =>
-      authApi.register(data),
+    mutationFn: (data: {
+      email: string;
+      password: string;
+      username: string;
+      fullName?: string;
+    }) => authApi.register(data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },
   });
 
@@ -70,7 +83,7 @@ export function useAuth() {
   const checkUsername = async (username: string): Promise<boolean> => {
     try {
       const res = await usersApi.checkUsername(username);
-      return (res as { available: boolean }).available;
+      return (res as unknown as { available: boolean }).available;
     } catch {
       return false;
     }
@@ -79,7 +92,7 @@ export function useAuth() {
   // Complete onboarding step
   const completeOnboardingStep = useMutation({
     mutationFn: async ({
-      step,
+      step: _step,
       data,
     }: {
       step: number;

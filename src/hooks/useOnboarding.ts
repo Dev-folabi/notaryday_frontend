@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
-import { usersApi } from "@/lib/api";
+import { usersApi } from "@/api/users.api";
 import { useMutation } from "@tanstack/react-query";
 import type { UserSettings } from "@/types/user";
 

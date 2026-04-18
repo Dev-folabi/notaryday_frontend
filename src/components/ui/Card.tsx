@@ -7,17 +7,29 @@ interface CardProps {
   hoverable?: boolean;
 }
 
-export function Card({ children, className, onClick, hoverable }: CardProps) {
+export function Card({
+  children,
+  className,
+  onClick,
+  hoverable,
+}: CardProps) {
+  const isInteractive = Boolean(onClick || hoverable);
+
   return (
     <div
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") onClick();
+            }
+          : undefined
+      }
       className={cn(
-        "bg-white border border-border rounded-12px shadow-card",
-        hoverable && "cursor-pointer hover:border-interactive-blue/40 transition-colors duration-150",
-        onClick && "cursor-pointer",
+        "bg-white border border-border rounded-md shadow-card transition-colors duration-150",
+        isInteractive && "cursor-pointer hover:border-blue/40",
         className
       )}
     >

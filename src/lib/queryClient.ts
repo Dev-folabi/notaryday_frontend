@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30 seconds default
+      staleTime: 30 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -13,48 +13,107 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Query key factories
+// Stable query key factories
 export const queryKeys = {
-  // Auth
-  me: ["me"] as const,
+  auth: {
+    me: ["auth", "me"] as const,
+  },
 
-  // User
-  profile: ["profile"] as const,
-  settings: ["settings"] as const,
-  signingDefaults: ["signingDefaults"] as const,
+  user: {
+    profile: ["user", "profile"] as const,
+    settings: ["user", "settings"] as const,
+    signingDefaults: ["user", "signing-defaults"] as const,
+  },
 
-  // Jobs
-  jobs: (params?: { date?: string; status?: string; page?: number; limit?: number }) =>
-    ["jobs", params] as const,
-  job: (id: string) => ["job", id] as const,
+  jobs: {
+    all: (filters?: {
+      date?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    }) =>
+      [
+        "jobs",
+        {
+          date: filters?.date ?? null,
+          status: filters?.status ?? null,
+          page: filters?.page ?? null,
+          limit: filters?.limit ?? null,
+        },
+      ] as const,
 
-  // CITT
-  citt: (params: { address: string; appointment_time: string; signing_type: string }) =>
-    ["citt", params] as const,
+    detail: (id: string) => ["jobs", id] as const,
+  },
 
-  // Planner
-  plannerToday: (date: string) => ["planner", "today", date] as const,
-  plannerGaps: (date: string) => ["planner", "gaps", date] as const,
+  citt: {
+    check: (payload: {
+      address: string;
+      appointment_time: string;
+      signing_type: string;
+    }) =>
+      [
+        "citt",
+        payload.address,
+        payload.appointment_time,
+        payload.signing_type,
+      ] as const,
+  },
 
-  // Bookings (notary review)
-  bookings: (params?: { status?: string }) => ["bookings", params] as const,
-  booking: (id: string) => ["booking", id] as const,
+  planner: {
+    today: (date: string) => ["planner", "today", date] as const,
+    gaps: (date: string) => ["planner", "gaps", date] as const,
+  },
 
-  // Public booking page
-  bookingSlots: (username: string, date: string) =>
-    ["bookingPage", username, date] as const,
+  bookings: {
+    all: (status?: string) =>
+      ["bookings", status ?? null] as const,
+    detail: (id: string) => ["bookings", id] as const,
+  },
 
-  // Invoices
-  invoices: (params?: { status?: string }) => ["invoices", params] as const,
-  invoice: (id: string) => ["invoice", id] as const,
+  bookingPage: {
+    slots: (username: string, date: string) =>
+      ["booking-page", username, date] as const,
+  },
 
-  // Reports
-  earnings: (params: { from?: string; to?: string; groupBy?: string }) =>
-    ["reports", "earnings", params] as const,
-  mileage: (year: number) => ["reports", "mileage", year] as const,
-  journal: (params: { from?: string; to?: string }) =>
-    ["reports", "journal", params] as const,
+  invoices: {
+    all: (status?: string) =>
+      ["invoices", status ?? null] as const,
+    detail: (id: string) => ["invoices", id] as const,
+  },
 
-  // Notifications
-  notifications: ["notifications"] as const,
+  reports: {
+    earnings: (params: {
+      from?: string;
+      to?: string;
+      groupBy?: string;
+    }) =>
+      [
+        "reports",
+        "earnings",
+        {
+          from: params.from ?? null,
+          to: params.to ?? null,
+          groupBy: params.groupBy ?? null,
+        },
+      ] as const,
+
+    mileage: (year: number) => ["reports", "mileage", year] as const,
+
+    journal: (params: {
+      from?: string;
+      to?: string;
+    }) =>
+      [
+        "reports",
+        "journal",
+        {
+          from: params.from ?? null,
+          to: params.to ?? null,
+        },
+      ] as const,
+  },
+
+  notifications: {
+    all: ["notifications"] as const,
+  },
 };

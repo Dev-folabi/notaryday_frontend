@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CheckCircle2, Sparkles } from "lucide-react";
-import { billingApi } from "@/lib/api";
+import { billingApi } from "@/api/billing.api";
 import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 

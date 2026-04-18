@@ -6,30 +6,40 @@ import { Providers } from "@/components/providers";
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const mono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Notary Day",
+  title: {
+    default: "Notary Day",
+    template: "%s | Notary Day",
+  },
   description: "Everything you already do manually, done automatically.",
   manifest: "/manifest.json",
   themeColor: "#0F2C4E",
+  viewport: "width=device-width, initial-scale=1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Notary Day",
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
@@ -39,11 +49,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
-      <body className="min-h-full flex flex-col antialiased">
+    <html
+      lang="en"
+      className={`${sora.variable} ${inter.variable} ${mono.variable} h-full`}
+    >
+      <body className="h-full bg-background text-slate font-inter antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { cittApi } from "@/lib/api";
-import { queryKeys } from "@/lib/queryClient";
+import { cittApi } from "@/api/citt.api";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 
 interface CITTCheckParams {
   address: string;
@@ -33,10 +33,15 @@ export function useCITTCheck() {
   return useMutation({
     mutationFn: async (params: CITTCheckParams) => {
       const res = await cittApi.check(params);
-      return res as CITCResult;
+      return res as unknown as CITCResult;
     },
-    onSuccess: () => {
-      // CITT results are fresh for 2 minutes
+    onSuccess: (data, variables) => {
+      const key = queryKeys.citt.check({
+        address: variables.address,
+        appointment_time: variables.appointment_time,
+        signing_type: variables.signing_type,
+      });
+      qc.setQueryData(key, data);
     },
   });
 }

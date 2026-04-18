@@ -1,11 +1,16 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { jobsApi } from "@/lib/api";
+import { jobsApi } from "@/api/jobs.api";
 import { queryKeys } from "@/lib/queryClient";
 import type { CreateJobInput, Job, JobStatus } from "@/types/job";
 
-export function useJobs(params?: { date?: string; status?: string; page?: number; limit?: number }) {
+export function useJobs(params?: {
+  date?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}) {
   return useQuery({
     queryKey: queryKeys.jobs(params),
     queryFn: async () => {
@@ -31,7 +36,8 @@ export function useJob(id: string) {
 export function useCreateJob() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateJobInput) => jobsApi.create(data as Record<string, unknown>),
+    mutationFn: (data: CreateJobInput) =>
+      jobsApi.create(data as Record<string, unknown>),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },

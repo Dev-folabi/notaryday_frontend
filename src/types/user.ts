@@ -15,7 +15,10 @@ export interface UserSettings {
   booking_page_bio: string | null;
   service_area_miles: number;
   booking_buffer_mins: number;
-  booking_page_active_hours: Record<string, { start: string; end: string }> | null;
+  booking_page_active_hours: Record<
+    string,
+    { start: string; end: string }
+  > | null;
   booking_page_services: BookingPageService[] | null;
   payment_info: PaymentInfo | null;
   invoice_notes: string | null;
@@ -85,5 +88,6 @@ export interface SessionUser {
   id: string;
   email: string;
   username: string;
+  full_name?: string | null;
   plan: PlanTier;
 }

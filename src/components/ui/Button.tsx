@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import { type ButtonHTMLAttributes, forwardRef } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost" | "pro";
 
@@ -12,15 +12,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-navy text-white hover:bg-navy-active active:bg-navy-active disabled:bg-slate-secondary/40",
+    "bg-navy text-white hover:bg-navy-active active:bg-navy-active",
   secondary:
-    "bg-white border border-primary-navy text-primary-navy hover:bg-bg active:bg-bg disabled:opacity-50",
+    "bg-white border border-navy text-navy hover:bg-background",
   destructive:
-    "bg-red-danger text-white hover:bg-red-danger/90 active:bg-red-danger/80 disabled:opacity-50",
+    "bg-red text-white hover:bg-red/90",
   ghost:
-    "bg-transparent text-interactive-blue hover:text-blue-hover active:text-blue-hover disabled:opacity-50",
+    "bg-transparent text-blue hover:text-blue-hover",
   pro:
-    "bg-pro-gold text-primary-navy hover:bg-pro-gold/90 active:bg-pro-gold/80 disabled:opacity-50",
+    "bg-pro text-navy hover:bg-pro/90",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -32,7 +32,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       disabled,
       children,
-      ...props },
+      ...props
+    },
     ref
   ) => {
     return (
@@ -40,23 +41,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          // Base
-          "inline-flex items-center justify-center gap-2 font-inter font-semibold text-sm rounded-button transition-colors duration-150 cursor-pointer",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-interactive-blue focus-visible:ring-offset-2",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          // Width
+          "inline-flex items-center justify-center gap-2 font-inter font-semibold text-sm rounded-md transition-colors duration-150",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          "h-12 px-5",
           fullWidth && "w-full",
-          // Height - primary/pro/destructive are 48px, secondary/ghost are 44px
-          (variant === "primary" || variant === "pro" || variant === "destructive") && "h-12 px-5",
-          (variant === "secondary" || variant === "ghost") && "h-11 px-4",
-          // Variant
           variantClasses[variant],
           className
         )}
         {...props}
       >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {children}
+        <span className="inline-flex items-center gap-2">
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {children}
+        </span>
       </button>
     );
   }

@@ -5,39 +5,26 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   CalendarDays,
-  Map,
   Briefcase,
-  CalendarCheck,
   TrendingUp,
   Receipt,
-  BookOpen,
   Settings,
-  CreditCard,
 } from "lucide-react";
 
-const navItems = [
+const bottomNavItems = [
   { href: "/", icon: CalendarDays, label: "Today" },
-  { href: "/map", icon: Map, label: "Map", pro: true },
   { href: "/jobs", icon: Briefcase, label: "Jobs" },
-  { href: "/bookings", icon: CalendarCheck, label: "Bookings", pro: true },
   { href: "/earnings", icon: TrendingUp, label: "Earnings" },
   { href: "/expenses", icon: Receipt, label: "Expenses" },
-  { href: "/reports", icon: TrendingUp, label: "Reports", pro: true },
-  { href: "/journal", icon: BookOpen, label: "Journal" },
   { href: "/settings", icon: Settings, label: "Settings" },
-  { href: "/settings/billing", icon: CreditCard, label: "Billing" },
 ];
 
 interface BottomNavProps {
   isPro?: boolean;
-  username?: string;
 }
 
 export function BottomNav({ isPro = false }: BottomNavProps) {
   const pathname = usePathname();
-
-  // Only show 4 main items to make room for CITT FAB in the center
-  const mainItems = navItems.slice(0, 4);
 
   return (
     <nav
@@ -45,17 +32,17 @@ export function BottomNav({ isPro = false }: BottomNavProps) {
       aria-label="Mobile navigation"
     >
       <div className="h-[60px] flex items-center justify-around px-1">
-        {mainItems.map(({ href, icon: Icon, label, pro }) => {
+        {bottomNavItems.map(({ href, icon: Icon, label }) => {
           const isActive =
             pathname === href || (href !== "/" && pathname.startsWith(href));
+
           return (
             <Link
               key={href}
-              href={pro && !isPro ? "/settings/billing" : href}
+              href={href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full min-w-[60px]",
-                isActive ? "text-primary-navy" : "text-slate-secondary",
-                pro && !isPro && "opacity-60",
+                "flex flex-col items-center justify-center gap-0.5 flex-1 h-full",
+                isActive ? "text-primary-navy" : "text-slate-secondary"
               )}
               aria-current={isActive ? "page" : undefined}
             >

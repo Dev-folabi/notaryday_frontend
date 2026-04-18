@@ -1,7 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
 import { useEffect } from "react";
 import type { Toast as ToastType } from "@/store/uiStore";
 
@@ -13,27 +19,21 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: {
-    bg: "bg-teal-success",
-    icon: "text-white",
-  },
-  error: {
-    bg: "bg-red-danger",
-    icon: "text-white",
-  },
-  info: {
-    bg: "bg-interactive-blue",
-    icon: "text-white",
-  },
-  warning: {
-    bg: "bg-amber-warning",
-    icon: "text-white",
-  },
+  success: "text-teal",
+  error: "text-red",
+  info: "text-blue",
+  warning: "text-amber",
 };
 
-function ToastItem({ toast, onRemove }: { toast: ToastType; onRemove: () => void }) {
+function ToastItem({
+  toast,
+  onRemove,
+}: {
+  toast: ToastType;
+  onRemove: () => void;
+}) {
   const Icon = iconMap[toast.type];
-  const colors = colorMap[toast.type];
+  const color = colorMap[toast.type];
 
   useEffect(() => {
     const timer = setTimeout(onRemove, toast.duration);
@@ -43,41 +43,36 @@ function ToastItem({ toast, onRemove }: { toast: ToastType; onRemove: () => void
   return (
     <div
       className={cn(
-        "flex items-start gap-3 px-4 py-3 rounded-card text-white shadow-card",
-        colors.bg
+        "flex items-start gap-3 px-4 py-3 rounded-card shadow-card bg-white border border-border",
       )}
-      role="alert"
     >
-      <Icon className={cn("h-4 w-4 mt-0.5 flex-shrink-0", colors.icon)} />
-      <div className="flex-1 min-w-0">
-        <p className="font-inter font-semibold text-sm">{toast.title}</p>
+      <Icon className={cn("h-4 w-4 mt-0.5 flex-shrink-0", color)} />
+      <div className="flex-1">
+        <p className="font-inter font-semibold text-sm text-slate">
+          {toast.title}
+        </p>
         {toast.message && (
-          <p className="font-inter text-xs opacity-90 mt-0.5">{toast.message}</p>
+          <p className="font-inter text-xs text-slate-secondary mt-0.5">
+            {toast.message}
+          </p>
         )}
       </div>
-      <button
-        onClick={onRemove}
-        aria-label="Dismiss"
-        className="flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity"
-      >
-        <X className="h-4 w-4" />
+      <button onClick={onRemove}>
+        <X className="h-4 w-4 text-slate-secondary" />
       </button>
     </div>
   );
 }
 
-interface ToastContainerProps {
+export function ToastContainer({
+  toasts,
+  onRemove,
+}: {
   toasts: ToastType[];
   onRemove: (id: string) => void;
-}
-
-export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
+}) {
   return (
-    <div
-      aria-live="polite"
-      aria-label="Notifications"
-      className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4"
-    >
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-full max-w-sm px-4">
       {toasts.map((toast) => (
         <ToastItem
           key={toast.id}
