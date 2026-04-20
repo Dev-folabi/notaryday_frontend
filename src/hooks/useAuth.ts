@@ -85,7 +85,7 @@ export function useAuth() {
     async (username: string): Promise<boolean> => {
       try {
         const res = await usersApi.checkUsername(username);
-        return (res as unknown as { available: boolean }).available;
+        return (res as unknown as { data: { available: boolean } }).data.available;
       } catch {
         return false;
       }

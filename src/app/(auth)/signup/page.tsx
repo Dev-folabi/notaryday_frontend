@@ -267,7 +267,7 @@ export default function SignupPage() {
               )}
               {usernameStatus === "available" && (
                 <p className="text-[12px] text-teal mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> notaryday.app/book/
+                  <CheckCircle2 className="w-3 h-3" />
                   {watchedUsername} is available
                 </p>
               )}
