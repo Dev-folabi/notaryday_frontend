@@ -32,8 +32,6 @@ export default function OnboardingBookingPage() {
   const handleStartPro = async () => {
     setIsLoading(true);
     try {
-      // billingApi.subscribe expects a variantId from Lemon Squeezy
-      // The monthly variant ID is configured in the backend env
       const result = (await billingApi.subscribe({ variantId: "monthly" })) as {
         checkoutUrl?: string;
       };

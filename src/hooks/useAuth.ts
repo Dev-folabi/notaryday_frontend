@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { authApi } from "@/api/auth.api";
 import { usersApi } from "@/api/users.api";
 import { queryKeys } from "@/lib/queryClient";
@@ -80,14 +81,17 @@ export function useAuth() {
   });
 
   // Check username availability
-  const checkUsername = async (username: string): Promise<boolean> => {
-    try {
-      const res = await usersApi.checkUsername(username);
-      return (res as unknown as { available: boolean }).available;
-    } catch {
-      return false;
-    }
-  };
+  const checkUsername = useCallback(
+    async (username: string): Promise<boolean> => {
+      try {
+        const res = await usersApi.checkUsername(username);
+        return (res as unknown as { available: boolean }).available;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
 
   // Complete onboarding step
   const completeOnboardingStep = useMutation({

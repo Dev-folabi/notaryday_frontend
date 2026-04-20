@@ -12,15 +12,15 @@ type BadgeVariant =
   | "amber";
 
 const variantClasses: Record<BadgeVariant, string> = {
-  free: "bg-teal-bg text-teal-success border border-teal-b",
-  pro: "bg-amber-bg text-amber-warning border border-amber-b",
-  loan: "bg-blue-bg text-interactive-blue border border-blue-b",
-  general: "bg-teal-bg text-teal-success border border-teal-b",
+  free: "bg-teal-bg text-teal border border-teal-border",
+  pro: "bg-amber-bg text-amber border border-amber-border",
+  loan: "bg-blue-bg text-blue border border-blue-b",
+  general: "bg-teal-bg text-teal border border-teal-border",
   hybrid: "bg-violet-bg text-violet border border-violet-b",
   platform: "bg-slate-100 text-slate-secondary border border-border",
-  active: "bg-blue-bg text-interactive-blue border border-blue-b",
-  teal: "bg-teal-bg text-teal-success border border-teal-b",
-  amber: "bg-amber-bg text-amber-warning border border-amber-b",
+  active: "bg-blue-bg text-blue border border-blue-b",
+  teal: "bg-teal-bg text-teal border border-teal-border",
+  amber: "bg-amber-bg text-amber border border-amber-border",
 };
 
 interface BadgeProps {

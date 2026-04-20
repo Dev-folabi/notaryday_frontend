@@ -44,10 +44,10 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-bg flex flex-col">
       {/* Topbar */}
       <div className="h-16 bg-white border-b border-border px-6 flex items-center justify-between">
-        <Link href="/login" className="flex items-center gap-1.5 text-sm text-slate-secondary hover:text-primary-navy transition-colors font-inter font-medium">
+        <Link href="/login" className="flex items-center gap-1.5 text-sm text-slate-secondary hover:text-navy transition-colors font-inter font-medium">
           <ChevronLeft className="w-4 h-4" /> Back to sign in
         </Link>
-        <span className="font-sora font-bold text-[18px] text-primary-navy">Notary Day</span>
+        <span className="font-sora font-bold text-[18px] text-navy">Notary Day</span>
         <div className="w-24" />
       </div>
 
@@ -56,10 +56,10 @@ export default function ForgotPasswordPage() {
           {!submitted ? (
             /* ── STATE A: Request ── */
             <div>
-              <div className="w-14 h-14 bg-blue-bg rounded-[14px] flex items-center justify-center mb-5 text-interactive-blue">
+              <div className="w-14 h-14 bg-blue-bg rounded-[14px] flex items-center justify-center mb-5 text-blue">
                 <Mail className="w-6 h-6" />
               </div>
-              <h1 className="font-sora font-bold text-[26px] text-primary-navy mb-2 tracking-tight">
+              <h1 className="font-sora font-bold text-[26px] text-navy mb-2 tracking-tight">
                 Reset your password
               </h1>
               <p className="font-inter text-sm text-slate-secondary leading-[1.6] mb-6">
@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
               </form>
               <div className="h-px bg-border my-6" />
               <p className="text-center font-inter text-sm text-slate-secondary">
-                <Link href="/login" className="font-semibold text-interactive-blue">
+                <Link href="/login" className="font-semibold text-blue">
                   Back to sign in
                 </Link>
               </p>
@@ -92,27 +92,27 @@ export default function ForgotPasswordPage() {
           ) : (
             /* ── STATE B: Sent ── */
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-teal-bg border border-teal-b flex items-center justify-center mx-auto mb-5 text-teal-success">
+              <div className="w-14 h-14 rounded-full bg-teal-bg border border-teal-border flex items-center justify-center mx-auto mb-5 text-teal">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h2 className="font-sora font-bold text-[22px] text-primary-navy mb-2 tracking-tight">
+              <h2 className="font-sora font-bold text-[22px] text-navy mb-2 tracking-tight">
                 Check your email
               </h2>
               <p className="font-inter text-sm text-slate-secondary leading-[1.6] max-w-[320px] mx-auto mb-6">
                 If an account exists for{" "}
-                <strong className="text-primary-navy">{submittedEmail}</strong>, you&apos;ll receive a reset
+                <strong className="text-navy">{submittedEmail}</strong>, you&apos;ll receive a reset
                 link within a few minutes.
               </p>
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="font-inter text-sm font-semibold text-interactive-blue hover:underline"
+                  className="font-inter text-sm font-semibold text-blue hover:underline"
                 >
                   Resend email
                 </button>
                 <Link
                   href="/login"
-                  className="flex items-center gap-1.5 font-inter text-sm text-slate-secondary hover:text-primary-navy transition-colors"
+                  className="flex items-center gap-1.5 font-inter text-sm text-slate-secondary hover:text-navy transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" /> Back to sign in
                 </Link>

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useEffect } from "react";
+import { useUIStore } from "@/store/uiStore";
 import type { Toast as ToastType } from "@/store/uiStore";
 
 const iconMap = {
@@ -82,4 +83,10 @@ export function ToastContainer({
       ))}
     </div>
   );
+}
+
+export function GlobalToast() {
+  const { toasts, removeToast } = useUIStore();
+  if (toasts.length === 0) return null;
+  return <ToastContainer toasts={toasts} onRemove={removeToast} />;
 }

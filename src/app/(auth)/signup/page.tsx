@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,13 +10,61 @@ import { useUIStore } from "@/store/uiStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Zap, ArrowRight, Scan, Sparkles } from "lucide-react";
+import { Check, CheckCircle2, ArrowRight, Mail } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { PasswordStrength } from "@/components/ui/PasswordStrength";
 
 const US_STATES = [
-  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
-  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
-  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
-  "VA","WA","WV","WI","WY",
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
 ];
 
 const signupSchema = z.object({
@@ -34,22 +82,32 @@ const signupSchema = z.object({
 type SignupForm = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { registerMutation, isAuthenticated, isLoadingUser, checkUsername } = useAuth();
+  const { registerMutation, isAuthenticated, isLoadingUser, checkUsername } =
+    useAuth();
   const { addToast } = useUIStore();
   const router = useRouter();
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
 
   const {
+    control,
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", username: "", state: "", password: "" },
+    defaultValues: {
+      fullName: "",
+      email: "",
+      username: "",
+      state: "",
+      password: "",
+    },
   });
 
-  const watchedUsername = watch("username");
+  const watchedUsername = useWatch({ control, name: "username" });
+  const watchedPw = useWatch({ control, name: "password", defaultValue: "" });
 
   useEffect(() => {
     if (!isLoadingUser && isAuthenticated) {
@@ -82,9 +140,14 @@ export default function SignupPage() {
         username: data.username,
         fullName: data.fullName,
       });
-      addToast({ type: "success", title: "Account created!", message: "Let's set up your profile." });
+      addToast({
+        type: "success",
+        title: "Account created!",
+        message: "Let's set up your profile.",
+      });
       router.push("/onboarding/home");
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as { message?: string };
       addToast({
         type: "error",
         title: "Sign up failed",
@@ -97,49 +160,50 @@ export default function SignupPage() {
     <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-border bg-white">
-        <Link href="/" className="font-sora font-bold text-lg text-primary-navy">
+        <Link
+          href="/"
+          className="font-sora font-bold text-lg text-navy"
+        >
           Notary Day
         </Link>
       </div>
 
       {/* Left Panel — Desktop Only */}
-      <div className="hidden lg:flex w-[44%] bg-primary-navy p-12 xl:p-20 flex-col justify-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-interactive-blue/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="hidden lg:flex w-[44%] bg-navy p-12 xl:p-20 flex-col justify-center relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-pro-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
-        <Link href="/" className="font-sora font-extrabold text-[20px] text-white block mb-12 relative z-10">
+        <Link
+          href="/"
+          className="font-sora font-extrabold text-[20px] text-white block mb-12 relative z-10"
+        >
           Notary Day
         </Link>
         <div className="max-w-md relative z-10">
-          <div className="font-sora font-extrabold text-[34px] xl:text-[40px] leading-[1.1] text-white mb-5 tracking-tight">
-            Run your signing<br />day like a business.
+          <div className="font-sora font-bold text-[28px] leading-[1.2] text-white mb-4">
+            Join 500+ notaries already using Notary Day
           </div>
-          <p className="font-inter text-base text-white/60 leading-[1.7] mb-10">
-            Scheduling, real earnings, scanback blocking, and your notarial journal — all in one tool built for how you actually work.
+          <p className="text-[14px] text-white/60 leading-[1.7] mb-8">
+            Free plan. No credit card. Unlimited Can I Take This? checks from
+            day one.
           </p>
-          <div className="flex flex-col gap-5 mb-10">
+          <div className="flex flex-col gap-3">
             {[
-              { icon: <Zap className="w-4 h-4 text-interactive-blue" />, bg: "bg-interactive-blue/15", t: "Know before you drive", d: "CITT gives you the real net after mileage and confirms the job fits your schedule." },
-              { icon: <Scan className="w-4 h-4 text-amber-warning" />, bg: "bg-amber-warning/15", t: "Scanback included", d: "The only tool that auto-blocks scanback time between loan signings." },
-              { icon: <Sparkles className="w-4 h-4 text-teal-success" />, bg: "bg-teal-success/15", t: "Gap Finder (Pro)", d: "Surface available jobs that fit between your already-booked signings." },
-            ].map((b) => (
-              <div key={b.t} className="flex items-start gap-4">
-                <div className={`w-8 h-8 rounded-[8px] ${b.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>{b.icon}</div>
-                <div>
-                  <div className="font-inter text-sm font-semibold text-white mb-0.5">{b.t}</div>
-                  <div className="font-inter text-xs text-white/55 leading-[1.6]">{b.d}</div>
-                </div>
+              "Unlimited jobs & journal entries",
+              "Can I Take This? — free, unlimited",
+              "Real earnings per signing (IRS rate)",
+              "Pro from $19/month — cancel any time",
+            ].map((text, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2.5 text-[14px] text-white/80"
+              >
+                <Check
+                  className="w-4 h-4 text-teal flex-shrink-0"
+                  strokeWidth={3}
+                />
+                {text}
               </div>
             ))}
-          </div>
-          <div className="border-t border-white/10 pt-6">
-            <div className="text-xs text-white/40 mb-3 font-semibold uppercase tracking-[0.5px]">What you get free, forever</div>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {["Unlimited jobs", "CITT (accurate & unlimited)", "Mileage log", "Notarial journal"].map((f) => (
-                <div key={f} className="flex items-center gap-1.5 text-[12px] text-white/65">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-success" /> {f}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -147,19 +211,35 @@ export default function SignupPage() {
       {/* Right Panel — Form */}
       <div className="flex-1 bg-white flex flex-col items-center justify-center px-6 py-12 lg:px-20 overflow-y-auto">
         <div className="w-full max-w-[420px]">
-          <div className="mb-8">
-            <h1 className="font-sora font-extrabold text-[28px] text-primary-navy mb-2 tracking-tight">
-              Create your free account
+          <div className="mb-7">
+            <h1 className="font-sora font-bold text-[24px] text-navy mb-1.5">
+              Create your account
             </h1>
-            <p className="font-inter text-sm text-slate-secondary">
-              No credit card. Set up in 3 minutes.
+            <p className="font-inter text-[14px] text-slate-secondary">
+              Takes under 2 minutes. Free forever.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[18px]">
+          {registerMutation.isSuccess && (
+            <div className="mb-5 bg-blue-50 border border-blue-200 rounded-[10px] p-4 flex items-start gap-3">
+              <Mail className="h-4 w-4 text-blue mt-0.5" />
+              <div className="text-[12px] text-blue leading-[1.5]">
+                Check your email to verify your account. You can still explore
+                while you wait.{" "}
+                <span className="font-semibold cursor-pointer underline">
+                  Resend
+                </span>
+              </div>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-[18px]"
+          >
             <Input
               label="Full name"
-              placeholder="Sarah Martinez"
+              placeholder="Sarah Mitchell"
               error={errors.fullName?.message}
               {...register("fullName")}
             />
@@ -168,6 +248,7 @@ export default function SignupPage() {
               label="Email address"
               type="email"
               placeholder="your@email.com"
+              leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
               error={errors.email?.message}
               {...register("email")}
             />
@@ -180,46 +261,59 @@ export default function SignupPage() {
                 {...register("username")}
               />
               {usernameStatus === "checking" && (
-                <p className="text-[12px] text-muted mt-1">Checking availability…</p>
+                <p className="text-[12px] text-muted mt-1">
+                  Checking availability…
+                </p>
               )}
               {usernameStatus === "available" && (
-                <p className="text-[12px] text-teal-success mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> notaryday.app/book/{watchedUsername} is available
+                <p className="text-[12px] text-teal mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> notaryday.app/book/
+                  {watchedUsername} is available
                 </p>
               )}
               {usernameStatus === "taken" && (
-                <p className="text-[12px] text-red-danger mt-1">This username is taken</p>
+                <p className="text-[12px] text-red mt-1">
+                  This username is taken
+                </p>
               )}
               {usernameStatus === "idle" && !errors.username && (
-                <p className="text-[12px] text-muted mt-1">Your public booking URL: notaryday.app/book/you</p>
+                <p className="text-[12px] text-muted mt-1">
+                  Your public booking URL: notaryday.app/book/you
+                </p>
               )}
             </div>
 
             <div>
-              <label className="block font-inter text-xs font-semibold text-primary-navy mb-1.5 uppercase tracking-[0.5px]">
+              <label className="block font-inter text-xs font-semibold text-navy mb-1.5 uppercase tracking-[0.5px]">
                 State
               </label>
               <select
                 {...register("state")}
-                className="w-full h-11 border border-border rounded-input px-3 font-inter text-sm text-primary-navy bg-white focus:outline-none focus:border-interactive-blue transition-colors appearance-none"
+                className="w-full h-11 border border-border rounded-input px-3 font-inter text-sm text-navy bg-white focus:outline-none focus:border-blue transition-colors appearance-none"
               >
                 <option value="">Select your state…</option>
                 {US_STATES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
                 ))}
               </select>
               {errors.state && (
-                <p className="text-[12px] text-red-danger mt-1">{errors.state.message}</p>
+                <p className="text-[12px] text-red mt-1">
+                  {errors.state.message}
+                </p>
               )}
             </div>
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="At least 8 characters"
-              error={errors.password?.message}
-              {...register("password")}
-            />
+            <div>
+              <PasswordInput
+                label="Password"
+                placeholder="Minimum 8 characters"
+                error={errors.password?.message}
+                {...register("password")}
+              />
+              <PasswordStrength password={watchedPw} />
+            </div>
 
             <Button
               type="submit"
@@ -233,15 +327,21 @@ export default function SignupPage() {
 
           <p className="text-center font-inter text-xs text-muted mt-4 leading-[1.6]">
             By creating an account you agree to our{" "}
-            <span className="underline cursor-pointer text-slate-secondary">Terms of Service</span> and{" "}
-            <span className="underline cursor-pointer text-slate-secondary">Privacy Policy</span>.
+            <span className="underline cursor-pointer text-slate-secondary">
+              Terms of Service
+            </span>{" "}
+            and{" "}
+            <span className="underline cursor-pointer text-slate-secondary">
+              Privacy Policy
+            </span>
+            .
           </p>
 
           <div className="h-px bg-border my-6" />
 
           <p className="text-center font-inter text-sm text-slate-secondary">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-interactive-blue">
+            <Link href="/login" className="font-semibold text-blue">
               Sign in
             </Link>
           </p>

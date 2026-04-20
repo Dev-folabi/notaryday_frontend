@@ -29,7 +29,7 @@ export function EmptyState({
         </div>
       )}
 
-      <h3 className="font-sora font-semibold text-base text-primary-navy mb-1">
+      <h3 className="font-sora font-semibold text-base text-navy mb-1">
         {title}
       </h3>
 

@@ -33,7 +33,7 @@ export function ProGate({
 
           <button
             onClick={() => router.push("/settings/billing")}
-            className="bg-pro-gold text-primary-navy font-semibold text-sm rounded-button h-9 px-4"
+            className="bg-pro-gold text-navy font-semibold text-sm rounded-button h-9 px-4"
           >
             Upgrade to Pro
           </button>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { GlobalToast } from "@/components/ui/Toast";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -55,6 +56,7 @@ export default function RootLayout({
     >
       <body className="h-full bg-background text-slate font-inter antialiased">
         <Providers>{children}</Providers>
+        <GlobalToast />
       </body>
     </html>
   );
