@@ -1,49 +1,52 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { MapPin, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function OnboardingHomePage() {
-  const router = useRouter();
   const { saveHomeBase } = useOnboarding();
   const { setOnboardingStep } = useUIStore();
+  const { user } = useAuthStore();
 
   const [address, setAddress] = useState("");
-  const [username, setUsername] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [searching, setSearching] = useState(false);
-  const [suggestions, setSuggestions] = useState<Array<{ display: string; place_id: string }>>([]);
+  const [suggestions, setSuggestions] = useState<
+    Array<{ display: string; place_id: string }>
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [errors, setErrors] = useState<{ address?: string }>({});
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set initial step on mount
-  useState(() => {
+  useEffect(() => {
     setOnboardingStep(1);
-  });
+  }, [setOnboardingStep]);
 
   // Nominatim address search
   const searchAddress = useCallback(async (query: string) => {
-    if (query.length < 3) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
     setSearching(true);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
       );
       const data = await res.json();
       setSuggestions(
         data.map((item: { display_name: string; place_id: string }) => ({
           display: item.display_name,
           place_id: item.place_id,
-        }))
+        })),
       );
       setShowSuggestions(true);
     } catch {
@@ -63,13 +66,16 @@ export default function OnboardingHomePage() {
     searchTimeout.current = setTimeout(() => searchAddress(value), 350);
   };
 
-  const selectSuggestion = async (suggestion: { display: string; place_id: string }) => {
+  const selectSuggestion = async (suggestion: {
+    display: string;
+    place_id: string;
+  }) => {
     setAddress(suggestion.display);
     setShowSuggestions(false);
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&place_id=${suggestion.place_id}`
+        `https://nominatim.openstreetmap.org/search?format=json&place_id=${suggestion.place_id}`,
       );
       const data = await res.json();
       if (data.length > 0) {
@@ -88,7 +94,6 @@ export default function OnboardingHomePage() {
     }
 
     saveHomeBase.mutate({
-      username: username || `user_${Math.floor(Math.random() * 10000)}`, // Fallback if no username field in S-03
       home_base_address: address.trim(),
       home_base_lat: lat ?? 0,
       home_base_lng: lng ?? 0,
@@ -107,7 +112,8 @@ export default function OnboardingHomePage() {
           Where do you <br className="hidden sm:block" /> start your day?
         </h1>
         <p className="font-inter text-base text-slate-secondary leading-relaxed mb-10">
-          The address you drive from each morning. We use this to calculate your first and last drive of the day.
+          The address you drive from each morning. We use this to calculate your
+          first and last drive of the day.
         </p>
 
         <div className="flex flex-col gap-6">
@@ -122,7 +128,7 @@ export default function OnboardingHomePage() {
                 Private
               </div>
             </div>
-            
+
             <div className="relative group">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-interactive-blue transition-colors">
                 <MapPin className="w-5 h-5" />
@@ -130,14 +136,18 @@ export default function OnboardingHomePage() {
               <input
                 value={address}
                 onChange={(e) => handleAddressChange(e.target.value)}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onFocus={() =>
+                  suggestions.length > 0 && setShowSuggestions(true)
+                }
                 placeholder="Start typing your address…"
                 className={cn(
                   "h-14 w-full pl-12 pr-4 text-base border-2 rounded-16px bg-white text-primary-navy font-inter font-medium",
                   "placeholder:text-muted/60 placeholder:font-normal",
                   "focus:border-interactive-blue focus:ring-4 focus:ring-blue-100 focus:outline-none",
                   "transition-all duration-200",
-                  errors.address ? "border-red-danger bg-red-50/10" : "border-border hover:border-slate-300"
+                  errors.address
+                    ? "border-red-danger bg-red-50/10"
+                    : "border-border hover:border-slate-300",
                 )}
               />
               {searching && (
@@ -145,7 +155,9 @@ export default function OnboardingHomePage() {
               )}
             </div>
             {errors.address && (
-              <span className="font-inter text-sm text-red-danger font-medium mt-2 block">{errors.address}</span>
+              <span className="font-inter text-sm text-red-danger font-medium mt-2 block">
+                {errors.address}
+              </span>
             )}
 
             {/* Autocomplete dropdown */}
@@ -158,7 +170,7 @@ export default function OnboardingHomePage() {
                     onClick={() => selectSuggestion(s)}
                     className={cn(
                       "w-full text-left px-5 py-4 text-base text-slate hover:bg-bg transition-colors",
-                      "border-b border-border last:border-b-0 group"
+                      "border-b border-border last:border-b-0 group",
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -179,7 +191,8 @@ export default function OnboardingHomePage() {
               </div>
             )}
             <p className="font-inter text-[11px] text-muted font-medium mt-3 leading-relaxed">
-              This address is never shared with clients or listed on your booking page.
+              This address is never shared with clients or listed on your
+              booking page.
             </p>
           </div>
 
@@ -189,9 +202,9 @@ export default function OnboardingHomePage() {
             disabled={!address || saveHomeBase.isPending}
             className={cn(
               "w-full h-14 text-base font-extrabold rounded-16px transition-all shadow-lg",
-              !address 
-                ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" 
-                : "bg-interactive-blue text-white hover:bg-blue-hover shadow-blue-500/25 active:scale-[0.98]"
+              !address
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                : "bg-interactive-blue text-white hover:bg-blue-hover shadow-blue-500/25 active:scale-[0.98]",
             )}
           >
             Set home base

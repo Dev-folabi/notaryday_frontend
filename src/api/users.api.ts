@@ -20,4 +20,6 @@ export const usersApi = {
 
   checkUsername: (username: string) =>
     api.get(`/auth/username-check/${username}`),
+
+  completeOnboarding: () => api.patch("/users/onboarding/complete"),
 };

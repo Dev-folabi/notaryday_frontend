@@ -11,13 +11,6 @@ const PUBLIC_PATHS = [
 
 const PUBLIC_PREFIXES = ["/book/"];
 
-const ONBOARDING_PATHS = [
-  "/onboarding/home",
-  "/onboarding/mileage",
-  "/onboarding/durations",
-  "/onboarding/booking",
-];
-
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -31,13 +24,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for session cookie
-  const sessionCookie = request.cookies.get("session");
-  const hasSession = !!sessionCookie?.value;
+  // Check for auth token cookie (set alongside localStorage for middleware use)
+  const authTokenCookie = request.cookies.get("auth_token");
+  const hasToken = !!authTokenCookie?.value;
 
-  // Protect onboarding paths — require session
+  // Protect onboarding paths — require token
   if (pathname.startsWith("/onboarding/")) {
-    if (!hasSession) {
+    if (!hasToken) {
       const redirectUrl = new URL("/login", request.url);
       redirectUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(redirectUrl);
@@ -45,21 +38,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect (app) routes — require session
-  if (pathname.startsWith("/(")) {
-    if (!hasSession) {
-      const redirectUrl = new URL("/login", request.url);
-      redirectUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    // Onboarding completion check — redirect to onboarding if not complete
-    // We pass this through for the layout to handle client-side, but the
-    // middleware allows the route so the layout can show the onboarding shell
-    return NextResponse.next();
-  }
-
-  // Protect top-level app routes that are not public
+  // Protect app routes — require token
+  // The (app) group routes and other protected paths
   const PROTECTED_PREFIXES = [
     "/jobs",
     "/map",
@@ -71,8 +51,13 @@ export function proxy(request: NextRequest) {
     "/settings",
   ];
 
-  if (PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-    if (!hasSession) {
+  const isAppRoute =
+    pathname === "/" ||
+    pathname.startsWith("/(") ||
+    PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+  if (isAppRoute) {
+    if (!hasToken) {
       const redirectUrl = new URL("/login", request.url);
       redirectUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(redirectUrl);

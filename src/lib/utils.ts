@@ -126,7 +126,7 @@ export function truncateAddress(address: string, maxLen = 40): string {
  */
 export function openNavigation(
   address: string,
-  app: "google" | "apple" | "waze"
+  app: "google" | "apple" | "waze",
 ): void {
   const encoded = encodeURIComponent(address);
   const urls: Record<string, string> = {
@@ -141,7 +141,7 @@ export function openNavigation(
  * Determine profitability color class based on net earnings
  */
 export function profitabilityColor(
-  netEarnings: number
+  netEarnings: number,
 ): "text-teal-success" | "text-amber-warning" | "text-red-danger" {
   if (netEarnings >= 30) return "text-teal-success";
   if (netEarnings >= 10) return "text-amber-warning";
@@ -153,4 +153,23 @@ export function profitabilityColor(
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Set authentication cookie (Client side only)
+ */
+export function setAuthCookie(token: string): void {
+  if (typeof document !== "undefined") {
+    // Set cookie for middleware to read (expires in 24h to match JWT)
+    document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
+  }
+}
+
+/**
+ * Delete authentication cookie (Client side only)
+ */
+export function deleteAuthCookie(): void {
+  if (typeof document !== "undefined") {
+    document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict";
+  }
 }

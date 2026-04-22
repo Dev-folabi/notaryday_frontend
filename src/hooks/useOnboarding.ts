@@ -14,12 +14,16 @@ export function useOnboarding() {
 
   // Save home base + username
   const saveHomeBase = useMutation({
-    mutationFn: (data: {
-      username: string;
+    mutationFn: async (data: {
       home_base_address: string;
       home_base_lat: number;
       home_base_lng: number;
-    }) => usersApi.updateSettings(data),
+    }) => {
+      // Update onboarding step to 2 first
+      await usersApi.updateSettings({ onboarding_step: 2 } as Record<string, unknown>);
+      // Then save home base settings
+      return usersApi.updateSettings(data as Record<string, unknown>);
+    },
     onSuccess: () => {
       setOnboardingStep(2);
       router.push("/onboarding/scanback");
@@ -35,10 +39,21 @@ export function useOnboarding() {
 
   // Save scanback duration (and optional IRS rate)
   const saveScanback = useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       scanback_duration_mins: number;
       irs_rate_per_mile?: number;
-    }) => usersApi.updateSettings(data as Record<string, unknown>),
+      onboarding_step?: number;
+    }) => {
+      // Update onboarding step first if provided
+      if (data.onboarding_step) {
+        await usersApi.updateSettings({ onboarding_step: data.onboarding_step } as Record<string, unknown>);
+      }
+      // Then save scanback settings
+      return usersApi.updateSettings({
+        scanback_duration_mins: data.scanback_duration_mins,
+        irs_rate_per_mile: data.irs_rate_per_mile,
+      } as Record<string, unknown>);
+    },
     onSuccess: () => {
       setOnboardingStep(3);
       router.push("/onboarding/signing-types");
@@ -61,11 +76,10 @@ export function useOnboarding() {
         scanback_duration_mins: number;
       }>;
     }) => {
+      // Save signing defaults to settings
       await usersApi.updateSettings(data as Record<string, unknown>);
-      return usersApi.updateSettings({ onboarding_completed: true } as Record<
-        string,
-        unknown
-      >);
+      // Complete onboarding via dedicated endpoint
+      return usersApi.completeOnboarding();
     },
     onSuccess: () => {
       setOnboardingStep(4);

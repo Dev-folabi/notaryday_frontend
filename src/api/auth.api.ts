@@ -8,7 +8,7 @@ export const authApi = {
     fullName?: string;
   }) => api.post("/auth/register", data),
 
-  login: (data: { email: string; password: string; rememberMe?: boolean }) =>
+  login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
 
   logout: () => api.post("/auth/logout"),

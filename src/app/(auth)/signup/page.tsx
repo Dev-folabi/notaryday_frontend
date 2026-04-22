@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { Check, CheckCircle2, ArrowRight, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { PasswordStrength } from "@/components/ui/PasswordStrength";
+import { setAuthCookie } from "@/lib/utils";
 
 const US_STATES = [
   "AL",
@@ -134,17 +135,27 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupForm) => {
     try {
-      await registerMutation.mutateAsync({
+      const response = await registerMutation.mutateAsync({
         email: data.email,
         password: data.password,
         username: data.username,
         fullName: data.fullName,
       });
+
       addToast({
         type: "success",
         title: "Account created!",
         message: "Let's set up your profile.",
       });
+
+      const user = response?.data?.user;
+      const token = response?.data?.token;
+
+      if (token) {
+        localStorage.setItem("auth_token", token);
+        setAuthCookie(token);
+      }
+
       router.push("/onboarding/home");
     } catch (error) {
       const err = error as { message?: string };
@@ -160,10 +171,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-border bg-white">
-        <Link
-          href="/"
-          className="font-sora font-bold text-lg text-navy"
-        >
+        <Link href="/" className="font-sora font-bold text-lg text-navy">
           Notary Day
         </Link>
       </div>

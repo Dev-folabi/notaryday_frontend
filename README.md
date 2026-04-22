@@ -90,14 +90,11 @@ src/
 
 ```typescript
 // Query key conventions — consistent across the entire app
-['jobs', { date, status }]          // Job list
-['job', id]                         // Single job
-['planner', 'today', date]          // Optimised day view
-['planner', 'gaps', date]           // Gap finder candidates
-['citt', { address, time, type }]   // CITT result (5min stale)
-['booking-page', username, date]    // Public slot availability
-['user', 'me']                      // Auth session user
-['reports', 'earnings', { from, to }]
+["jobs", { date, status }][("job", id)][("planner", "today", date)][ // Job list // Single job // Optimised day view
+  ("planner", "gaps", date)
+][("citt", { address, time, type })][("booking-page", username, date)][ // Gap finder candidates // CITT result (5min stale) // Public slot availability
+  ("user", "me")
+][("reports", "earnings", { from, to })]; // Authenticated user profile
 ```
 
 **Stale time strategy** — Jobs: 30s (change frequently during a working day). CITT results: 2 min (schedule changes). Reports: 5 min. User settings: 10 min.
@@ -112,7 +109,7 @@ Three route groups with distinct layouts:
 - `(onboarding)` — Wizard layout with step indicator. Enforced sequential flow (steps 1–3 required, step 4 skippable).
 - `(app)` — Full application layout. Mobile: bottom navigation (60px, fixed). Desktop: sidebar (240px) + content area at ≥1024px breakpoint.
 
-**Route protection:** Middleware checks session on every `(app)` route. Unauthenticated → `/login`. Authenticated but onboarding incomplete → `/onboarding/home`. Pro-gated routes show an overlay, never redirect.
+**Route protection:** Middleware checks for a valid JWT in every `(app)` route. Unauthenticated → `/login`. Authenticated but onboarding incomplete → `/onboarding/home`. Pro-gated routes show an overlay, never redirect.
 
 ---
 
@@ -122,21 +119,21 @@ The design system is implemented as a combination of Tailwind config extensions 
 
 ### Colour Palette
 
-| Token | Hex | Usage |
-|---|---|---|
-| `primary-navy` | `#0F2C4E` | Nav bar, headings, primary buttons, CITT button gradient |
-| `navy-active` | `#1A3D6B` | Hover and active states on navy elements |
-| `interactive-blue` | `#2563EB` | Links, checkboxes, focus rings |
-| `teal-success` | `#0E7B6C` | CITT "Take It" verdict, positive earnings, complete status |
-| `amber-warning` | `#D97706` | CITT "Risky" verdict, scanback blocks, conflict flags |
-| `red-danger` | `#C0392B` | CITT "Decline" verdict, destructive actions |
-| `slate-body` | `#475569` | Primary body text |
-| `slate-secondary` | `#64748B` | Labels, metadata, helper text |
-| `border` | `#E2E8F0` | Card borders, dividers, input strokes |
-| `bg` | `#F8FAFC` | Page canvas |
-| `scanback-bg` | `#FEF3C7` | Scanback time-block calendar background |
-| `gap-finder-bg` | `#EDE9FE` | Gap opportunity card background |
-| `pro-gold` | `#F59E0B` | Pro badge, upgrade prompts, annual plan highlight |
+| Token              | Hex       | Usage                                                      |
+| ------------------ | --------- | ---------------------------------------------------------- |
+| `primary-navy`     | `#0F2C4E` | Nav bar, headings, primary buttons, CITT button gradient   |
+| `navy-active`      | `#1A3D6B` | Hover and active states on navy elements                   |
+| `interactive-blue` | `#2563EB` | Links, checkboxes, focus rings                             |
+| `teal-success`     | `#0E7B6C` | CITT "Take It" verdict, positive earnings, complete status |
+| `amber-warning`    | `#D97706` | CITT "Risky" verdict, scanback blocks, conflict flags      |
+| `red-danger`       | `#C0392B` | CITT "Decline" verdict, destructive actions                |
+| `slate-body`       | `#475569` | Primary body text                                          |
+| `slate-secondary`  | `#64748B` | Labels, metadata, helper text                              |
+| `border`           | `#E2E8F0` | Card borders, dividers, input strokes                      |
+| `bg`               | `#F8FAFC` | Page canvas                                                |
+| `scanback-bg`      | `#FEF3C7` | Scanback time-block calendar background                    |
+| `gap-finder-bg`    | `#EDE9FE` | Gap opportunity card background                            |
+| `pro-gold`         | `#F59E0B` | Pro badge, upgrade prompts, annual plan highlight          |
 
 ### Typography
 
@@ -164,23 +161,29 @@ Badge         Inter 600 11px      Status chips — ALL CAPS
 ### Component Patterns
 
 **Input pattern (strict — never use placeholders as labels):**
+
 ```tsx
 <div className="flex flex-col gap-1.5">
   <label className="font-medium text-xs text-slate-body">{label}</label>
-  <input className="bg-white border border-border rounded-input h-10 px-3
+  <input
+    className="bg-white border border-border rounded-input h-10 px-3
                     text-sm focus:border-interactive-blue focus:ring-2
-                    focus:ring-blue-100 outline-none" />
+                    focus:ring-blue-100 outline-none"
+  />
   {error && <span className="text-red-danger text-xs mt-1">{error}</span>}
 </div>
 ```
 
 **Pro feature gate (overlay, never redirect):**
+
 ```tsx
 <div className="relative">
   {children}
   {!isPro && (
-    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm
-                    rounded-card flex flex-col items-center justify-center gap-3">
+    <div
+      className="absolute inset-0 bg-white/80 backdrop-blur-sm
+                    rounded-card flex flex-col items-center justify-center gap-3"
+    >
       <LockIcon className="text-slate-secondary w-6 h-6" />
       <p className="text-sm text-slate-body text-center max-w-[200px]">
         {benefitText}
@@ -192,6 +195,7 @@ Badge         Inter 600 11px      Status chips — ALL CAPS
 ```
 
 **CITT floating button (fixed, always visible on all app screens):**
+
 ```tsx
 // 56px circle, gradient navy→blue, elevated 8px above bottom nav
 // Shadow: 0 4px 16px rgba(15,44,78,0.4)
@@ -289,11 +293,11 @@ The application runs on `http://localhost:3000` by default.
 
 ### Core Web Vitals Targets
 
-| Metric | Target | Strategy |
-|---|---|---|
-| LCP | < 2.5s | SSG landing page, SSR booking page, lazy-loaded map |
-| FID / INP | < 100ms | Optimistic updates, no blocking renders |
-| CLS | < 0.1 | Explicit dimensions on all images and map containers |
+| Metric    | Target  | Strategy                                             |
+| --------- | ------- | ---------------------------------------------------- |
+| LCP       | < 2.5s  | SSG landing page, SSR booking page, lazy-loaded map  |
+| FID / INP | < 100ms | Optimistic updates, no blocking renders              |
+| CLS       | < 0.1   | Explicit dimensions on all images and map containers |
 
 ### PWA & Mobile Performance
 
@@ -369,12 +373,12 @@ interface UIStore {
   closeCITT: () => void;
 
   // Date navigation
-  activeDate: string;             // ISO date string
+  activeDate: string; // ISO date string
   setActiveDate: (date: string) => void;
 
   // Toast notifications
   toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id'>) => void;
+  addToast: (toast: Omit<Toast, "id">) => void;
   removeToast: (id: string) => void;
 }
 ```
@@ -394,21 +398,21 @@ interface UIStore {
 
 ## Tech Stack
 
-| Concern | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS |
-| Server State | React Query (@tanstack/react-query) |
-| Client State | Zustand |
-| Forms | React Hook Form + Zod |
-| Maps | Leaflet.js (react-leaflet) — OpenStreetMap tiles |
-| Icons | Lucide React |
-| HTTP Client | axios (with session + CSRF interceptors) |
-| Date Utilities | date-fns |
-| PDF | Handled by backend (pdfkit) |
-| PWA | next-pwa |
-| Testing | Jest + React Testing Library |
+| Concern        | Technology                                       |
+| -------------- | ------------------------------------------------ |
+| Framework      | Next.js 15 (App Router)                          |
+| Language       | TypeScript 5                                     |
+| Styling        | Tailwind CSS                                     |
+| Server State   | React Query (@tanstack/react-query)              |
+| Client State   | Zustand                                          |
+| Forms          | React Hook Form + Zod                            |
+| Maps           | Leaflet.js (react-leaflet) — OpenStreetMap tiles |
+| Icons          | Lucide React                                     |
+| HTTP Client    | axios (with JWT + auth interceptors)             |
+| Date Utilities | date-fns                                         |
+| PDF            | Handled by backend (pdfkit)                      |
+| PWA            | next-pwa                                         |
+| Testing        | Jest + React Testing Library                     |
 
 ---
 

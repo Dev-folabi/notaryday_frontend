@@ -16,9 +16,17 @@ export function useAuth() {
   const { data: user, isLoading: isLoadingUser } = useQuery({
     queryKey: queryKeys.auth.me,
     queryFn: async () => {
+      if (
+        typeof window === "undefined" ||
+        !localStorage.getItem("auth_token")
+      ) {
+        return null;
+      }
       try {
-        return (await authApi.me()) as unknown as User;
+        const response = (await authApi.me()) as any;
+        return response.data as User;
       } catch {
+        localStorage.removeItem("auth_token");
         return null;
       }
     },
@@ -37,12 +45,15 @@ export function useAuth() {
 
   // Login mutation
   const loginMutation = useMutation({
-    mutationFn: (data: {
-      email: string;
-      password: string;
-      rememberMe?: boolean;
-    }) => authApi.login(data),
-    onSuccess: async () => {
+    mutationFn: (data: { email: string; password: string }) =>
+      authApi.login(data),
+    onSuccess: async (data: any) => {
+      const token = data?.data?.token;
+      if (token) {
+        localStorage.setItem("auth_token", token);
+        // Set cookie for middleware to read (expires in 24h to match JWT)
+        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },
   });
@@ -55,7 +66,13 @@ export function useAuth() {
       username: string;
       fullName?: string;
     }) => authApi.register(data),
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
+      const token = data?.data?.token;
+      if (token) {
+        localStorage.setItem("auth_token", token);
+        // Set cookie for middleware to read (expires in 24h to match JWT)
+        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
+      }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },
   });
@@ -64,6 +81,10 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
+      localStorage.removeItem("auth_token");
+      // Also clear the cookie
+      document.cookie =
+        "auth_token=; path=/; max-age=0; SameSite=Strict";
       queryClient.clear();
       router.push("/login");
     },
@@ -85,7 +106,8 @@ export function useAuth() {
     async (username: string): Promise<boolean> => {
       try {
         const res = await usersApi.checkUsername(username);
-        return (res as unknown as { data: { available: boolean } }).data.available;
+        return (res as unknown as { data: { available: boolean } }).data
+          .available;
       } catch {
         return false;
       }

@@ -12,11 +12,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CheckCircle2, Mail } from "lucide-react";
+import { setAuthCookie } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional(),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -37,7 +37,7 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "sarah@", password: "wrong", rememberMe: false },
+    defaultValues: { email: "", password: "" },
   });
 
   // Redirect if already authenticated
@@ -53,9 +53,21 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await loginMutation.mutateAsync(data);
+      const response = await loginMutation.mutateAsync(data);
       addToast({ type: "success", title: "Welcome back!" });
-      router.push(isOnboardingComplete ? "/" : "/onboarding/home");
+
+      const user = response?.data?.user;
+      const token = response?.data?.token;
+
+      if (token) {
+        localStorage.setItem("auth_token", token);
+        setAuthCookie(token);
+      }
+
+      const redirectPath = user?.onboarding_completed
+        ? "/"
+        : "/onboarding/home";
+      router.push(redirectPath);
     } catch (error) {
       const err = error as { message?: string };
       addToast({

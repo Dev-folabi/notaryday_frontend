@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError } from "axios";
+import { deleteAuthCookie } from "./utils";
 
 declare module "axios" {
   interface AxiosRequestConfig {
@@ -28,17 +29,9 @@ export interface ApiError {
   };
 }
 
-function getCsrfToken(): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  return document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("XSRF-TOKEN="))
-    ?.split("=")[1];
-}
-
 const api: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
-  withCredentials: true,
+  withCredentials: false,
   headers: {
     "Content-Type": "application/json",
   },
@@ -46,13 +39,11 @@ const api: AxiosInstance = axios.create({
 
 // Request Interceptor
 api.interceptors.request.use((config) => {
-  const token = getCsrfToken();
-
-  if (
-    token &&
-    !["get", "head", "options"].includes(config.method?.toLowerCase() ?? "")
-  ) {
-    config.headers["X-XSRF-TOKEN"] = token;
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   return config;
@@ -65,7 +56,6 @@ api.interceptors.response.use(
   },
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config;
-
     const status = error.response?.status;
 
     if (status === 401 && originalRequest && !originalRequest._retry) {
@@ -74,13 +64,14 @@ api.interceptors.response.use(
       if (typeof window !== "undefined") {
         const isPublicRoute =
           ["/login", "/signup", "/forgot-password"].some((route) =>
-            window.location.pathname.startsWith(route)
+            window.location.pathname.startsWith(route),
           ) ||
           window.location.pathname.startsWith("/reset-password") ||
           window.location.pathname.startsWith("/book/");
 
         if (!isPublicRoute) {
-          // safer than window redirect logic coupling
+          localStorage.removeItem("auth_token");
+          deleteAuthCookie();
           window.location.href = "/login";
         }
       }
@@ -93,7 +84,7 @@ api.interceptors.response.use(
     };
 
     return Promise.reject(errorData);
-  }
+  },
 );
 
 export default api;
