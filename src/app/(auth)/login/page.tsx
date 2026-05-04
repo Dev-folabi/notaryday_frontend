@@ -15,7 +15,7 @@ import { CheckCircle2, Mail } from "lucide-react";
 import { setAuthCookie } from "@/lib/utils";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -27,6 +27,7 @@ export default function LoginPage() {
     isAuthenticated,
     isOnboardingComplete,
     isLoadingUser,
+    user,
   } = useAuth();
   const { addToast } = useUIStore();
   const router = useRouter();
@@ -44,12 +45,16 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isLoadingUser && isAuthenticated) {
       if (isOnboardingComplete) {
-        router.replace("/");
+        router.replace("/today");
       } else {
-        router.replace("/onboarding/home");
+        let route = "/onboarding/home";
+        if (user?.onboarding_step === 2) route = "/onboarding/scanback";
+        if (user?.onboarding_step === 3) route = "/onboarding/signing-types";
+        if (user?.onboarding_step === 4) route = "/onboarding/plan";
+        router.replace(route);
       }
     }
-  }, [isLoadingUser, isAuthenticated, isOnboardingComplete, router]);
+  }, [isLoadingUser, isAuthenticated, isOnboardingComplete, router, user]);
 
   const onSubmit = async (data: LoginForm) => {
     try {
@@ -64,9 +69,16 @@ export default function LoginPage() {
         setAuthCookie(token);
       }
 
-      const redirectPath = user?.onboarding_completed
-        ? "/"
-        : "/onboarding/home";
+      let redirectPath = "/onboarding/home";
+      if (user?.onboarding_completed) {
+        redirectPath = "/today";
+      } else {
+        if (user?.onboarding_step === 2) redirectPath = "/onboarding/scanback";
+        if (user?.onboarding_step === 3)
+          redirectPath = "/onboarding/signing-types";
+        if (user?.onboarding_step === 4) redirectPath = "/onboarding/plan";
+      }
+
       router.push(redirectPath);
     } catch (error) {
       const err = error as { message?: string };

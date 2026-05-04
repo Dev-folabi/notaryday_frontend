@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useUIStore } from "@/store/uiStore";
 import { Button } from "@/components/ui/Button";
-import {
-  Check,
-  ArrowRight,
-  ArrowLeft,
-  Sparkles,
-} from "lucide-react";
+import { Check, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SIGNING_TYPES = [
@@ -40,11 +35,27 @@ const SIGNING_TYPES = [
     defaultScanback: 0,
   },
   {
-    key: "ESTATE",
-    label: "Estate & Probate",
-    desc: "Estate planning, trust signings, court documents.",
-    icon: "🏛️",
-    defaultSigning: 90,
+    key: "PURCHASE_CLOSING",
+    label: "Purchase Closing",
+    desc: "Real estate purchase transaction signings.",
+    icon: "🏠",
+    defaultSigning: 60,
+    defaultScanback: 30,
+  },
+  {
+    key: "FIELD_INSPECTION",
+    label: "Field Inspections",
+    desc: "Property, vehicle, or business site inspections.",
+    icon: "🔍",
+    defaultSigning: 30,
+    defaultScanback: 0,
+  },
+  {
+    key: "APOSTILLE",
+    label: "Apostille Services",
+    desc: "Authentication of documents for international use.",
+    icon: "🌐",
+    defaultSigning: 45,
     defaultScanback: 0,
   },
 ];
@@ -59,7 +70,6 @@ export default function OnboardingSigningTypesPage() {
     "HYBRID",
     "GENERAL",
   ]);
-  const [isCompleted, setIsCompleted] = useState(false);
 
   // Set step on mount
   useEffect(() => {
@@ -75,9 +85,10 @@ export default function OnboardingSigningTypesPage() {
   const handleSubmit = async () => {
     if (selectedTypes.length === 0) return;
 
-    saveSigningTypes.mutate(
-      {
-        signing_defaults: selectedTypes.map((key) => {
+    saveSigningTypes.mutate({
+      signing_defaults: selectedTypes
+        .filter((key) => SIGNING_TYPES.some((t) => t.key === key))
+        .map((key) => {
           const type = SIGNING_TYPES.find((t) => t.key === key)!;
           return {
             signing_type: key,
@@ -85,40 +96,8 @@ export default function OnboardingSigningTypesPage() {
             scanback_duration_mins: type.defaultScanback,
           };
         }),
-      },
-      {
-        onSuccess: () => {
-          setIsCompleted(true);
-        },
-      },
-    );
+    });
   };
-
-  if (isCompleted) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 bg-white lg:bg-bg animate-in fade-in duration-500">
-        <div className="w-full max-w-md bg-white p-10 rounded-[32px] text-center shadow-xl shadow-slate-200/50 border border-border">
-          <div className="w-20 h-20 rounded-full bg-teal-success flex items-center justify-center mx-auto mb-8 shadow-lg shadow-teal-500/20">
-            <Check className="w-10 h-10 text-white" strokeWidth={3} />
-          </div>
-          <h2 className="font-sora font-extrabold text-3xl text-primary-navy mb-4 tracking-tight">
-            You&apos;re account <br /> is ready.
-          </h2>
-          <p className="font-inter text-base text-slate-secondary leading-relaxed mb-10">
-            Notary Day knows your home base, scanback time, and signing types.
-            You&apos;re ready to optimize.
-          </p>
-          <Button
-            onClick={() => router.push("/")}
-            className="w-full h-14 bg-primary-navy hover:bg-navy-active text-white text-base font-extrabold rounded-20px shadow-lg shadow-navy/20 active:scale-[0.98] transition-all"
-          >
-            Go to my dashboard
-            <ArrowRight className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 bg-white lg:bg-bg">

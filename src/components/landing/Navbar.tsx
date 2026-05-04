@@ -1,7 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Navbar() {
+  const { isAuthenticated, user, isLoadingUser } = useAuth();
+
+  const getDashboardRoute = () => {
+    if (!user) return "/login";
+    if (user.onboarding_completed) return "/today";
+    if (user.onboarding_step === 2) return "/onboarding/scanback";
+    if (user.onboarding_step === 3) return "/onboarding/signing-types";
+    if (user.onboarding_step === 4) return "/onboarding/plan";
+    return "/onboarding/home";
+  };
   return (
     <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-6 md:px-12">
       <div className="flex items-center gap-8">
@@ -38,15 +51,25 @@ export function Navbar() {
         </div>
       </div>
       <div className="flex items-center gap-5">
-        <Link
-          href="/login"
-          className="cursor-pointer text-sm font-medium text-slate-500 hover:text-navy"
-        >
-          Sign in
-        </Link>
-        <Link href="/signup">
-          <Button className="h-10 px-4 text-[13px]">Get started free</Button>
-        </Link>
+        {!isLoadingUser && isAuthenticated ? (
+          <Link href={getDashboardRoute()}>
+            <Button className="h-10 px-4 text-[13px]">Dashboard</Button>
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/login"
+              className="cursor-pointer text-sm font-medium text-slate-500 hover:text-navy"
+            >
+              Sign in
+            </Link>
+            <Link href="/signup">
+              <Button className="h-10 px-4 text-[13px]">
+                Get started free
+              </Button>
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

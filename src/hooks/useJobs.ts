@@ -12,7 +12,7 @@ export function useJobs(params?: {
   limit?: number;
 }) {
   return useQuery({
-    queryKey: queryKeys.jobs(params),
+    queryKey: queryKeys.jobs.all(params),
     queryFn: async () => {
       const res = await jobsApi.list(params);
       return res as Job[];
@@ -23,7 +23,7 @@ export function useJobs(params?: {
 
 export function useJob(id: string) {
   return useQuery({
-    queryKey: queryKeys.job(id),
+    queryKey: queryKeys.jobs.detail(id),
     queryFn: async () => {
       const res = await jobsApi.get(id);
       return res as Job;
@@ -50,7 +50,7 @@ export function useUpdateJob() {
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateJobInput> }) =>
       jobsApi.update(id, data as Record<string, unknown>),
     onSuccess: (_data: unknown, vars: { id: string }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.job(vars.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.jobs.detail(vars.id) });
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },
   });
@@ -72,7 +72,7 @@ export function useUpdateJobStatus() {
     mutationFn: ({ id, status }: { id: string; status: JobStatus }) =>
       jobsApi.updateStatus(id, { status }),
     onSuccess: (_data: unknown, vars: { id: string }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.job(vars.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.jobs.detail(vars.id) });
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },
   });

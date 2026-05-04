@@ -25,9 +25,13 @@ export function useAuth() {
       try {
         const response = (await authApi.me()) as any;
         return response.data as User;
-      } catch {
-        localStorage.removeItem("auth_token");
-        return null;
+      } catch (err: any) {
+        if (err?.statusCode === 401) {
+          localStorage.removeItem("auth_token");
+          document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict";
+          return null;
+        }
+        throw err;
       }
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
@@ -83,8 +87,7 @@ export function useAuth() {
     onSuccess: () => {
       localStorage.removeItem("auth_token");
       // Also clear the cookie
-      document.cookie =
-        "auth_token=; path=/; max-age=0; SameSite=Strict";
+      document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict";
       queryClient.clear();
       router.push("/login");
     },

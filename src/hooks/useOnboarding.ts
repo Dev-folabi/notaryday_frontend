@@ -20,7 +20,10 @@ export function useOnboarding() {
       home_base_lng: number;
     }) => {
       // Update onboarding step to 2 first
-      await usersApi.updateSettings({ onboarding_step: 2 } as Record<string, unknown>);
+      await usersApi.updateSettings({ onboarding_step: 2 } as Record<
+        string,
+        unknown
+      >);
       // Then save home base settings
       return usersApi.updateSettings(data as Record<string, unknown>);
     },
@@ -46,7 +49,9 @@ export function useOnboarding() {
     }) => {
       // Update onboarding step first if provided
       if (data.onboarding_step) {
-        await usersApi.updateSettings({ onboarding_step: data.onboarding_step } as Record<string, unknown>);
+        await usersApi.updateSettings({
+          onboarding_step: data.onboarding_step,
+        } as Record<string, unknown>);
       }
       // Then save scanback settings
       return usersApi.updateSettings({
@@ -77,14 +82,11 @@ export function useOnboarding() {
       }>;
     }) => {
       // Save signing defaults to settings
-      await usersApi.updateSettings(data as Record<string, unknown>);
-      // Complete onboarding via dedicated endpoint
-      return usersApi.completeOnboarding();
+      return usersApi.updateSettings(data as Record<string, unknown>);
     },
     onSuccess: () => {
       setOnboardingStep(4);
-      addToast({ type: "success", title: "You're all set!" });
-      router.push("/");
+      router.push("/onboarding/plan");
     },
     onError: (err: { message?: string }) => {
       addToast({
@@ -106,10 +108,22 @@ export function useOnboarding() {
     }
   };
 
+  const completeOnboarding = useMutation({
+    mutationFn: () => usersApi.completeOnboarding(),
+    onError: (err: { message?: string }) => {
+      addToast({
+        type: "error",
+        title: "Failed to complete onboarding",
+        message: err?.message ?? "Please try again.",
+      });
+    },
+  });
+
   return {
     saveHomeBase,
     saveScanback,
     saveSigningTypes,
+    completeOnboarding,
     skipStep,
   };
 }

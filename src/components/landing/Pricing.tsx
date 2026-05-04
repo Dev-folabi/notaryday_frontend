@@ -91,12 +91,12 @@ export function Pricing() {
             </span>
           </div>
           <div className="my-[5px] font-sora text-[28px] font-bold leading-none text-navy">
-            $29{" "}
+            $19{" "}
             <span className="font-inter text-sm font-normal text-slate-500">
               /month
             </span>
           </div>
-          <p className="mb-1 text-xs text-slate-400">or $249/year — save $99</p>
+          <p className="mb-1 text-xs text-slate-400">or $208/year — save $20</p>
           <p className="mb-3.5 text-xs font-medium text-teal-600">
             Less than the fee from one extra signing.
           </p>

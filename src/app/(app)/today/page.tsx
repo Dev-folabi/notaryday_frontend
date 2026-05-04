@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,7 +53,7 @@ export default function TodayPage() {
 
   // Query jobs for the current active date
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: queryKeys.jobs({ date: activeDate }),
+    queryKey: queryKeys.jobs.all({ date: activeDate }),
     queryFn: async () => {
       const res = await jobsApi.list({ date: activeDate, limit: 50 });
       return res as any[];
@@ -61,7 +63,7 @@ export default function TodayPage() {
 
   // Query jobs for the whole week to power the week stats
   const weekJobsQuery = useQuery({
-    queryKey: queryKeys.jobs({ date: toDateInputValue(weekStart) }),
+    queryKey: queryKeys.jobs.all({ date: toDateInputValue(weekStart) }),
     queryFn: async () => {
       const res = await jobsApi.list({
         date: toDateInputValue(weekStart),

@@ -46,7 +46,7 @@ src/
 │   │       ├── home/page.tsx         ← Step 1: home base + username
 │   │       ├── scanback/page.tsx      ← Step 2: scanback
 │   │       ├── signing-types/page.tsx    ← Step 3: signing type defaults
-│   │       └── booking/page.tsx      ← Step 4: booking page setup (skippable)
+│   │       └── plan/page.tsx      ← Step 4: booking page setup (skippable)
 │   ├── (app)/                        ← Main app route group (sidebar layout)
 │   │   ├── layout.tsx                ← Sidebar + bottom nav
 │   │   ├── page.tsx                  ← Today view (/) — primary daily screen

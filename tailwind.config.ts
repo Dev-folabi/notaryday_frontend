@@ -23,7 +23,7 @@ export default {
         "teal-border": "#6EE7B7",
 
         amber: "#D97706",
-        "amber-bg": "#FEF3C7",
+        "amber-bg": "#FFFBEB",
         "amber-border": "#FDE68A",
 
         red: "#C0392B",
@@ -37,10 +37,20 @@ export default {
         surface: "#FFFFFF",
 
         // Domain-specific
-        "scanback": "#FEF3C7",
+        scanback: "#FEF3C7",
         "gap-finder": "#EDE9FE",
 
-        "pro": "#F59E0B",
+        pro: "#F59E0B",
+
+        // Aliases heavily used in UI
+        "primary-navy": "#0F2C4E",
+        "pro-gold": "#F59E0B",
+        "teal-success": "#0E7B6C",
+        "amber-warning": "#D97706",
+        "interactive-blue": "#2563EB",
+        "slate-body": "#475569",
+        "violet-light": "#EDE9FE",
+        "blue-light": "#EFF6FF",
       },
 
       fontFamily: {

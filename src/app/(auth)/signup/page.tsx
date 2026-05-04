@@ -83,8 +83,14 @@ const signupSchema = z.object({
 type SignupForm = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { registerMutation, isAuthenticated, isLoadingUser, checkUsername } =
-    useAuth();
+  const {
+    registerMutation,
+    isAuthenticated,
+    isOnboardingComplete,
+    isLoadingUser,
+    user,
+    checkUsername,
+  } = useAuth();
   const { addToast } = useUIStore();
   const router = useRouter();
   const [usernameStatus, setUsernameStatus] = useState<
@@ -112,9 +118,16 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (!isLoadingUser && isAuthenticated) {
-      router.replace("/onboarding/home");
+      if (isOnboardingComplete) {
+        router.replace("/");
+      } else {
+        let route = "/onboarding/home";
+        if (user?.onboarding_step === 2) route = "/onboarding/scanback";
+        if (user?.onboarding_step === 3) route = "/onboarding/signing-types";
+        router.replace(route);
+      }
     }
-  }, [isLoadingUser, isAuthenticated, router]);
+  }, [isLoadingUser, isAuthenticated, isOnboardingComplete, user, router]);
 
   useEffect(() => {
     if (!watchedUsername || watchedUsername.length < 3) {

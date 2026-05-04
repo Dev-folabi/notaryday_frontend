@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { MapPin, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
+import { ADDRESS_SUGGESTIONS } from "@/lib/constants/addresses";
 
 export default function OnboardingHomePage() {
   const { saveHomeBase } = useOnboarding();
@@ -29,31 +30,32 @@ export default function OnboardingHomePage() {
     setOnboardingStep(1);
   }, [setOnboardingStep]);
 
-  // Nominatim address search
+  // Local address search
   const searchAddress = useCallback(async (query: string) => {
     if (query.length < 3) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
+
     setSearching(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
-      );
-      const data = await res.json();
-      setSuggestions(
-        data.map((item: { display_name: string; place_id: string }) => ({
-          display: item.display_name,
-          place_id: item.place_id,
-        })),
-      );
-      setShowSuggestions(true);
-    } catch {
-      // silently fail
-    } finally {
-      setSearching(false);
-    }
+
+    // Slight delay to simulate network/processing and avoid blocking main thread immediately
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = ADDRESS_SUGGESTIONS.filter((addr) =>
+      addr.toLowerCase().includes(lowerQuery),
+    ).slice(0, 5);
+
+    setSuggestions(
+      filtered.map((display) => ({
+        display,
+        place_id: display,
+      })),
+    );
+    setShowSuggestions(true);
+    setSearching(false);
   }, []);
 
   const handleAddressChange = (value: string) => {
@@ -63,7 +65,7 @@ export default function OnboardingHomePage() {
     setErrors((e) => ({ ...e, address: undefined }));
 
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => searchAddress(value), 350);
+    searchTimeout.current = setTimeout(() => searchAddress(value), 300);
   };
 
   const selectSuggestion = async (suggestion: {
@@ -72,10 +74,11 @@ export default function OnboardingHomePage() {
   }) => {
     setAddress(suggestion.display);
     setShowSuggestions(false);
+    setSearching(true);
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&place_id=${suggestion.place_id}`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(suggestion.display)}`,
       );
       const data = await res.json();
       if (data.length > 0) {
@@ -84,6 +87,8 @@ export default function OnboardingHomePage() {
       }
     } catch {
       // proceed without coordinates
+    } finally {
+      setSearching(false);
     }
   };
 

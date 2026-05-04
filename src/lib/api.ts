@@ -68,7 +68,6 @@ api.interceptors.response.use(
           ) ||
           window.location.pathname.startsWith("/reset-password") ||
           window.location.pathname.startsWith("/book/");
-
         if (!isPublicRoute) {
           localStorage.removeItem("auth_token");
           deleteAuthCookie();
@@ -82,6 +81,11 @@ api.interceptors.response.use(
       message: error.message ?? "An unexpected error occurred",
       statusCode: status ?? 500,
     };
+
+    if (errorData.code === "DATABASE_TIMEOUT" || errorData.statusCode === 504) {
+      errorData.message =
+        "System is experiencing heavy load. Please try again in a moment.";
+    }
 
     return Promise.reject(errorData);
   },
