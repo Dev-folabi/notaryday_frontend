@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useUIStore } from "@/store/uiStore";
+import { ROUTES } from "@/config/routes";
 import { Button } from "@/components/ui/Button";
 import { Check, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -189,7 +190,7 @@ export default function OnboardingSigningTypesPage() {
           </Button>
 
           <button
-            onClick={() => router.push("/onboarding/scanback")}
+            onClick={() => router.push(ROUTES.ONBOARDING.SCANBACK)}
             className="flex items-center justify-center gap-2 font-inter text-sm font-bold text-slate-secondary hover:text-primary-navy transition-colors py-2"
           >
             <ArrowLeft className="w-4 h-4" />

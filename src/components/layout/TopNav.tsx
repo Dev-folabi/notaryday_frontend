@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getInitials } from "@/lib/utils";
 import type { SessionUser } from "@/types/user";
 import { Bell } from "lucide-react";
+import { ROUTES } from "@/config/routes";
 
 interface TopNavProps {
   user?: SessionUser | null;
@@ -14,7 +15,7 @@ export function TopNav({
   user,
   title,
   showBack,
-  backHref = "/",
+  backHref = ROUTES.APP.TODAY,
 }: TopNavProps) {
   const displayName = user?.full_name ?? user?.username ?? "";
 
@@ -29,7 +30,7 @@ export function TopNav({
         </Link>
       ) : (
         <Link
-          href="/"
+          href={ROUTES.APP.TODAY}
           className="font-sora font-bold text-lg text-primary-navy"
         >
           Notary Day
@@ -46,7 +47,7 @@ export function TopNav({
 
       <div className="flex items-center gap-3">
         <Link
-          href="/notifications"
+          href={ROUTES.APP.NOTIFICATIONS}
           className="p-2 text-slate-secondary hover:text-slate-body"
           aria-label="Notifications"
         >
@@ -54,7 +55,7 @@ export function TopNav({
         </Link>
 
         {user && displayName && (
-          <Link href="/settings">
+          <Link href={ROUTES.APP.ACCOUNT}>
             <div className="w-8 h-8 rounded-full bg-primary-navy text-white text-[11px] font-semibold flex items-center justify-center">
               {getInitials(displayName)}
             </div>

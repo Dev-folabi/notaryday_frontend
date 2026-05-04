@@ -4,17 +4,18 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { ROUTES } from "@/config/routes";
 
 export function FinalCTA() {
   const { isAuthenticated, user, isLoadingUser } = useAuth();
 
   const getDashboardRoute = () => {
-    if (!user) return "/login";
-    if (user.onboarding_completed) return "/today";
-    if (user.onboarding_step === 2) return "/onboarding/scanback";
-    if (user.onboarding_step === 3) return "/onboarding/signing-types";
-    if (user.onboarding_step === 4) return "/onboarding/plan";
-    return "/onboarding/home";
+    if (!user) return ROUTES.AUTH.LOGIN;
+    if (user.onboarding_completed) return ROUTES.APP.TODAY;
+    if (user.onboarding_step === 2) return ROUTES.ONBOARDING.SCANBACK;
+    if (user.onboarding_step === 3) return ROUTES.ONBOARDING.SIGNING_TYPES;
+    if (user.onboarding_step === 4) return ROUTES.ONBOARDING.PLAN;
+    return ROUTES.ONBOARDING.HOME;
   };
   return (
     <div className="bg-navy px-6 py-[72px] text-center md:px-12">
@@ -41,7 +42,7 @@ export function FinalCTA() {
           </Link>
         ) : (
           <>
-            <Link href="/signup">
+            <Link href={ROUTES.AUTH.SIGNUP}>
               <Button
                 variant="secondary"
                 className="h-[52px] rounded-[10px] bg-white px-7 text-[15px] hover:bg-white/90"
@@ -50,7 +51,7 @@ export function FinalCTA() {
                 <span className="text-navy">Create free account</span>
               </Button>
             </Link>
-            <Link href="/signup">
+            <Link href={ROUTES.AUTH.SIGNUP}>
               <Button
                 variant="pro"
                 className="h-[52px] rounded-[10px] bg-amber-500 px-6 text-[15px] hover:bg-amber-600"

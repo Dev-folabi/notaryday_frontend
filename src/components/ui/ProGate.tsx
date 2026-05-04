@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ROUTES } from "@/config/routes";
 
 interface ProGateProps {
   children: React.ReactNode;
@@ -32,7 +33,7 @@ export function ProGate({
           <p className="font-inter text-sm text-slate-body">{benefitText}</p>
 
           <button
-            onClick={() => router.push("/settings/billing")}
+            onClick={() => router.push(ROUTES.APP.BILLING)}
             className="bg-pro-gold text-navy font-semibold text-sm rounded-button h-9 px-4"
           >
             Upgrade to Pro

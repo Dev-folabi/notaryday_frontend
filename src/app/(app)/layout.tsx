@@ -7,12 +7,13 @@ import { CITTButton } from "@/components/layout/CITTButton";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useUIStore } from "@/store/uiStore";
+import { ROUTES } from "@/config/routes";
 
 const ONBOARDING_STEPS = [
-  "/onboarding/home",
-  "/onboarding/scanback",
-  "/onboarding/signing-types",
-  "/onboarding/booking",
+  ROUTES.ONBOARDING.HOME,
+  ROUTES.ONBOARDING.SCANBACK,
+  ROUTES.ONBOARDING.SIGNING_TYPES,
+  ROUTES.ONBOARDING.PLAN,
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -30,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ) {
       const step = user.onboarding_step ?? 1;
       setOnboardingStep(step);
-      const targetStep = ONBOARDING_STEPS[step - 1] ?? "/onboarding/home";
+      const targetStep = ONBOARDING_STEPS[step - 1] ?? ROUTES.ONBOARDING.HOME;
       router.replace(targetStep);
     }
   }, [isLoadingUser, isAuthenticated, user, router, setOnboardingStep]);
@@ -51,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Not authenticated — should have been caught by middleware, but safety redirect
   if (!isAuthenticated) {
-    router.replace("/login");
+    router.replace(ROUTES.AUTH.LOGIN);
     return null;
   }
 

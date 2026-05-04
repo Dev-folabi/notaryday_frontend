@@ -14,6 +14,7 @@ import { Check, CheckCircle2, ArrowRight, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { PasswordStrength } from "@/components/ui/PasswordStrength";
 import { setAuthCookie } from "@/lib/utils";
+import { ROUTES } from "@/config/routes";
 
 const US_STATES = [
   "AL",
@@ -119,11 +120,12 @@ export default function SignupPage() {
   useEffect(() => {
     if (!isLoadingUser && isAuthenticated) {
       if (isOnboardingComplete) {
-        router.replace("/");
+        router.replace(ROUTES.APP.TODAY);
       } else {
-        let route = "/onboarding/home";
-        if (user?.onboarding_step === 2) route = "/onboarding/scanback";
-        if (user?.onboarding_step === 3) route = "/onboarding/signing-types";
+        let route = ROUTES.ONBOARDING.HOME;
+        if (user?.onboarding_step === 2) route = ROUTES.ONBOARDING.SCANBACK;
+        if (user?.onboarding_step === 3)
+          route = ROUTES.ONBOARDING.SIGNING_TYPES;
         router.replace(route);
       }
     }
@@ -169,7 +171,7 @@ export default function SignupPage() {
         setAuthCookie(token);
       }
 
-      router.push("/onboarding/home");
+      router.push(ROUTES.ONBOARDING.HOME);
     } catch (error) {
       const err = error as { message?: string };
       addToast({
@@ -184,7 +186,10 @@ export default function SignupPage() {
     <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-border bg-white">
-        <Link href="/" className="font-sora font-bold text-lg text-navy">
+        <Link
+          href={ROUTES.APP.TODAY}
+          className="font-sora font-bold text-lg text-navy"
+        >
           Notary Day
         </Link>
       </div>
@@ -194,7 +199,7 @@ export default function SignupPage() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-pro-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
         <Link
-          href="/"
+          href={ROUTES.APP.TODAY}
           className="font-sora font-extrabold text-[20px] text-white block mb-12 relative z-10"
         >
           Notary Day
@@ -362,7 +367,7 @@ export default function SignupPage() {
 
           <p className="text-center font-inter text-sm text-slate-secondary">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-blue">
+            <Link href={ROUTES.AUTH.LOGIN} className="font-semibold text-blue">
               Sign in
             </Link>
           </p>

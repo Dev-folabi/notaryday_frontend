@@ -4,6 +4,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MapPin, Scan, Briefcase, Sparkles } from "lucide-react";
+import { ROUTES } from "@/config/routes";
 
 export default function OnboardingLayout({
   children,
@@ -27,7 +28,7 @@ export default function OnboardingLayout({
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-border h-14 flex items-center justify-between px-4 safe-area-top">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(ROUTES.APP.TODAY)}
           className="font-inter text-sm text-slate-secondary"
         >
           Skip for now
@@ -38,12 +39,14 @@ export default function OnboardingLayout({
               key={s.id}
               className={cn(
                 "w-7 h-1 rounded-full transition-colors",
-                s.id <= currentStep ? "bg-primary-navy" : "bg-border"
+                s.id <= currentStep ? "bg-primary-navy" : "bg-border",
               )}
             />
           ))}
         </div>
-        <span className="font-inter text-xs text-muted">{currentStep} of {steps.length}</span>
+        <span className="font-inter text-xs text-muted">
+          {currentStep} of {steps.length}
+        </span>
       </div>
 
       {/* Mobile content padding */}
@@ -64,19 +67,28 @@ export default function OnboardingLayout({
                   key={s.id}
                   className={cn(
                     "flex items-center gap-3 transition-opacity",
-                    s.id > currentStep ? "opacity-40" : "opacity-100"
+                    s.id > currentStep ? "opacity-40" : "opacity-100",
                   )}
                 >
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    s.id === currentStep ? "bg-blue-bg text-interactive-blue" :
-                    s.id < currentStep ? "bg-teal-bg text-teal-success" : "bg-bg text-slate-secondary"
-                  )}>
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                      s.id === currentStep
+                        ? "bg-blue-bg text-interactive-blue"
+                        : s.id < currentStep
+                          ? "bg-teal-bg text-teal-success"
+                          : "bg-bg text-slate-secondary",
+                    )}
+                  >
                     <s.icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-inter text-xs font-semibold text-muted uppercase tracking-wider">Step {s.id}</div>
-                    <div className="font-inter text-sm font-semibold text-primary-navy">{s.label}</div>
+                    <div className="font-inter text-xs font-semibold text-muted uppercase tracking-wider">
+                      Step {s.id}
+                    </div>
+                    <div className="font-inter text-sm font-semibold text-primary-navy">
+                      {s.label}
+                    </div>
                   </div>
                 </div>
               ))}

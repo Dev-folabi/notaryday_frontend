@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, Sparkles } from "lucide-react";
 import { billingApi } from "@/api/billing.api";
 import { useUIStore } from "@/store/uiStore";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/config/routes";
 
 const FREE_FEATURES = [
   "Unlimited jobs",
@@ -63,7 +63,7 @@ export default function OnboardingBookingPage() {
     setIsLoading(true);
     try {
       await completeOnboarding.mutateAsync();
-      router.push("/today");
+      router.push(ROUTES.APP.TODAY);
     } finally {
       setIsLoading(false);
     }

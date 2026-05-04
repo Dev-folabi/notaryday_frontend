@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CheckCircle2, Mail } from "lucide-react";
 import { setAuthCookie } from "@/lib/utils";
+import { ROUTES } from "@/config/routes";
 
 const loginSchema = z.object({
   email: z.email("Please enter a valid email address"),
@@ -45,12 +46,13 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isLoadingUser && isAuthenticated) {
       if (isOnboardingComplete) {
-        router.replace("/today");
+        router.replace(ROUTES.APP.TODAY);
       } else {
-        let route = "/onboarding/home";
-        if (user?.onboarding_step === 2) route = "/onboarding/scanback";
-        if (user?.onboarding_step === 3) route = "/onboarding/signing-types";
-        if (user?.onboarding_step === 4) route = "/onboarding/plan";
+        let route = ROUTES.ONBOARDING.HOME;
+        if (user?.onboarding_step === 2) route = ROUTES.ONBOARDING.SCANBACK;
+        if (user?.onboarding_step === 3)
+          route = ROUTES.ONBOARDING.SIGNING_TYPES;
+        if (user?.onboarding_step === 4) route = ROUTES.ONBOARDING.PLAN;
         router.replace(route);
       }
     }
@@ -69,14 +71,15 @@ export default function LoginPage() {
         setAuthCookie(token);
       }
 
-      let redirectPath = "/onboarding/home";
+      let redirectPath = ROUTES.ONBOARDING.HOME;
       if (user?.onboarding_completed) {
-        redirectPath = "/today";
+        redirectPath = ROUTES.APP.TODAY;
       } else {
-        if (user?.onboarding_step === 2) redirectPath = "/onboarding/scanback";
+        if (user?.onboarding_step === 2)
+          redirectPath = ROUTES.ONBOARDING.SCANBACK;
         if (user?.onboarding_step === 3)
-          redirectPath = "/onboarding/signing-types";
-        if (user?.onboarding_step === 4) redirectPath = "/onboarding/plan";
+          redirectPath = ROUTES.ONBOARDING.SIGNING_TYPES;
+        if (user?.onboarding_step === 4) redirectPath = ROUTES.ONBOARDING.PLAN;
       }
 
       router.push(redirectPath);
@@ -181,7 +184,7 @@ export default function LoginPage() {
               />
               <div className="text-right mt-1.5 -mb-2">
                 <Link
-                  href="/forgot-password"
+                  href={ROUTES.AUTH.FORGOT_PASSWORD}
                   title="Forgot password?"
                   className="text-[13px] font-medium text-blue hover:text-blue-700"
                 >
@@ -204,7 +207,7 @@ export default function LoginPage() {
 
           <p className="text-center font-inter text-sm text-slate-secondary">
             New to Notary Day?{" "}
-            <Link href="/signup" className="font-semibold text-blue">
+            <Link href={ROUTES.AUTH.SIGNUP} className="font-semibold text-blue">
               Create a free account
             </Link>
           </p>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
+import { ROUTES } from "@/config/routes";
 import { usersApi } from "@/api/users.api";
 import { useMutation } from "@tanstack/react-query";
 import type { UserSettings } from "@/types/user";
@@ -29,7 +30,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       setOnboardingStep(2);
-      router.push("/onboarding/scanback");
+      router.push(ROUTES.ONBOARDING.SCANBACK);
     },
     onError: (err: { message?: string }) => {
       addToast({
@@ -61,7 +62,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       setOnboardingStep(3);
-      router.push("/onboarding/signing-types");
+      router.push(ROUTES.ONBOARDING.SIGNING_TYPES);
     },
     onError: (err: { message?: string }) => {
       addToast({
@@ -86,7 +87,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       setOnboardingStep(4);
-      router.push("/onboarding/plan");
+      router.push(ROUTES.ONBOARDING.PLAN);
     },
     onError: (err: { message?: string }) => {
       addToast({
@@ -101,10 +102,10 @@ export function useOnboarding() {
   const skipStep = (currentStep: number) => {
     const nextStep = currentStep + 1;
     setOnboardingStep(nextStep);
-    if (nextStep === 2) router.push("/onboarding/scanback");
-    else if (nextStep === 3) router.push("/onboarding/signing-types");
+    if (nextStep === 2) router.push(ROUTES.ONBOARDING.SCANBACK);
+    else if (nextStep === 3) router.push(ROUTES.ONBOARDING.SIGNING_TYPES);
     else {
-      router.push("/");
+      router.push(ROUTES.APP.TODAY);
     }
   };
 

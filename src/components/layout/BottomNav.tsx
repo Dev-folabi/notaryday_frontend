@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/config/routes";
 import {
   CalendarDays,
   Briefcase,
@@ -12,11 +13,11 @@ import {
 } from "lucide-react";
 
 const bottomNavItems = [
-  { href: "/", icon: CalendarDays, label: "Today" },
-  { href: "/jobs", icon: Briefcase, label: "Jobs" },
-  { href: "/earnings", icon: TrendingUp, label: "Earnings" },
-  { href: "/expenses", icon: Receipt, label: "Expenses" },
-  { href: "/settings", icon: Settings, label: "Settings" },
+  { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
+  { href: ROUTES.APP.JOBS, icon: Briefcase, label: "Jobs" },
+  { href: ROUTES.APP.EARNINGS, icon: TrendingUp, label: "Earnings" },
+  { href: ROUTES.APP.EXPENSES, icon: Receipt, label: "Expenses" },
+  { href: ROUTES.APP.ACCOUNT, icon: Settings, label: "Settings" },
 ];
 
 interface BottomNavProps {
@@ -42,7 +43,7 @@ export function BottomNav({ isPro = false }: BottomNavProps) {
               href={href}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full",
-                isActive ? "text-primary-navy" : "text-slate-secondary"
+                isActive ? "text-primary-navy" : "text-slate-secondary",
               )}
               aria-current={isActive ? "page" : undefined}
             >

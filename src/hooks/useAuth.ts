@@ -7,6 +7,7 @@ import { usersApi } from "@/api/users.api";
 import { queryKeys } from "@/lib/queryClient";
 import type { User, SessionUser, UserSettings } from "@/types/user";
 import { useRouter } from "next/navigation";
+import { ROUTES } from "@/config/routes";
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -89,7 +90,7 @@ export function useAuth() {
       // Also clear the cookie
       document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict";
       queryClient.clear();
-      router.push("/login");
+      router.push(ROUTES.AUTH.LOGIN);
     },
   });
 
