@@ -303,6 +303,19 @@ export default function JobForm({
         </div>
       </div>
 
+      {/* PLATFORM NAME */}
+      <div className="flex flex-col gap-1.5">
+        <label className="font-inter font-medium text-xs text-slate-body">
+          Platform Name (optional)
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. Snapdocs, SigningOrder, Direct"
+          {...register("platform_name")}
+          className="bg-white border border-border rounded-[6px] h-10 px-3 text-sm focus:border-interactive-blue focus:ring-2 focus:ring-blue-100 outline-none w-full"
+        />
+      </div>
+
       <hr className="border-border my-4" />
 
       {/* CLIENT DETAILS */}

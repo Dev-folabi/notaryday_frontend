@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useCITTCheck } from "@/hooks/useCITT";
 import { useAuth } from "@/hooks/useAuth";
-import { X, Zap, MapPin, DollarSign, Clock, Info } from "lucide-react";
+import { useCreateJob } from "@/hooks/useJobs";
+import { X, Zap, MapPin, DollarSign, Clock, Info, Sparkles } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,7 +32,9 @@ type CITTFormValues = z.infer<typeof cittSchema>;
 export default function CITTModal() {
   const { isCITTOpen, closeCITT, cittPreFill } = useUIStore();
   const { mutate, isPending, isSuccess, data, reset } = useCITTCheck();
+  const createJob = useCreateJob();
   const { user } = useAuth();
+  const { addToast } = useUIStore();
   const isPro = user?.plan && user.plan !== "FREE";
 
   const {
@@ -140,6 +143,23 @@ export default function CITTModal() {
     closeCITT();
   };
 
+  const handleAddJob = async (values: any) => {
+    try {
+      await createJob.mutateAsync({
+        ...values,
+        appointment_time: new Date(values.appointment_time).toISOString(),
+      });
+      addToast({ type: "success", title: "Job added to your day" });
+      handleClose();
+    } catch (err: any) {
+      addToast({
+        type: "error",
+        title: "Failed to add job",
+        message: err?.message ?? "Please try again.",
+      });
+    }
+  };
+
   if (!isCITTOpen) return null;
 
   return (
@@ -172,6 +192,8 @@ export default function CITTModal() {
             <CITTVerdictCard
               result={data}
               onClose={handleClose}
+              onAdd={handleAddJob}
+              isAdding={createJob.isPending}
               jobData={watch()}
             />
           ) : (

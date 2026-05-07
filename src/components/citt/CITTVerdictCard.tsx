@@ -6,10 +6,18 @@ import { format } from "date-fns";
 interface CITTVerdictCardProps {
   result: CITCResult;
   onClose: () => void;
+  onAdd: (data: any) => void;
   jobData: any;
+  isAdding?: boolean;
 }
 
-export default function CITTVerdictCard({ result, onClose, jobData }: CITTVerdictCardProps) {
+export default function CITTVerdictCard({
+  result,
+  onClose,
+  onAdd,
+  jobData,
+  isAdding = false,
+}: CITTVerdictCardProps) {
   const {
     net_earnings = 0,
     mileage_cost = 0,
@@ -308,14 +316,30 @@ export default function CITTVerdictCard({ result, onClose, jobData }: CITTVerdic
         {/* ACTIONS */}
         <div className="flex flex-col gap-2.5 mt-2">
           {isTakeIt ? (
-            <button className="bg-[#0E7B6C] text-white border-none rounded-button h-12 text-[14px] font-semibold flex items-center justify-center gap-2 hover:opacity-90">
-              <Plus className="w-4 h-4" />
-              <span>Add to my day</span>
+            <button
+              onClick={() => onAdd(jobData)}
+              disabled={isAdding}
+              className="bg-[#0E7B6C] text-white border-none rounded-button h-12 text-[14px] font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50"
+            >
+              {isAdding ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              <span>{isAdding ? "Adding..." : "Add to my day"}</span>
             </button>
           ) : isRisky ? (
-            <button className="bg-[#D97706] text-white border-none rounded-button h-12 text-[14px] font-semibold flex items-center justify-center gap-2 hover:opacity-90">
-              <AlertTriangle className="w-4 h-4" />
-              <span>Accept anyway — I understand the risk</span>
+            <button
+              onClick={() => onAdd(jobData)}
+              disabled={isAdding}
+              className="bg-[#D97706] text-white border-none rounded-button h-12 text-[14px] font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50"
+            >
+              {isAdding ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <AlertTriangle className="w-4 h-4" />
+              )}
+              <span>{isAdding ? "Adding..." : "Accept anyway — I understand the risk"}</span>
             </button>
           ) : null}
 
@@ -332,9 +356,17 @@ export default function CITTVerdictCard({ result, onClose, jobData }: CITTVerdic
           </button>
           
           {isDecline && (
-             <button className="bg-transparent text-[#C0392B] border border-[#FECACA] rounded-button h-11 font-semibold text-[13px] flex items-center justify-center gap-1.5">
-               <AlertTriangle className="w-4 h-4" />
-               <span>Override and accept anyway</span>
+             <button
+               onClick={() => onAdd(jobData)}
+               disabled={isAdding}
+               className="bg-transparent text-[#C0392B] border border-[#FECACA] rounded-button h-11 font-semibold text-[13px] flex items-center justify-center gap-1.5 disabled:opacity-50"
+             >
+               {isAdding ? (
+                  <div className="w-4 h-4 border-2 border-[#C0392B]/30 border-t-[#C0392B] rounded-full animate-spin" />
+               ) : (
+                  <AlertTriangle className="w-4 h-4" />
+               )}
+               <span>{isAdding ? "Adding..." : "Override and accept anyway"}</span>
              </button>
           )}
         </div>
