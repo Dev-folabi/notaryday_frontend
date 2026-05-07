@@ -18,6 +18,7 @@ export type JobSource =
   | "CSV";
 
 export interface Job {
+  profitability_net_earnings: number;
   id: string;
   user_id: string;
   address: string;

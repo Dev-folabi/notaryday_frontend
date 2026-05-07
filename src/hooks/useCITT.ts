@@ -15,7 +15,7 @@ interface CITTCheckParams {
   scanback_duration_mins?: number;
 }
 
-interface CITCResult {
+export interface CITCResult {
   can_make_it: boolean;
   drive_time_mins: number | null;
   drive_distance_miles: number | null;
@@ -33,7 +33,7 @@ export function useCITTCheck() {
   return useMutation({
     mutationFn: async (params: CITTCheckParams) => {
       const res = await cittApi.check(params);
-      return res as unknown as CITCResult;
+      return (res as any).data as CITCResult;
     },
     onSuccess: (data, variables) => {
       const key = queryKeys.citt.check({

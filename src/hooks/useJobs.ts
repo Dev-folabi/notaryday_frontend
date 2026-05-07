@@ -15,7 +15,7 @@ export function useJobs(params?: {
     queryKey: queryKeys.jobs.all(params),
     queryFn: async () => {
       const res = await jobsApi.list(params);
-      return res as Job[];
+      return (res as any).data as Job[];
     },
     staleTime: 30 * 1000,
   });
@@ -26,7 +26,7 @@ export function useJob(id: string) {
     queryKey: queryKeys.jobs.detail(id),
     queryFn: async () => {
       const res = await jobsApi.get(id);
-      return res as Job;
+      return (res as any).data as Job;
     },
     enabled: !!id,
     staleTime: 30 * 1000,

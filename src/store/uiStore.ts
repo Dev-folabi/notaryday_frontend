@@ -88,7 +88,6 @@ export const useUIStore = create<UIState>()(
     {
       name: "notaryday-ui",
       partialize: (state) => ({
-        activeDate: state.activeDate,
         onboardingStep: state.onboardingStep,
       }),
     }

@@ -5,7 +5,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { jobsApi } from "@/api/jobs.api";
 import { queryKeys } from "@/lib/queryClient";
-import { formatCurrency, formatMiles, toDateInputValue } from "@/lib/utils";
+import { formatCurrency, formatMiles, toDateInputValue, getInitials } from "@/lib/utils";
 import {
   CalendarDays,
   Plus,
@@ -28,6 +28,7 @@ import {
   isToday,
   getDay,
 } from "date-fns";
+import { useEffect } from "react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -36,9 +37,14 @@ export default function TodayPage() {
   const { user } = useAuth();
   const { activeDate, setActiveDate } = useUIStore();
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
-
   const today = new Date();
+  const todayIso = toDateInputValue(today);
   const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday start
+
+  // Ensure activeDate is today on mount
+  useEffect(() => {
+    setActiveDate(todayIso);
+  }, [setActiveDate, todayIso]);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(weekStart, i);
@@ -56,7 +62,7 @@ export default function TodayPage() {
     queryKey: queryKeys.jobs.all({ date: activeDate }),
     queryFn: async () => {
       const res = await jobsApi.list({ date: activeDate, limit: 50 });
-      return res as any[];
+      return (res as any).data;
     },
     enabled: !!activeDate,
   });
@@ -69,7 +75,7 @@ export default function TodayPage() {
         date: toDateInputValue(weekStart),
         limit: 100,
       });
-      return res as any[];
+      return (res as any).data;
     },
   });
   const weekJobs = (weekJobsQuery.data as any[]) ?? [];
@@ -110,27 +116,6 @@ export default function TodayPage() {
   return (
     <div className="flex flex-col h-full bg-bg">
       <div className="flex flex-1 overflow-hidden flex-col">
-        {/* Mobile top bar from prototype (blue Free/Pro chip + Avatar) */}
-        <div className="lg:hidden h-[56px] bg-white border-b border-border flex items-center justify-between px-[18px] flex-shrink-0">
-          <span className="font-sora font-bold text-[16px] text-primary-navy">
-            Notary Day
-          </span>
-          <div className="flex items-center gap-[10px]">
-            {!isPro ? (
-              <span className="inline-flex items-center gap-1 bg-border text-slate-body font-semibold text-[10px] tracking-[0.2px] uppercase rounded-[4px] px-[7px] py-[3px]">
-                Free
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 bg-pro-gold text-primary-navy font-semibold text-[10px] tracking-[0.2px] uppercase rounded-[4px] px-[7px] py-[3px]">
-                Pro
-              </span>
-            )}
-            <div className="w-[32px] h-[32px] rounded-full bg-primary-navy text-white text-[11px] font-semibold flex items-center justify-center font-inter">
-              {getInitials(userName)}
-            </div>
-          </div>
-        </div>
-
         <div className="flex-1 overflow-y-auto w-full">
           {/* Week Strip */}
           <div className="bg-white border-b border-border flex px-4 lg:px-7 flex-shrink-0 overflow-x-auto">
@@ -176,25 +161,23 @@ export default function TodayPage() {
           </div>
 
           {!isEmpty ? (
-            /* ============================================================== 
-               S-10: DASHBOARD HOME (Weekly Overview)
-               ============================================================== */
+            /* DASHBOARD HOME (Weekly Overview) */
             <div className="p-5 lg:p-7 pt-4">
-              <div className="flex items-baseline justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-4 gap-4">
                 <div>
                   <h1 className="font-sora text-[20px] font-bold text-primary-navy">
                     Good {greeting}, {userName}.
                   </h1>
                   <div className="text-[13px] text-slate-secondary mt-[3px]">
-                    {format(parseISO(activeDate), "EEEE, MMMM d")} · {jobCount}{" "}
-                    signing{jobCount !== 1 ? "s" : ""} on today's schedule
+                    {format(new Date(), "EEEE, MMMM d")} · {jobCount} signing
+                    {jobCount !== 1 ? "s" : ""} scheduled
                   </div>
                 </div>
                 <Link
                   href="/jobs/new"
-                  className="hidden lg:inline-flex items-center justify-center bg-primary-navy text-white border-none rounded-[8px] h-[36px] text-[12px] font-semibold px-[13px] gap-1.5 flex-shrink-0"
+                  className="inline-flex items-center justify-center bg-primary-navy text-white border-none rounded-[8px] h-[40px] text-[13px] font-semibold px-[16px] gap-1.5 w-full md:w-auto"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" />
                   <span>Add job</span>
                 </Link>
               </div>
@@ -334,9 +317,7 @@ export default function TodayPage() {
               )}
             </div>
           ) : (
-            /* ============================================================== 
-               S-09: EMPTY DASHBOARD
-               ============================================================== */
+            /* EMPTY DASHBOARD */
             <div className="flex-1">
               <div className="p-[14px] px-5 lg:px-7 bg-white border-b border-border flex items-center justify-between flex-shrink-0">
                 <span className="text-[14px] font-medium text-slate-secondary">
@@ -454,9 +435,7 @@ export default function TodayPage() {
   );
 }
 
-/* ==============================================================
-   CompactJobItem (S-10 List Style) 
-   ============================================================== */
+/* CompactJobItem (S-10 List Style)  */
 function CompactJobItem({ job }: { job: any }) {
   const net = parseFloat(job.net_earnings ?? job.fee ?? "0") || 0;
   const isGood = net >= 30;
@@ -518,11 +497,12 @@ function CompactJobItem({ job }: { job: any }) {
 
 function getTypeColorClass(type: string): string {
   const map: Record<string, string> = {
-    GENERAL: "bg-[#D1FAE5] text-[#065F46]", // cg
-    LOAN_REFI: "bg-[#DBEAFE] text-[#1D4ED8]", // cl
-    HYBRID: "bg-violet-light text-violet", // ch
-    PURCHASE_CLOSING: "bg-[#F1F5F9] text-[#64748B]", // cp
-    FIELD_INSPECTION: "bg-border text-slate", // cfr
+    GENERAL: "bg-[#D1FAE5] text-[#065F46]",
+    LOAN_REFI: "bg-[#DBEAFE] text-[#1D4ED8]",
+    HYBRID: "bg-violet-light text-violet",
+    PURCHASE_CLOSING: "bg-[#F1F5F9] text-[#64748B]",
+    FIELD_INSPECTION: "bg-[#FEF3C7] text-[#92400E]",
+    APOSTILLE: "bg-[#FCE7F3] text-[#9D174D]",
   };
   return map[type] ?? "bg-[#F1F5F9] text-[#64748B]";
 }
@@ -594,9 +574,4 @@ function WeekAtAGlanceBars({ weekDays, weekJobs, maxEarn }: any) {
       })}
     </div>
   );
-}
-
-function getInitials(name: string): string {
-  if (!name) return "?";
-  return name.slice(0, 2).toUpperCase();
 }

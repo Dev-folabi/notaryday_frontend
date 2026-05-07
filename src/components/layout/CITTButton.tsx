@@ -21,7 +21,7 @@ export function CITTButton({ className }: CITTButtonProps) {
         "bg-gradient-to-br from-primary-navy to-interactive-blue",
         "flex items-center justify-center shadow-fab border-2 border-white",
         "hover:scale-105 active:scale-95 transition-transform duration-150",
-        "bottom-[72px] left-1/2 -translate-x-1/2",
+        "bottom-[72px] left-1/2 -translate-x-1/2 lg:hidden",
         className
       )}
     >

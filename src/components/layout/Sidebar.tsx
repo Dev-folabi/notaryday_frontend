@@ -12,6 +12,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
+import { useUIStore } from "@/store/uiStore";
 
 const navItems = [
   { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
@@ -29,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ isPro = false, username, initials }: SidebarProps) {
   const pathname = usePathname();
+  const openCITT = useUIStore((s) => s.openCITT);
 
   // Helper to fallback initials if not provided
   const displayInitials = initials
@@ -84,7 +86,10 @@ export function Sidebar({ isPro = false, username, initials }: SidebarProps) {
       {/* Footer */}
       <div className="p-4 flex flex-col gap-[22px]">
         {/* Can I Take This? Button */}
-        <button className="w-full h-12 rounded-[10px] bg-primary-navy text-white font-inter font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#1A3D6B] transition-colors shadow-[0_2px_4px_rgba(15,44,78,0.2)]">
+        <button
+          onClick={() => openCITT()}
+          className="w-full h-12 rounded-[10px] bg-primary-navy text-white font-inter font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#1A3D6B] transition-colors shadow-[0_2px_4px_rgba(15,44,78,0.2)]"
+        >
           <Zap className="w-[18px] h-[18px]" fill="none" strokeWidth={2} />
           <span>Can I Take This?</span>
         </button>
