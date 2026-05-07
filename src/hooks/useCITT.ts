@@ -25,6 +25,16 @@ export interface CITCResult {
   scanback_conflict: boolean;
   scanback_conflict_detail?: string;
   verdict: "TAKE_IT" | "RISKY" | "DECLINE";
+  reason: string;
+  prev_job?: {
+    type: string;
+    time: string;
+    duration: number;
+  } | null;
+  next_job?: {
+    type: string;
+    time: string;
+  } | null;
 }
 
 export function useCITTCheck() {
@@ -33,7 +43,14 @@ export function useCITTCheck() {
   return useMutation({
     mutationFn: async (params: CITTCheckParams) => {
       const res = await cittApi.check(params);
-      return (res as any).data as CITCResult;
+      let result = (res as any);
+      if (result.data && result.success !== undefined) {
+        result = result.data;
+      }
+      if (result.data && result.success !== undefined) {
+        result = result.data;
+      }
+      return result as CITCResult;
     },
     onSuccess: (data, variables) => {
       const key = queryKeys.citt.check({

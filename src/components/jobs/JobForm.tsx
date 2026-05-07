@@ -99,7 +99,7 @@ export default function JobForm({
         const res = await fetch(
           `https://photon.komoot.io/api/?q=${encodeURIComponent(
             addressQuery
-          )}&limit=5&lang=en`
+          )}&limit=5&lang=en&countrycode=us`
         );
         if (!res.ok) throw new Error("Search failed");
         const data = await res.json();
