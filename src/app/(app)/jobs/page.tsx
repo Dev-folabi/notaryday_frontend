@@ -26,7 +26,18 @@ const STATUS_LABELS: Record<string, string> = {
 export default function JobsPage() {
   const router = useRouter();
   const { activeDate, setActiveDate } = useUIStore();
-  const { data: jobs = [], isLoading } = useJobs({ date: activeDate });
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [dateFilter, setDateFilter] = useState<string | undefined>(undefined);
+  const { data: jobs = [], isLoading } = useJobs({ date: dateFilter, status: statusFilter });
+
+  const STATUS_FILTERS = [
+    { value: undefined, label: "All" },
+    { value: "PENDING", label: "Pending" },
+    { value: "CONFIRMED", label: "Confirmed" },
+    { value: "IN_PROGRESS", label: "In Progress" },
+    { value: "COMPLETE", label: "Complete" },
+    { value: "CANCELLED", label: "Cancelled" },
+  ] as const;
 
   return (
     <div className="flex flex-col h-full">
@@ -35,7 +46,7 @@ export default function JobsPage() {
         <div>
           <h1 className="font-sora font-bold text-xl text-primary-navy">My Jobs</h1>
           <p className="font-inter text-xs text-slate-secondary mt-0.5">
-            {activeDate ? format(parseISO(activeDate), "MMMM d, yyyy") : "All dates"}
+            {dateFilter ? format(parseISO(dateFilter), "MMMM d, yyyy") : "All dates"}
           </p>
         </div>
         <Link
@@ -45,6 +56,42 @@ export default function JobsPage() {
           <Plus className="w-4 h-4" />
           Add job
         </Link>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="px-4 lg:px-8 py-3 bg-white border-b border-border flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 flex-shrink-0">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.label}
+              onClick={() => setStatusFilter(f.value)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg font-inter text-xs font-medium border transition-colors whitespace-nowrap flex-shrink-0",
+                statusFilter === f.value
+                  ? "border-primary-navy bg-blue-bg text-primary-navy font-semibold"
+                  : "border-border bg-white text-slate-secondary hover:border-slate-secondary"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dateFilter ?? ""}
+            onChange={(e) => setDateFilter(e.target.value || undefined)}
+            className="h-8 px-2 border border-border rounded-lg font-inter text-xs text-slate-secondary bg-white flex-1 min-w-0 lg:flex-none lg:w-auto"
+          />
+          {dateFilter && (
+            <button
+              onClick={() => setDateFilter(undefined)}
+              className="font-inter text-xs text-interactive-blue hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

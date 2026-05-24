@@ -55,7 +55,7 @@ export default function JournalPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="h-11 px-6 border-2 font-bold text-primary-navy bg-white hover:bg-slate-50 transition-all">
+            <Button variant="secondary" className="h-11 px-6 border-2 font-bold text-primary-navy bg-white hover:bg-slate-50 transition-all">
               <Download className="w-4 h-4" />
               Export PDF
             </Button>

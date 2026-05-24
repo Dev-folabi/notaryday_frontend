@@ -31,11 +31,11 @@ export default function JobCard({ job, showNav = true }: JobCardProps) {
   const time = new Date(job.appointment_time);
   const formattedTime = format(time, "h:mm a");
 
-  const fee = job.profitability_net_earnings ?? 0;
+  const net = parseFloat(job.net_earnings ?? "0") || 0;
   let feeColorClass = "text-slate-body";
-  if (fee >= 30) feeColorClass = "text-teal-success";
-  else if (fee >= 10) feeColorClass = "text-amber-warning";
-  else if (fee < 10) feeColorClass = "text-red-danger";
+  if (net >= 30) feeColorClass = "text-teal-success";
+  else if (net >= 10) feeColorClass = "text-amber-warning";
+  else if (net < 10) feeColorClass = "text-red-danger";
 
   const handleNav = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,7 +86,7 @@ export default function JobCard({ job, showNav = true }: JobCardProps) {
       </div>
       <div className="text-right flex-shrink-0">
         <div className={`text-[15px] font-bold mb-[1px] ${feeColorClass}`}>
-          ${fee.toFixed(2)}
+          ${net.toFixed(2)}
         </div>
         <div className="text-[10px] text-slate-secondary mb-[7px]">
           net after mileage
