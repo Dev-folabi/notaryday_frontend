@@ -73,7 +73,7 @@ export function useUpdateJobStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: JobStatus }) =>
       jobsApi.updateStatus(id, { status }),
-    onSuccess: (_data: unknown, vars: { id: string }) => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.jobs.detail(vars.id) });
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },

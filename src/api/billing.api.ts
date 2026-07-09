@@ -7,4 +7,6 @@ export const billingApi = {
   cancel: () => api.post("/billing/cancel"),
 
   getPortalUrl: () => api.get("/billing/portal"),
+
+  getStatus: () => api.get("/billing/status"),
 };

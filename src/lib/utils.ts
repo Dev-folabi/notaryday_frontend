@@ -163,7 +163,6 @@ export function sleep(ms: number): Promise<void> {
  */
 export function setAuthCookie(token: string): void {
   if (typeof document !== "undefined") {
-    // Set cookie for middleware to read (expires in 24h to match JWT)
     document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
   }
 }

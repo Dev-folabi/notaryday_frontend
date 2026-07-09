@@ -3,6 +3,7 @@
 import { useJob, useUpdateJobStatus, useDeleteJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import { formatCurrency } from "@/lib/utils";
+import { invoicesApi } from "@/api/accounting.api";
 import {
   Clock,
   MapPin,
@@ -327,6 +328,11 @@ export default function JobDetailPage() {
           </div>
         )}
 
+        {/* Invoice section (shown for COMPLETE jobs) */}
+        {job.status === "COMPLETE" && (
+          <InvoiceSection jobId={job.id} invoice={(job as any).invoice} />
+        )}
+
         {/* Actions */}
         <div className="flex flex-col gap-2">
           {nextAction && (
@@ -391,6 +397,113 @@ export default function JobDetailPage() {
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function InvoiceSection({ jobId, invoice }: { jobId: string; invoice: any }) {
+  const { addToast } = useUIStore();
+  const [inv, setInv] = useState<any>(invoice);
+  const [generating, setGenerating] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const res = await invoicesApi.generate(jobId);
+      const p = (res as any).data ?? res;
+      setInv((p as any).data ?? p);
+      addToast({ type: "success", title: "Invoice generated" });
+    } catch {
+      addToast({ type: "error", title: "Failed to generate invoice" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!inv) return;
+    setSending(true);
+    try {
+      await invoicesApi.send(inv.id);
+      setInv({ ...inv, sent_at: new Date().toISOString() });
+      addToast({ type: "success", title: "Invoice sent" });
+    } catch {
+      addToast({ type: "error", title: "Failed to send" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleMarkPaid = async (method: string) => {
+    if (!inv) return;
+    try {
+      await invoicesApi.markPaid(inv.id, method);
+      setInv({
+        ...inv,
+        is_paid: true,
+        paid_at: new Date().toISOString(),
+        payment_method_used: method,
+      });
+      addToast({ type: "success", title: "Marked as paid" });
+    } catch {
+      addToast({ type: "error", title: "Failed" });
+    }
+  };
+
+  return (
+    <div>
+      <span className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide block mb-2">
+        Invoice
+      </span>
+      <div className="bg-white border border-border rounded-12px p-4">
+        {!inv ? (
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="w-full h-10 bg-primary-navy text-white rounded-8px font-inter text-sm font-semibold disabled:opacity-50"
+          >
+            {generating ? "Generating..." : "Generate invoice"}
+          </button>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-inter text-sm font-semibold text-primary-navy">
+                  {inv.invoice_number}
+                </div>
+                <div className="font-inter text-xs text-slate-secondary">
+                  {formatCurrency(Number(inv.total))}
+                </div>
+              </div>
+              <span
+                className={`font-inter text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${inv.is_paid ? "bg-teal-bg text-teal-success" : inv.sent_at ? "bg-blue-bg text-interactive-blue" : "bg-slate-100 text-slate-secondary"}`}
+              >
+                {inv.is_paid ? "Paid" : inv.sent_at ? "Sent" : "Draft"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              {!inv.sent_at && (
+                <button
+                  onClick={handleSend}
+                  disabled={sending}
+                  className="flex-1 h-9 bg-primary-navy text-white rounded-8px font-inter text-xs font-semibold disabled:opacity-50"
+                >
+                  {sending ? "Sending..." : "Send invoice"}
+                </button>
+              )}
+              {!inv.is_paid && (
+                <button
+                  onClick={() => handleMarkPaid("Zelle")}
+                  className="flex-1 h-9 border border-teal-success text-teal-success rounded-8px font-inter text-xs font-semibold"
+                >
+                  Mark paid
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

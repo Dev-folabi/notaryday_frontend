@@ -1,16 +1,45 @@
 {
   "name": "Notary Day",
   "short_name": "Notary Day",
-  "description": "Everything you already do manually, done automatically.",
-  "start_url": "/",
+  "description": "Smart scheduling and business management for mobile notaries.",
+  "start_url": "/today",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#F8FAFC",
   "theme_color": "#0F2C4E",
+  "categories": ["business", "productivity"],
   "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/favicon.ico",
       "sizes": "64x64",
       "type": "image/x-icon"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Can I Take This?",
+      "short_name": "CITT",
+      "url": "/today?citt=open",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Jobs",
+      "url": "/jobs",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

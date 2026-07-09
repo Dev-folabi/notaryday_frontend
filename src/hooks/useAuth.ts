@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { authApi } from "@/api/auth.api";
 import { usersApi } from "@/api/users.api";
 import { queryKeys } from "@/lib/queryClient";
-import type { User, SessionUser, UserSettings } from "@/types/user";
+import type { User, SessionUser } from "@/types/user";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
 
@@ -56,7 +56,6 @@ export function useAuth() {
       const token = data?.data?.token;
       if (token) {
         localStorage.setItem("auth_token", token);
-        // Set cookie for middleware to read (expires in 24h to match JWT)
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
@@ -75,7 +74,6 @@ export function useAuth() {
       const token = data?.data?.token;
       if (token) {
         localStorage.setItem("auth_token", token);
-        // Set cookie for middleware to read (expires in 24h to match JWT)
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
@@ -132,8 +130,6 @@ export function useAuth() {
       if (data && Object.keys(data).length > 0) {
         await usersApi.updateSettings(data);
       }
-      // Update onboarding step (handled via settings or a dedicated endpoint)
-      // For now settings update handles this via backend
     },
   });
 
