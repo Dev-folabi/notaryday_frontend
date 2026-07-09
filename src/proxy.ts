@@ -19,12 +19,19 @@ function isPublicPath(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Landing page, auth pages, and public booking pages — allow through
-  if (isPublicPath(pathname)) {
+  // Allow public paths and static files
+  if (
+    isPublicPath(pathname) ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/icons") ||
+    pathname === "/manifest.json" ||
+    pathname === "/favicon.ico"
+  ) {
     return NextResponse.next();
   }
 
-  // Check for auth token cookie (set alongside localStorage for middleware use)
+  // Check for auth token cookie
   const authTokenCookie = request.cookies.get("auth_token");
   const hasToken = !!authTokenCookie?.value;
 
@@ -39,8 +46,8 @@ export function proxy(request: NextRequest) {
   }
 
   // Protect app routes — require token
-  // The (app) group routes and other protected paths
   const PROTECTED_PREFIXES = [
+    "/today",
     "/jobs",
     "/map",
     "/bookings",
@@ -49,12 +56,17 @@ export function proxy(request: NextRequest) {
     "/reports",
     "/journal",
     "/settings",
+    "/import",
+    "/notifications",
+    "/(" // App router groups
   ];
 
-  const isAppRoute =
-    pathname === "/" ||
-    pathname.startsWith("/(") ||
-    PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isProtectedRoute = PROTECTED_PREFIXES.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+
+  // Also protect the root path (dashboard) if it's not a public path
+  const isAppRoute = pathname === "/" || isProtectedRoute;
 
   if (isAppRoute) {
     if (!hasToken) {
@@ -75,6 +87,7 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico (favicon)
      * - public files (e.g. /manifest.json)
+     * - image files
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
