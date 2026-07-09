@@ -48,7 +48,7 @@ export default function JobForm({
     watch,
     formState: { errors },
   } = useForm<JobFormValues>({
-    resolver: zodResolver(jobSchema),
+    resolver: zodResolver(jobSchema) as any,
     defaultValues: {
       address: initialValues?.address || "",
       appointment_time: initialValues?.appointment_time

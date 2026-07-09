@@ -27,7 +27,7 @@ const cittSchema = z.object({
   signing_duration_mins: z.number().min(1).default(45),
 });
 
-type CITTFormValues = z.infer<typeof cittSchema>;
+type CITTFormValues = z.input<typeof cittSchema>;
 
 export default function CITTModal() {
   const { isCITTOpen, closeCITT, cittPreFill } = useUIStore();
@@ -46,7 +46,7 @@ export default function CITTModal() {
     reset: resetForm,
     formState: { errors },
   } = useForm<CITTFormValues>({
-    resolver: zodResolver(cittSchema),
+    resolver: zodResolver(cittSchema) as any,
     defaultValues: {
       address: "",
       appointment_time: "",

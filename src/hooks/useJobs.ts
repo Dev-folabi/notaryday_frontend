@@ -39,7 +39,7 @@ export function useCreateJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateJobInput) =>
-      jobsApi.create(data as Record<string, unknown>),
+      jobsApi.create(data as unknown as Record<string, unknown>),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },
@@ -50,8 +50,8 @@ export function useUpdateJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateJobInput> }) =>
-      jobsApi.update(id, data as Record<string, unknown>),
-    onSuccess: (_data: unknown, vars: { id: string }) => {
+      jobsApi.update(id, data as unknown as Record<string, unknown>),
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.jobs.detail(vars.id) });
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },

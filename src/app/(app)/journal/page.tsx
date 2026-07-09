@@ -179,7 +179,7 @@ export default function JournalPage() {
 
           <div className="mt-12 text-center">
             <p className="font-inter text-sm text-muted font-medium mb-6">Showing 3 of 1,248 entries</p>
-            <Button variant="outline" className="h-12 px-8 border-2 font-bold text-primary-navy rounded-12px hover:bg-white transition-all">
+            <Button variant="secondary" className="h-12 px-8 border-2 font-bold text-primary-navy rounded-12px hover:bg-white transition-all">
               Load more entries
             </Button>
           </div>
