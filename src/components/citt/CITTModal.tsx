@@ -5,7 +5,15 @@ import { useUIStore } from "@/store/uiStore";
 import { useCITTCheck } from "@/hooks/useCITT";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateJob } from "@/hooks/useJobs";
-import { X, Zap, MapPin, DollarSign, Clock, Info, Sparkles } from "lucide-react";
+import {
+  X,
+  Zap,
+  MapPin,
+  DollarSign,
+  Clock,
+  Info,
+  Sparkles,
+} from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -104,8 +112,8 @@ export default function CITTModal() {
       try {
         const res = await fetch(
           `https://photon.komoot.io/api/?q=${encodeURIComponent(
-            addressQuery
-          )}&limit=5&lang=en&countrycode=us`
+            addressQuery,
+          )}&limit=5&lang=en&countrycode=us`,
         );
         if (!res.ok) throw new Error("Search failed");
         const json = await res.json();
@@ -187,7 +195,9 @@ export default function CITTModal() {
         )}
 
         {/* Body */}
-        <div className={`overflow-y-auto flex-1 custom-scrollbar ${isSuccess ? "p-0" : "p-5 px-[22px]"}`}>
+        <div
+          className={`overflow-y-auto flex-1 custom-scrollbar ${isSuccess ? "p-0" : "p-5 px-[22px]"}`}
+        >
           {isSuccess && data ? (
             <CITTVerdictCard
               result={data}
@@ -195,9 +205,14 @@ export default function CITTModal() {
               onAdd={handleAddJob}
               isAdding={createJob.isPending}
               jobData={watch()}
+              isPro={!!isPro}
             />
           ) : (
-            <form id="citt-form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <form
+              id="citt-form"
+              onSubmit={handleSubmit(onSubmit)}
+              className="flex flex-col gap-4"
+            >
               {/* ADDRESS AUTOCOMPLETE */}
               <div className="flex flex-col gap-1.5" ref={wrapperRef}>
                 <label className="text-[12px] font-medium text-[#475569]">
@@ -211,7 +226,9 @@ export default function CITTModal() {
                     onFocus={() => setShowSuggestions(true)}
                     placeholder="Enter signing address..."
                     className={`bg-white border ${
-                      errors.address ? "border-[#C0392B] ring-2 ring-[#C0392B]/5" : "border-[#E2E8F0] focus:ring-2 focus:ring-[#EFF6FF] focus:border-[#2563EB]"
+                      errors.address
+                        ? "border-[#C0392B] ring-2 ring-[#C0392B]/5"
+                        : "border-[#E2E8F0] focus:ring-2 focus:ring-[#EFF6FF] focus:border-[#2563EB]"
                     } rounded-[8px] h-11 px-3 pl-9 text-sm outline-none w-full transition-all`}
                   />
                   {isSearching && (
@@ -219,30 +236,32 @@ export default function CITTModal() {
                       <div className="w-3.5 h-3.5 border-2 border-[#E2E8F0] border-t-[#2563EB] rounded-full animate-spin" />
                     </div>
                   )}
-                  {showSuggestions && (suggestions.length > 0 || isSearching) && (
-                    <ul className="absolute z-10 top-12 left-0 w-full bg-white border border-[#E2E8F0] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {isSearching && suggestions.length === 0 && (
-                        <li className="px-3 py-3 text-xs text-[#64748B] text-center">
-                          Searching addresses...
-                        </li>
-                      )}
-                      {suggestions.map((s, i) => {
-                        const { name, street, city, state, postcode } = s.properties;
-                        const label = [name || street, city, state, postcode]
-                          .filter(Boolean)
-                          .join(", ");
-                        return (
-                          <li
-                            key={i}
-                            onClick={() => handleSelectAddress(s)}
-                            className="px-3 py-2 text-sm cursor-pointer hover:bg-[#F8FAFC] border-b border-[#E2E8F0] last:border-b-0 text-[#475569]"
-                          >
-                            {label}
+                  {showSuggestions &&
+                    (suggestions.length > 0 || isSearching) && (
+                      <ul className="absolute z-10 top-12 left-0 w-full bg-white border border-[#E2E8F0] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {isSearching && suggestions.length === 0 && (
+                          <li className="px-3 py-3 text-xs text-[#64748B] text-center">
+                            Searching addresses...
                           </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                        )}
+                        {suggestions.map((s, i) => {
+                          const { name, street, city, state, postcode } =
+                            s.properties;
+                          const label = [name || street, city, state, postcode]
+                            .filter(Boolean)
+                            .join(", ");
+                          return (
+                            <li
+                              key={i}
+                              onClick={() => handleSelectAddress(s)}
+                              className="px-3 py-2 text-sm cursor-pointer hover:bg-[#F8FAFC] border-b border-[#E2E8F0] last:border-b-0 text-[#475569]"
+                            >
+                              {label}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                 </div>
                 {errors.address && (
                   <span className="text-[#C0392B] text-[11px] flex items-center gap-1">
@@ -268,7 +287,9 @@ export default function CITTModal() {
                     />
                   </div>
                   {errors.fee && (
-                    <span className="text-[#C0392B] text-[11px]">{errors.fee.message}</span>
+                    <span className="text-[#C0392B] text-[11px]">
+                      {errors.fee.message}
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -334,7 +355,9 @@ export default function CITTModal() {
                 <div className="flex items-center gap-2.5">
                   <input
                     type="number"
-                    {...register("signing_duration_mins", { valueAsNumber: true })}
+                    {...register("signing_duration_mins", {
+                      valueAsNumber: true,
+                    })}
                     className="bg-white border border-[#E2E8F0] rounded-[8px] h-11 text-center w-[72px] text-sm focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] outline-none transition-all"
                   />
                   <span className="text-[13px] text-[#64748B]">minutes</span>

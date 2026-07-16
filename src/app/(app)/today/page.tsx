@@ -5,7 +5,12 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { jobsApi } from "@/api/jobs.api";
 import { queryKeys } from "@/lib/queryClient";
-import { formatCurrency, formatMiles, toDateInputValue, getInitials } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatMiles,
+  toDateInputValue,
+  getInitials,
+} from "@/lib/utils";
 import {
   CalendarDays,
   Plus,
@@ -29,6 +34,7 @@ import {
   getDay,
 } from "date-fns";
 import { useEffect } from "react";
+import { useGaps } from "@/hooks/usePlanner";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -66,6 +72,12 @@ export default function TodayPage() {
     },
     enabled: !!activeDate,
   });
+
+  // Fetch gap opportunities for today (pro only)
+  const { data: gaps = [] } = useGaps(isPro ? todayIso : "");
+  const gapsWithCandidates = gaps.filter((g) => g.candidates.length > 0);
+  const firstGap = gapsWithCandidates[0];
+  const bestCandidate = firstGap?.candidates[0];
 
   // Query jobs for the whole week to power the week stats
   const weekJobsQuery = useQuery({
@@ -294,22 +306,32 @@ export default function TodayPage() {
               </div>
 
               {/* GAP FINDER HINT */}
-              {isPro && jobs.length > 0 && (
+              {isPro && jobs.length > 0 && firstGap && bestCandidate && (
                 <div className="bg-violet-light border border-violet-200 rounded-[10px] p-[14px] px-[16px] mt-1 flex items-center gap-3">
                   <div className="w-[36px] h-[36px] bg-violet-100 rounded-[8px] flex items-center justify-center flex-shrink-0 text-violet">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-primary-navy mb-[2px]">
-                      1 gap opportunity found today
+                      {gapsWithCandidates.length} gap opportunit
+                      {gapsWithCandidates.length === 1 ? "y" : "ies"} found
+                      today
                     </div>
-                    <div className="text-[12px] text-slate-secondary">
-                      1847 Crenshaw Blvd · $125 offered · 2:00 PM
+                    <div className="text-[12px] text-slate-secondary truncate">
+                      {bestCandidate.address} ·{" "}
+                      {formatCurrency(bestCandidate.net_earnings)} net ·{" "}
+                      {format(parseISO(firstGap.gap_start), "h:mm a")}
                     </div>
                   </div>
                   <span
-                    onClick={() => useUIStore.getState().openCITT()}
-                    className="text-[12px] font-semibold text-violet cursor-pointer flex items-center gap-[3px]"
+                    onClick={() =>
+                      useUIStore.getState().openCITT({
+                        address: bestCandidate.address,
+                        time: bestCandidate.appointment_time,
+                        fee: bestCandidate.fee,
+                      })
+                    }
+                    className="text-[12px] font-semibold text-violet cursor-pointer flex items-center gap-[3px] flex-shrink-0"
                   >
                     CITT <ChevronRight className="w-3.5 h-3.5 stroke-2" />
                   </span>

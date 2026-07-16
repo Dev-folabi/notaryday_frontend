@@ -49,7 +49,7 @@ export function proxy(request: NextRequest) {
   const PROTECTED_PREFIXES = [
     "/today",
     "/jobs",
-    "/map",
+    "/day",
     "/bookings",
     "/earnings",
     "/expenses",

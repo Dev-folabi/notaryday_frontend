@@ -1,7 +1,7 @@
 export const ROUTES = {
   APP: {
     TODAY: "/today",
-    MAP: "/map",
+    MAP: "/day",
     JOBS: "/jobs",
     BOOKINGS: "/bookings",
     EARNINGS: "/earnings",

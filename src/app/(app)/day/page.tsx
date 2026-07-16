@@ -8,7 +8,7 @@ import ProGate from "@/components/ui/ProGate";
 import DaySummaryStrip from "@/components/planner/DaySummaryStrip";
 import DayMap from "@/components/map/DayMap";
 
-export default function MapPage() {
+export default function DayPage() {
   const { user } = useAuth();
   const { activeDate } = useUIStore();
   const date = activeDate || toDateInputValue(new Date());
