@@ -1,9 +1,12 @@
 export const ROUTES = {
   APP: {
     TODAY: "/today",
+    ACTIVE: "/active",
     MAP: "/day",
     JOBS: "/jobs",
+    GAP: "/gap",
     BOOKINGS: "/bookings",
+    INVOICES: "/invoices",
     EARNINGS: "/earnings",
     EXPENSES: "/expenses",
     JOURNAL: "/journal",
@@ -11,6 +14,7 @@ export const ROUTES = {
     ACCOUNT: "/settings",
     BILLING: "/settings/billing",
     NOTIFICATIONS: "/notifications",
+    IMPORT: "/import",
   },
   ONBOARDING: {
     HOME: "/onboarding/home",
