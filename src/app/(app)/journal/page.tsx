@@ -1,192 +1,273 @@
-import { Search, Filter, Download, Plus, MapPin, Users, Calendar, Banknote, Briefcase, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { cn } from "@/lib/utils";
+"use client";
 
-const MOCK_ENTRIES = [
-  {
-    id: "J-001",
-    date: "Dec 12, 2026",
-    time: "9:30 AM",
-    type: "Loan Refi",
-    signers: ["Sarah Johnson", "Mark Johnson"],
-    address: "3847 Wilshire Blvd, Los Angeles, CA",
-    fee: "$150.00",
-    net: "$132.50",
-    status: "Signed",
-  },
-  {
-    id: "J-002",
-    date: "Dec 12, 2026",
-    time: "1:45 PM",
-    type: "Hybrid",
-    signers: ["David Chen"],
-    address: "942 N Broadway, Los Angeles, CA",
-    fee: "$125.00",
-    net: "$114.20",
-    status: "Signed",
-  },
-  {
-    id: "J-003",
-    date: "Dec 11, 2026",
-    time: "11:00 AM",
-    type: "GNW",
-    signers: ["Elena Rodriguez"],
-    address: "1200 S Figueroa St, Los Angeles, CA",
-    fee: "$45.00",
-    net: "$38.50",
-    status: "Signed",
-  },
-];
+import { useState } from "react";
+import { Plus, Search, Edit2, Trash2, Check } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { useUIStore } from "@/store/uiStore";
+
+const TYPES = ["All", "Loan Refi", "General", "Hybrid", "Purchase Closing", "Field Inspection", "Apostille"];
+const ID_TYPES = ["CA Driver License", "US Passport", "State ID"];
+const ACTS = ["Acknowledgement", "Jurat", "Oath", "Certified Copy"];
+const TYPE_CHIP: Record<string, string> = {
+  "Loan Refi": "c-loan",
+  "Purchase Closing": "c-loan",
+  Hybrid: "c-hyb",
+  General: "c-gen",
+  "Field Inspection": "c-gen",
+  Apostille: "c-gen",
+};
+
+interface Entry {
+  id: string;
+  date: string;
+  time: string;
+  type: string;
+  act: string;
+  signer: string;
+  idType: string;
+  idNo: string;
+  doc: string;
+  addr: string;
+  fee: string;
+}
 
 export default function JournalPage() {
+  const { addToast } = useUIStore();
+  const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [form, setForm] = useState({
+    date: "2026-03-18",
+    time: "14:00",
+    act: "Acknowledgement",
+    type: "General",
+    signer: "",
+    idType: ID_TYPES[0],
+    idNo: "",
+    doc: "",
+    addr: "",
+    fee: "",
+  });
+
+  const filtered = entries.filter((e) => {
+    if (filter !== "All" && e.type !== filter) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (!e.signer.toLowerCase().includes(s) && !e.addr.toLowerCase().includes(s) && !e.doc.toLowerCase().includes(s))
+        return false;
+    }
+    return true;
+  });
+
+  const openNew = () => {
+    setEditing(null);
+    setForm({
+      date: "2026-03-18",
+      time: "14:00",
+      act: "Acknowledgement",
+      type: "General",
+      signer: "",
+      idType: ID_TYPES[0],
+      idNo: "",
+      doc: "",
+      addr: "",
+      fee: "",
+    });
+    setModalOpen(true);
+  };
+
+  const openEdit = (e: Entry) => {
+    setEditing(e);
+    setForm({
+      date: e.date,
+      time: e.time,
+      act: e.act,
+      type: e.type,
+      signer: e.signer,
+      idType: e.idType,
+      idNo: e.idNo,
+      doc: e.doc,
+      addr: e.addr,
+      fee: e.fee,
+    });
+    setModalOpen(true);
+  };
+
+  const save = () => {
+    const next: Entry = {
+      id: editing?.id ?? `#JN-${(entries.length + 129).toString()}`,
+      date: form.date,
+      time: form.time,
+      act: form.act,
+      type: form.type,
+      signer: form.signer || "New Signer",
+      idType: form.idType,
+      idNo: form.idNo || "X0000000",
+      doc: form.doc || "General Document",
+      addr: form.addr || "Los Angeles, CA",
+      fee: form.fee || "$0",
+    };
+    if (editing) {
+      setEntries((prev) => prev.map((e) => (e.id === editing.id ? next : e)));
+      addToast({ type: "success", title: "Journal entry updated" });
+    } else {
+      setEntries((prev) => [next, ...prev]);
+      addToast({ type: "success", title: "Journal entry added" });
+    }
+    setModalOpen(false);
+  };
+
+  const remove = (id: string) => {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+    addToast({ type: "info", title: "Journal entry deleted" });
+  };
+
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-slate-50/50">
-      {/* Header Section */}
-      <header className="bg-white border-b border-border px-6 py-8">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="font-sora font-extrabold text-3xl text-primary-navy tracking-tight mb-2">
-              Notarial Journal
-            </h1>
-            <p className="font-inter text-sm text-slate-secondary font-medium uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-teal-success" />
-              Legally compliant records
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" className="h-11 px-6 border-2 font-bold text-primary-navy bg-white hover:bg-slate-50 transition-all">
-              <Download className="w-4 h-4" />
-              Export PDF
-            </Button>
-            <Button className="h-11 px-6 bg-interactive-blue hover:bg-blue-hover text-white font-extrabold shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-              <Plus className="w-4 h-4" />
-              Add Entry
-            </Button>
+    <div className="flex flex-col h-full">
+      <div className="ph">
+        <div className="ph-title">Notarial Journal</div>
+        <button onClick={openNew} className="btn-p" style={{ width: "auto", height: 34, padding: "0 12px", fontSize: 11 }}>
+          <Plus className="w-3.5 h-3.5" /> New entry
+        </button>
+      </div>
+
+      <div className="bg-white border-b border-border px-3.5 py-2.5 flex gap-2 flex-shrink-0 flex-wrap items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-3.5 h-3.5 text-slate-secondary absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, address, or document"
+            className="w-full h-9 bg-background border border-border rounded-[8px] pl-8 pr-3 font-inter text-[12px] text-navy outline-none focus:border-blue"
+          />
+        </div>
+        <div className="flex gap-1 bg-border p-0.5 rounded-[8px] overflow-x-auto flex-shrink-0">
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className="px-2.5 py-1 rounded-[5px] font-inter text-[11px] font-medium whitespace-nowrap"
+              style={{
+                color: filter === t ? "var(--navy)" : "var(--slate2)",
+                background: filter === t ? "#fff" : "transparent",
+                boxShadow: filter === t ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white border-b border-border px-3.5 py-2 flex gap-5 flex-shrink-0 flex-wrap">
+        <div>
+          <span className="font-sora text-[16px] font-bold text-navy">{entries.length}</span>
+          <span className="font-inter text-[10px] text-muted ml-1">Total acts, 2026</span>
+        </div>
+        <div>
+          <span className="font-sora text-[16px] font-bold text-navy">0</span>
+          <span className="font-inter text-[10px] text-muted ml-1">This month</span>
+        </div>
+        <div className="ml-auto font-inter text-[11px] text-slate-secondary">
+          Showing {filtered.length} entries
+        </div>
+      </div>
+
+      <div className="con">
+        <div className="alert al-blue mb-4">
+          <span className="text-blue flex-shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg></span>
+          <div className="font-inter text-[11px] leading-[1.4]">
+            Journal entries are auto created when you mark a job complete. You can
+            edit any entry manually. All entries meet California, Texas, Florida,
+            and New York requirements.
           </div>
         </div>
-      </header>
 
-      {/* Stats Bar */}
-      <section className="px-6 py-6 border-b border-border bg-white shadow-sm sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-x-12 gap-y-4">
-          <div className="flex flex-col">
-            <span className="font-sora font-extrabold text-xl text-primary-navy leading-none mb-1">1,248</span>
-            <span className="font-inter text-[10px] font-bold text-muted uppercase tracking-widest leading-none">Total Entries</span>
+        {filtered.length === 0 ? (
+          <div className="empty-box">
+            <p className="font-inter text-sm text-slate-secondary">No entries found</p>
           </div>
-          <div className="w-px h-8 bg-border hidden sm:block" />
-          <div className="flex flex-col">
-            <span className="font-sora font-extrabold text-xl text-primary-navy leading-none mb-1">2,410</span>
-            <span className="font-inter text-[10px] font-bold text-muted uppercase tracking-widest leading-none">Signers</span>
-          </div>
-          <div className="w-px h-8 bg-border hidden sm:block" />
-          <div className="flex flex-col">
-            <span className="font-sora font-extrabold text-xl text-primary-navy leading-none mb-1">3,892</span>
-            <span className="font-inter text-[10px] font-bold text-muted uppercase tracking-widest leading-none">Signatures</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Controls */}
-          <div className="flex flex-col lg:flex-row items-center gap-4 mb-8">
-            <div className="relative flex-1 w-full lg:w-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted pointer-events-none" />
-              <input 
-                placeholder="Search by signer, address, or type…"
-                className="h-12 w-full pl-12 pr-4 bg-white border-2 border-border rounded-16px font-inter text-sm text-primary-navy placeholder:text-muted/60 focus:border-interactive-blue focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all font-medium"
-              />
-            </div>
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <div className="h-12 bg-white border-2 border-border rounded-16px px-4 flex items-center gap-2 cursor-pointer hover:border-slate-300 transition-all shadow-sm">
-                <Calendar className="w-4 h-4 text-primary-navy" />
-                <span className="font-inter text-sm font-bold text-primary-navy whitespace-nowrap">All dates</span>
-              </div>
-              <div className="h-12 bg-white border-2 border-border rounded-16px px-4 flex items-center gap-2 cursor-pointer hover:border-slate-300 transition-all shadow-sm">
-                <Filter className="w-4 h-4 text-primary-navy" />
-                <span className="font-inter text-sm font-bold text-primary-navy whitespace-nowrap">Filter entries</span>
-              </div>
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="space-y-4">
-            {MOCK_ENTRIES.map((entry) => (
-              <div 
-                key={entry.id}
-                className="group bg-white border-2 border-border rounded-[24px] p-6 lg:p-8 hover:border-interactive-blue hover:shadow-xl hover:shadow-slate-200/50 transition-all cursor-pointer relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 p-3 flex flex-col items-end gap-2">
-                  <div className="font-inter text-[10px] font-extrabold text-muted uppercase tracking-widest">
-                    Entry {entry.id}
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted group-hover:text-interactive-blue transition-all group-hover:translate-x-1" />
+        ) : (
+          filtered.map((e) => (
+            <div key={e.id} className="card p-3 mb-2">
+              <div className="flex justify-between gap-2 mb-1.5 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap items-center">
+                  <span className="font-sora text-[12px] font-bold text-navy">{e.id}</span>
+                  <span className={`chip ${TYPE_CHIP[e.type] ?? "c-gen"}`} style={{ fontSize: 8 }}>{e.type}</span>
+                  <span className="bg-background border border-border rounded-[4px] font-inter text-[9px] font-medium text-slate-secondary px-1.5 py-0.5">{e.act}</span>
                 </div>
-
-                <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center">
-                  {/* Left: Time/Type */}
-                  <div className="flex items-center gap-5 min-w-[200px]">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-bg flex flex-col items-center justify-center text-interactive-blue shadow-sm shadow-blue-500/5">
-                      <span className="font-sora font-extrabold text-sm uppercase leading-none">{entry.date.split(" ")[0]}</span>
-                      <span className="font-sora font-extrabold text-xl leading-none mt-1">{entry.date.split(" ")[1].replace(",", "")}</span>
-                    </div>
-                    <div>
-                      <div className="font-inter text-base font-extrabold text-primary-navy mb-1">{entry.time}</div>
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 font-inter text-[10px] font-bold text-slate-secondary uppercase tracking-wider">
-                        <Briefcase className="w-3 h-3" />
-                        {entry.type}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Middle: Signer & Address */}
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center">
-                        <Users className="w-4 h-4 text-primary-navy" />
-                      </div>
-                      <div className="font-inter text-base font-bold text-primary-navy">
-                        {entry.signers.join(" & ")}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-bg flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-primary-navy" />
-                      </div>
-                      <div className="font-inter text-sm text-slate-secondary font-medium">
-                        {entry.address}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Earnings */}
-                  <div className="lg:text-right flex flex-row lg:flex-col gap-8 lg:gap-2">
-                    <div className="flex flex-col lg:items-end">
-                      <span className="font-inter text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Fee Received</span>
-                      <span className="font-sora font-extrabold text-lg text-primary-navy">{entry.fee}</span>
-                    </div>
-                    <div className="flex flex-col lg:items-end">
-                      <span className="font-inter text-[10px] font-bold text-teal-success uppercase tracking-widest mb-1">Net (IRS Rate)</span>
-                      <span className="font-sora font-extrabold text-xl text-teal-success">{entry.net}</span>
-                    </div>
-                  </div>
-                </div>
+                <span className="font-inter text-[10px] text-muted">{e.date} · {e.time}</span>
               </div>
-            ))}
-          </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2">
+                {[
+                  ["Signer", e.signer],
+                  ["ID", `${e.idType} — ${e.idNo}`],
+                  ["Document", e.doc],
+                  ["Location", e.addr],
+                  ["Fee", e.fee],
+                ].map(([l, v]) => (
+                  <div key={l}>
+                    <div className="font-inter text-[9px] font-semibold text-muted uppercase tracking-[0.3px] mb-0.5">{l}</div>
+                    <div className="font-inter text-[11px] text-navy font-medium break-words">{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2.5">
+                <button onClick={() => openEdit(e)} className="font-inter text-[11px] font-medium text-blue bg-transparent border-none cursor-pointer flex items-center gap-1">
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button onClick={() => remove(e.id)} className="font-inter text-[11px] font-medium text-red bg-transparent border-none cursor-pointer flex items-center gap-1">
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
 
-          <div className="mt-12 text-center">
-            <p className="font-inter text-sm text-muted font-medium mb-6">Showing 3 of 1,248 entries</p>
-            <Button variant="secondary" className="h-12 px-8 border-2 font-bold text-primary-navy rounded-12px hover:bg-white transition-all">
-              Load more entries
-            </Button>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit journal entry" : "New journal entry"} showClose>
+        <div className="flex flex-col gap-3">
+          <div className="g2">
+            <div className="field"><label className="lbl">Date</label><input type="date" className="inp" value={form.date} onChange={(e) => set("date", e.target.value)} /></div>
+            <div className="field"><label className="lbl">Time</label><input type="time" className="inp" value={form.time} onChange={(e) => set("time", e.target.value)} /></div>
           </div>
+          <div className="g2">
+            <div className="field">
+              <label className="lbl">Type of act</label>
+              <select className="sel" value={form.act} onChange={(e) => set("act", e.target.value)}>
+                {ACTS.map((a) => <option key={a}>{a}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label className="lbl">Signing type</label>
+              <select className="sel" value={form.type} onChange={(e) => set("type", e.target.value)}>
+                {TYPES.filter((t) => t !== "All").map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="field"><label className="lbl">Signer name</label><input className="inp" placeholder="Signer full name" value={form.signer} onChange={(e) => set("signer", e.target.value)} /></div>
+          <div className="g2">
+            <div className="field">
+              <label className="lbl">ID type</label>
+              <select className="sel" value={form.idType} onChange={(e) => set("idType", e.target.value)}>
+                {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="field"><label className="lbl">ID number</label><input className="inp" placeholder="ID number" value={form.idNo} onChange={(e) => set("idNo", e.target.value)} /></div>
+          </div>
+          <div className="field"><label className="lbl">Document type</label><input className="inp" placeholder="Document type" value={form.doc} onChange={(e) => set("doc", e.target.value)} /></div>
+          <div className="field"><label className="lbl">Location</label><input className="inp" placeholder="Signing location" value={form.addr} onChange={(e) => set("addr", e.target.value)} /></div>
+          <div className="field"><label className="lbl">Fee charged</label><input className="inp" placeholder="$0" value={form.fee} onChange={(e) => set("fee", e.target.value)} /></div>
         </div>
-      </main>
+        <div className="modal-foot flex-col gap-2">
+          <button onClick={save} className="btn-p"><Check className="w-4 h-4" /> {editing ? "Update" : "Add"} entry</button>
+          <button onClick={() => setModalOpen(false)} className="btn-gh">Cancel</button>
+        </div>
+      </Modal>
     </div>
   );
 }
-
-import { CheckCircle2 } from "lucide-react";

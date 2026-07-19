@@ -11,6 +11,7 @@ import { PasswordStrength } from "@/components/ui/PasswordStrength";
 import { useUIStore } from "@/store/uiStore";
 import Link from "next/link";
 import { Lock, ArrowRight } from "lucide-react";
+import { Suspense } from "react";
 
 const schema = z
   .object({
@@ -24,7 +25,7 @@ const schema = z
 
 type ResetForm = z.infer<typeof schema>;
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -140,5 +141,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

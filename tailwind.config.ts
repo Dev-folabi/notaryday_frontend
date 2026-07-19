@@ -9,9 +9,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Core palette (semantic, clean names)
+        // Core palette
         navy: "#0F2C4E",
         "navy-active": "#1A3D6B",
+        "navy-2": "#1A3D6B",
 
         blue: "#2563EB",
         "blue-hover": "#3B82F6",
@@ -25,22 +26,33 @@ export default {
         amber: "#D97706",
         "amber-bg": "#FFFBEB",
         "amber-border": "#FDE68A",
+        "amber-2": "#FEF3C7",
 
         red: "#C0392B",
+        "red-bg": "#FEF2F2",
+        "red-border": "#FECACA",
+
+        violet: "#7C3AED",
+        "violet-bg": "#EDE9FE",
+        "violet-border": "#C4B5FD",
 
         slate: "#475569",
         "slate-secondary": "#64748B",
+        "slate-2": "#64748B",
         muted: "#94A3B8",
+        light: "#CBD5E1",
 
         border: "#E2E8F0",
         background: "#F8FAFC",
         surface: "#FFFFFF",
+        white: "#FFFFFF",
 
         // Domain-specific
         scanback: "#FEF3C7",
         "gap-finder": "#EDE9FE",
 
         pro: "#F59E0B",
+        gold: "#F59E0B",
 
         // Aliases heavily used in UI
         "primary-navy": "#0F2C4E",
@@ -62,14 +74,18 @@ export default {
       borderRadius: {
         sm: "6px",
         md: "8px",
-        lg: "12px",
-        xl: "14px",
+        lg: "10px",
+        xl: "12px",
+        "2xl": "14px",
+        button: "9px",
+        input: "8px",
       },
 
       boxShadow: {
         card: "0 1px 3px rgba(0,0,0,0.06)",
-        fab: "0 4px 16px rgba(15,44,78,0.4)",
+        fab: "0 6px 20px rgba(15,44,78,0.35)",
         dropdown: "0 6px 20px rgba(0,0,0,0.1)",
+        modal: "0 24px 64px rgba(0,0,0,0.28)",
       },
 
       spacing: {
@@ -82,6 +98,13 @@ export default {
         8: "32px",
         10: "40px",
         12: "48px",
+        14: "56px",
+        16: "64px",
+        sidebar: "256px",
+      },
+
+      maxWidth: {
+        "7xl": "720px",
       },
 
       container: {
@@ -91,6 +114,27 @@ export default {
           sm: "20px",
           lg: "32px",
         },
+      },
+
+      keyframes: {
+        modalIn: {
+          from: { transform: "translateY(12px) scale(0.98)", opacity: "0" },
+          to: { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
+        toastIn: {
+          from: { transform: "translateY(10px)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
+        drawerIn: {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(0)" },
+        },
+      },
+
+      animation: {
+        modalIn: "modalIn 0.22s ease",
+        toastIn: "toastIn 0.22s ease",
+        drawerIn: "drawerIn 0.24s ease",
       },
     },
   },

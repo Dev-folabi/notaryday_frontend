@@ -9,18 +9,26 @@ export interface CITTCheckRequest {
 }
 
 export interface CITTCheckResponse {
-  feasibility: {
-    can_make_it: boolean;
-    minutes_to_spare: number;
-  };
-  profitability: {
-    net_earnings: number;
-    effective_hourly_rate: number;
-    mileage_cost: number;
-  };
-  conflict: {
-    has_conflict: boolean;
-    conflict_detail?: string;
-  };
   verdict: "TAKE_IT" | "RISKY" | "DECLINE";
+  reason: string;
+  drive_distance_miles: number;
+  drive_time_mins: number;
+  mileage_cost: number;
+  net_earnings: number;
+  effective_hourly: number;
+  total_job_mins: number;
+  can_make_it: boolean;
+  scanback_conflict: boolean;
+  scanback_conflict_detail?: string;
+  gap_before?: number | null;
+  gap_after?: number | null;
+  prev_job?: {
+    type: string;
+    time: string;
+    duration: number;
+  } | null;
+  next_job?: {
+    type: string;
+    time: string;
+  } | null;
 }

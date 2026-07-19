@@ -8,6 +8,33 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 /**
+ * Unwrap an API response envelope. The axios interceptor returns `response.data`
+ * (the `{ success, data, meta }` envelope), so this peels to the actual payload.
+ */
+export function unwrap<T>(res: unknown): T {
+  const outer = (res as { data?: unknown })?.data ?? res;
+  const inner = (outer as { data?: unknown })?.data ?? outer;
+  return inner as T;
+}
+
+/**
+ * Extract a human-readable message from an axios/rejected error.
+ * The api.ts interceptor rejects with an object carrying `message`
+ * (the backend's error message). Falls back to a generic message.
+ */
+export function errMsg(err: unknown, fallback = "Something went wrong"): string {
+  if (!err) return fallback;
+  if (typeof err === "string") return err;
+  const e = err as {
+    message?: string;
+    response?: { data?: { error?: { message?: string } } };
+  };
+  if (e.message) return e.message;
+  if (e.response?.data?.error?.message) return e.response.data.error.message;
+  return fallback;
+}
+
+/**
  * Format a number as USD currency
  */
 export function formatCurrency(amount: number | string): string {

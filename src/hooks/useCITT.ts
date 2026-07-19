@@ -20,6 +20,7 @@ export interface CITCResult {
   drive_time_mins: number | null;
   drive_distance_miles: number | null;
   mileage_cost: number;
+  platform_fee?: number;
   net_earnings: number;
   effective_hourly: number;
   scanback_conflict: boolean;

@@ -1,509 +1,577 @@
 "use client";
 
+import React, { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  MapPin,
+  Clock,
+  DollarSign,
+  Navigation,
+  ScanLine,
+  Pencil,
+  Trash2,
+  Phone,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react";
 import { useJob, useUpdateJobStatus, useDeleteJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
-import { formatCurrency } from "@/lib/utils";
-import { invoicesApi } from "@/api/accounting.api";
+import type { Job, JobStatus } from "@/types/job";
 import {
-  Clock,
-  MapPin,
-  Navigation,
-  ChevronLeft,
-  Edit2,
-  Trash2,
-  CheckCircle2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
-import { format, parseISO } from "date-fns";
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import ProfitabilityRow from "@/components/jobs/ProfitabilityRow";
-import { JobStatus } from "@/types/job";
+  formatTime,
+  formatDate,
+  formatCurrency,
+  openNavigation,
+  errMsg,
+} from "@/lib/utils";
+import JobStatusBadge from "@/components/jobs/JobStatusBadge";
+import { useAuth } from "@/hooks/useAuth";
+import { invoicesApi } from "@/api/invoices.api";
+import { unwrap } from "@/lib/utils";
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  PENDING_REVIEW: "Pending Review",
-  CONFIRMED: "Confirmed",
-  IN_PROGRESS: "In Progress",
-  SCANNING: "Scanning",
-  COMPLETE: "Complete",
-  CANCELLED: "Cancelled",
-  DECLINED: "Declined",
-};
+function typeLabel(signingType: string): string {
+  const t = signingType.toUpperCase();
+  if (t === "LOAN_REFI") return "Loan Refi";
+  if (t === "GENERAL") return "General";
+  if (t === "HYBRID") return "Hybrid";
+  if (t === "PURCHASE_CLOSING") return "Purchase Closing";
+  if (t === "FIELD_INSPECTION") return "Field Inspection";
+  if (t === "APOSTILLE") return "Apostille";
+  return signingType;
+}
+
+function typeKey(signingType: string): "gen" | "loan" | "hyb" {
+  const t = signingType.toUpperCase();
+  if (t === "LOAN_REFI" || t === "PURCHASE_CLOSING") return "loan";
+  if (t === "HYBRID") return "hyb";
+  return "gen";
+}
+
+function typeChipClass(typeKey: string): string {
+  if (typeKey === "loan") return "bg-blue-100 text-blue-700";
+  if (typeKey === "hyb") return "bg-violet-100 text-violet-700";
+  return "bg-emerald-100 text-emerald-800";
+}
 
 export default function JobDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { data: job, isLoading } = useJob(id);
+  const { data: job, isLoading, isError } = useJob(id ?? "");
   const updateStatus = useUpdateJobStatus();
   const deleteJob = useDeleteJob();
-  const { addToast } = useUIStore();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { addToast, closeCITT } = useUIStore();
+  const { user } = useAuth();
+  const [showDelete, setShowDelete] = useState(false);
+  const [viewingInvoice, setViewingInvoice] = useState(false);
+
+  const viewInvoice = async () => {
+    try {
+      setViewingInvoice(true);
+      const res = await invoicesApi.list();
+      const invoices = (unwrap<any[]>(res) ?? []) as any[];
+      const inv = invoices.find((i) => i.job_id === job?.id);
+      if (inv) {
+        router.push(`/invoices?focus=${inv.id}`);
+      } else {
+        router.push(`/invoices/new?jobId=${job?.id}`);
+      }
+    } catch {
+      router.push(`/invoices/new?jobId=${job?.id}`);
+    } finally {
+      setViewingInvoice(false);
+    }
+  };
+
+  const handleStatus = (status: JobStatus) => {
+    updateStatus.mutate(
+      { id, status },
+      {
+        onSuccess: () => {
+          if (status === "IN_PROGRESS") {
+            addToast({ type: "success", title: "Signing started" });
+            router.push(`/active`);
+          } else if (status === "COMPLETE") {
+            addToast({ type: "success", title: "Job complete" });
+            router.push(`/invoices/new?jobId=${id}`);
+          } else {
+            addToast({ type: "success", title: "Job updated" });
+          }
+        },
+        onError: (err) =>
+          addToast({
+            type: "error",
+            title: "Couldn't update job",
+            message: errMsg(err),
+          }),
+      },
+    );
+  };
+
+  const handleDelete = () => {
+    deleteJob.mutate(id, {
+      onSuccess: () => {
+        addToast({ type: "success", title: "Job removed, route recalculated" });
+        router.push("/jobs");
+      },
+      onError: (err) => {
+        setShowDelete(false);
+        addToast({
+          type: "error",
+          title: "Couldn't delete job",
+          message: errMsg(err),
+        });
+      },
+    });
+  };
+
+  const navApp = (user?.settings?.preferred_nav_app ?? "GOOGLE_MAPS").toLowerCase() as
+    | "google"
+    | "apple"
+    | "waze";
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+      <div className="con" style={{ padding: 24, textAlign: "center", color: "#64748B", fontSize: 12 }}>
+        Loading job…
       </div>
     );
   }
 
-  if (!job) {
+  if (isError || !job) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="font-inter text-sm text-slate-secondary mb-4">
-          Job not found
-        </p>
-        <Link
-          href="/jobs"
-          className="font-inter text-sm text-interactive-blue hover:underline"
-        >
-          Back to jobs
-        </Link>
+      <div className="con" style={{ padding: 24, textAlign: "center", color: "#C0392B", fontSize: 12 }}>
+        Job not found.
+        <div style={{ marginTop: 12 }}>
+          <button className="btn-s" onClick={() => router.push("/jobs")}>
+            Back to My Jobs
+          </button>
+        </div>
       </div>
     );
   }
 
   const net = parseFloat(job.net_earnings ?? "0") || 0;
-  const fee = parseFloat(job.fee ?? "0") || 0;
   const mileageCost = parseFloat(job.mileage_cost ?? "0") || 0;
-  const mileageMiles = parseFloat(job.mileage_miles ?? "0") || 0;
-  const effectiveHourly = parseFloat(job.effective_hourly ?? "0") || 0;
-
-  const signingTypes: Record<string, string> = {
-    GENERAL: "General",
-    LOAN_REFI: "Loan Refi",
-    HYBRID: "Hybrid",
-    PURCHASE_CLOSING: "Purchase Closing",
-    FIELD_INSPECTION: "Field Inspection",
-    APOSTILLE: "Apostille",
-  };
-
-  const statusColors: Record<string, string> = {
-    PENDING: "bg-slate-100 text-slate-secondary",
-    PENDING_REVIEW: "bg-violet-bg text-violet",
-    CONFIRMED: "bg-blue-bg text-interactive-blue",
-    IN_PROGRESS: "bg-amber-bg text-amber-warning",
-    SCANNING: "bg-amber-bg text-amber-warning",
-    COMPLETE: "bg-teal-bg text-teal-success",
-    CANCELLED: "bg-slate-100 text-slate-secondary",
-    DECLINED: "bg-red-danger/10 text-red-danger",
-  };
-
-  const NEXT_STATUS: Record<JobStatus, { status: JobStatus; label: string }> = {
-    PENDING: { status: "CONFIRMED", label: "Confirm job" },
-    CONFIRMED: { status: "IN_PROGRESS", label: "Start signing" },
-    IN_PROGRESS: {
-      status: job?.scanback_duration_mins > 0 ? "SCANNING" : "COMPLETE",
-      label:
-        job?.scanback_duration_mins > 0
-          ? "Signing done — start scanback"
-          : "Mark complete",
-    },
-    SCANNING: { status: "COMPLETE", label: "Scanback done — mark complete" },
-    PENDING_REVIEW: {
-      status: "PENDING",
-      label: "",
-    },
-    COMPLETE: {
-      status: "PENDING",
-      label: "",
-    },
-    CANCELLED: {
-      status: "PENDING",
-      label: "",
-    },
-    DECLINED: {
-      status: "PENDING",
-      label: "",
-    },
-  };
-
-  const nextAction = job ? NEXT_STATUS[job.status] : undefined;
-
-  const handleAdvanceStatus = async () => {
-    if (!nextAction) return;
-    try {
-      await updateStatus.mutateAsync({ id: job.id, status: nextAction.status });
-      addToast({ type: "success", title: nextAction.label });
-    } catch {
-      addToast({ type: "error", title: "Failed to update status" });
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await deleteJob.mutateAsync(job.id);
-      addToast({ type: "success", title: "Job deleted" });
-      router.push("/jobs");
-    } catch {
-      addToast({ type: "error", title: "Failed to delete job" });
-    }
-  };
+  const miles = parseFloat(job.mileage_miles ?? "0") || 0;
+  const fee = parseFloat(job.fee ?? "0") || 0;
+  const platformFee = parseFloat(job.platform_fee ?? "0") || 0;
+  const irsRate = parseFloat(String(user?.settings?.irs_rate_per_mile ?? 0.67)) || 0.67;
+  const needsScanback = job.scanback_duration_mins > 0;
+  const tk = typeKey(job.signing_type);
+  const isActive = job.status === "IN_PROGRESS" || job.status === "SCANNING";
+  const isCompleted = job.status === "COMPLETE" || job.status === "CANCELLED";
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 lg:px-8 py-4 bg-white border-b border-border flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="p-1 text-slate-secondary hover:text-primary-navy"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="font-sora font-bold text-lg text-primary-navy">
-              Job detail
-            </h1>
-            <p className="font-inter text-xs text-slate-secondary">
-              {format(parseISO(job.appointment_time), "MMM d, yyyy")}
-            </p>
-          </div>
-        </div>
-        <Link
-          href={`/jobs/${job.id}/edit`}
-          className="inline-flex items-center gap-1.5 bg-white border border-primary-navy text-primary-navy font-inter font-semibold text-xs rounded-7px h-9 px-3 hover:bg-bg transition-colors"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-          Edit
-        </Link>
+    <>
+      <div className="ph" style={{ alignItems: "center" }}>
+        <button className="ph-back" onClick={() => router.push("/jobs")}>
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+        <div className="ph-title">Job detail</div>
+        <div style={{ minWidth: 44 }} />
       </div>
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 flex flex-col gap-4">
-        {/* Main job card */}
-        <div className="bg-white border border-border rounded-14px p-5">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div className="con">
+        {/* Header card */}
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
                 <span
-                  className={cn(
-                    "font-inter text-xs font-semibold uppercase px-2 py-0.5 rounded",
-                    statusColors[job.status] ??
-                      "bg-slate-100 text-slate-secondary",
-                  )}
+                  style={{
+                    background: "#EFF6FF",
+                    color: "#2563EB",
+                    display: "inline-flex",
+                    gap: 4,
+                    padding: "3px 8px",
+                    borderRadius: 20,
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
                 >
-                  {STATUS_LABELS[job.status] ?? job.status}
+                  <Clock className="w-3 h-3" /> {job.status.replace(/_/g, " ").toLowerCase()}
                 </span>
-                <span className="font-inter text-xs font-semibold uppercase px-2 py-0.5 rounded bg-violet-bg text-violet">
-                  {signingTypes[job.signing_type] ?? job.signing_type}
-                </span>
-                {job.platform_name && (
-                  <span className="font-inter text-xs font-medium uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-secondary">
-                    {job.platform_name}
-                  </span>
-                )}
+                <span className={`chip ${typeChipClass(tk)}`}>{typeLabel(job.signing_type)}</span>
+                <span className="chip c-plat">{job.platform_name || "Direct"}</span>
               </div>
-              <div className="font-inter text-sm font-semibold text-primary-navy flex items-center gap-2 mb-1">
-                <Clock className="w-3.5 h-3.5" />
-                {format(parseISO(job.appointment_time), "h:mm a")} ·{" "}
-                {job.signing_duration_mins} min
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#0F2C4E",
+                  marginBottom: 4,
+                  display: "flex",
+                  gap: 4,
+                  alignItems: "center",
+                }}
+              >
+                <Clock className="w-3 h-3" />
+                {formatTime(job.appointment_time)} - {job.signing_duration_mins} min
               </div>
-              <div className="font-inter text-xs text-slate-secondary flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{job.address}</span>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#475569",
+                  display: "flex",
+                  gap: 4,
+                  alignItems: "center",
+                  lineHeight: 1.3,
+                }}
+              >
+                <MapPin className="w-3 h-3 flex-shrink-0" /> {job.address}
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <div className="font-sora font-bold text-2xl text-teal-success">
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div
+                style={{
+                  fontFamily: "Sora, sans-serif",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: "#0E7B6C",
+                }}
+              >
                 {formatCurrency(fee)}
               </div>
-              <div className="font-inter text-[10px] text-muted">
-                offered fee
-              </div>
+              <div style={{ fontSize: 9, color: "#64748B" }}>offered fee</div>
             </div>
           </div>
-
-          {/* Navigate button */}
           <button
-            onClick={() => {
-              const encoded = encodeURIComponent(job.address);
-              window.open(
-                `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`,
-                "_blank",
-              );
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 6,
+              background: "#0F2C4E",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "10px 14px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              width: "100%",
             }}
-            className="w-full flex items-center justify-center gap-2 bg-primary-navy text-white font-inter font-semibold text-sm rounded-8px h-11 hover:bg-navy-active transition-colors"
+            onClick={() => openNavigation(job.address, navApp)}
           >
-            <Navigation className="w-4 h-4" />
-            Navigate to address
+            <Navigation className="w-4 h-4" /> Navigate to address
           </button>
         </div>
 
         {/* Net earnings breakdown */}
-        <div>
-          <span className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide block mb-2">
-            Net earnings
-          </span>
-          <ProfitabilityRow
-            fee={fee}
-            mileageCost={mileageCost}
-            mileageMiles={mileageMiles}
-            netEarnings={net}
-            effectiveHourly={effectiveHourly}
-          />
+        <span className="slbl">Net earnings</span>
+        <div className="em" style={{ marginBottom: 16 }}>
+          <div className="em-c">
+            <span className="em-l">Offered fee</span>
+            <span className="em-v" style={{ color: "#475569" }}>
+              {formatCurrency(fee)}
+            </span>
+          </div>
+          <div className="em-c" style={{ borderLeft: "1px solid #E2E8F0" }}>
+            <span className="em-l">Mileage cost</span>
+            <span className="em-v" style={{ color: "#D97706" }}>
+              -{formatCurrency(mileageCost)}
+            </span>
+            <span style={{ fontSize: 9, color: "#64748B", display: "block", marginTop: 2 }}>
+              {miles.toFixed(1)} mi x ${irsRate.toFixed(2)}
+            </span>
+          </div>
+          <div className="em-c" style={{ borderLeft: "1px solid #E2E8F0" }}>
+            <span className="em-l">Net earnings</span>
+            <span className="em-v" style={{ color: "#0E7B6C" }}>
+              {formatCurrency(net)}
+            </span>
+          </div>
         </div>
 
         {/* Details */}
-        <div>
-          <span className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide block mb-2">
-            Details
-          </span>
-          <div className="bg-white border border-border rounded-12px overflow-hidden">
-            {[
-              ["Client", job.client_name ?? "—"],
-              ["Phone", job.client_phone ?? "—"],
-              ["Platform", job.platform_name ?? "—"],
-              ["Date", format(parseISO(job.appointment_time), "EEEE, MMMM d")],
-              ["Start time", format(parseISO(job.appointment_time), "h:mm a")],
-              ["Duration", `${job.signing_duration_mins} minutes`],
-              [
-                "Scanback",
-                job.scanback_duration_mins > 0
-                  ? `${job.scanback_duration_mins} min (auto-blocked)`
-                  : "None",
-              ],
-              [
-                "Anchor",
-                job.route_sequence != null
-                  ? `Fixed — sequence #${job.route_sequence}`
-                  : "Not anchored",
-              ],
-            ].map(([label, value], i, arr) => (
-              <div
-                key={label}
-                className={cn(
-                  "flex items-start justify-between px-4 py-3",
-                  i < arr.length - 1 ? "border-b border-border" : "",
-                )}
+        <span className="slbl">Details</span>
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 10,
+            padding: "0 12px",
+            marginBottom: 16,
+          }}
+        >
+          {[
+            ["Client", job.client_name || "—"],
+            ["Phone", job.client_phone || "(555) 555-0000"],
+            ["Status", job.status.replace(/_/g, " ").toLowerCase()],
+            ["Platform", job.platform_name || "Direct"],
+            ["Date", formatDate(job.appointment_time)],
+            ["Start time", formatTime(job.appointment_time)],
+            ["Duration", `${job.signing_duration_mins} minutes`],
+            [
+              "Scanback",
+              needsScanback
+                ? `${job.scanback_duration_mins} min auto blocked`
+                : "None",
+            ],
+          ].map(([l, v], i) => (
+            <div
+              key={l}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "10px 0",
+                borderBottom: i < 7 ? "1px solid #E2E8F0" : "none",
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: 11, color: "#64748B", fontWeight: 500, width: 90, flexShrink: 0 }}>
+                {l}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#0F2C4E",
+                  fontWeight: 500,
+                  textAlign: "right",
+                  flex: 1,
+                  display: "flex",
+                  gap: 6,
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                }}
               >
-                <span className="font-inter text-xs text-slate-secondary w-32 flex-shrink-0">
-                  {label}
-                </span>
-                <span className="font-inter text-sm font-medium text-primary-navy text-right flex-1">
-                  {value}
-                </span>
-              </div>
-            ))}
-          </div>
+                {l === "Phone" && <Phone className="w-3 h-3" />}
+                {v}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* Notes */}
-        {job.notes && (
-          <div>
-            <span className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide block mb-2">
-              Notes
-            </span>
-            <div className="bg-white border border-border rounded-10px p-4">
-              <p className="font-inter text-sm text-slate-secondary leading-relaxed">
-                {job.notes}
-              </p>
-            </div>
-          </div>
-        )}
+        <span className="slbl">Notes</span>
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 8,
+            padding: "10px 12px",
+            fontSize: 12,
+            color: "#475569",
+            lineHeight: 1.5,
+            marginBottom: 16,
+          }}
+        >
+          {job.notes || "No notes"}
+        </div>
 
-        {/* Scanback block */}
-        {job.scanback_duration_mins > 0 && job.scanback_ends_at && (
-          <div className="bg-scanback-bg border-l-3 border-l-amber-warning rounded-0  px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-warning" />
+        {/* Scanback info */}
+        {needsScanback && (
+          <div
+            style={{
+              background: "#FFFBEB",
+              borderLeft: "3px solid #D97706",
+              borderRadius: "0 10px 10px 0",
+              padding: "10px 12px",
+              marginBottom: 16,
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span style={{ color: "#D97706" }}>
+                <ScanLine className="w-4 h-4" />
+              </span>
               <div>
-                <div className="font-inter text-xs font-semibold text-amber-warning">
-                  Scanback auto-blocked
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#D97706" }}>
+                  Scanback auto blocked
                 </div>
-                <div className="font-inter text-[11px] text-slate-secondary mt-0.5">
+                <div style={{ fontSize: 10, color: "#64748B", marginTop: 1 }}>
                   {job.scanback_ends_at
-                    ? `${format(parseISO(job.scanback_ends_at), "h:mm a")} · ${job.scanback_duration_mins} min`
-                    : "—"}
+                    ? `${formatTime(job.scanback_ends_at)} - ${job.scanback_duration_mins} min`
+                    : `After this signing - ${job.scanback_duration_mins} min`}
                 </div>
               </div>
             </div>
-            <span className="font-inter text-[10px] italic text-amber-warning">
+            <span style={{ fontSize: 10, color: "#D97706", fontStyle: "italic" }}>
               After this signing
             </span>
           </div>
         )}
 
-        {/* Invoice section (shown for COMPLETE jobs) */}
+        {/* Status actions */}
+        {!isCompleted && !isActive && (
+          <>
+            <button
+              className="btn-p"
+              style={{ background: "#0E7B6C", marginBottom: 8 }}
+              onClick={() => handleStatus("IN_PROGRESS")}
+              disabled={updateStatus.isPending}
+            >
+              <Clock className="w-4 h-4" /> Start Signing
+            </button>
+          </>
+        )}
+        {job.status === "IN_PROGRESS" && (
+          <button
+            className="btn-p"
+            style={{ background: "#D97706", marginBottom: 8 }}
+            onClick={() => router.push("/active")}
+          >
+            <ScanLine className="w-4 h-4" /> Go to Active Signing
+          </button>
+        )}
+        {job.status === "SCANNING" && (
+          <button
+            className="btn-p"
+            style={{ background: "#D97706", marginBottom: 8 }}
+            onClick={() => router.push("/active")}
+          >
+            <ScanLine className="w-4 h-4" /> Go to Active Signing
+          </button>
+        )}
         {job.status === "COMPLETE" && (
-          <InvoiceSection jobId={job.id} invoice={(job as any).invoice} />
+          <button
+            className="btn-p"
+            style={{ background: "#0E7B6C", marginBottom: 8 }}
+            onClick={viewInvoice}
+            disabled={viewingInvoice}
+          >
+            {viewingInvoice ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                Loading invoice…
+              </>
+            ) : (
+              <>
+                <DollarSign className="w-4 h-4" /> View invoice
+              </>
+            )}
+          </button>
         )}
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2">
-          {nextAction && (
-            <Button
-              onClick={handleAdvanceStatus}
-              isLoading={updateStatus.isPending}
-              className="bg-teal-success text-white hover:bg-teal-success/90"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              {nextAction.label}
-            </Button>
-          )}
-          <div className="flex gap-2">
-            <Link
-              href={`/jobs/${job.id}/edit`}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-primary-navy text-primary-navy font-inter font-semibold text-sm rounded-8px h-11 px-4 hover:bg-bg transition-colors"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              Edit
-            </Link>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 bg-white border border-red-danger/30 text-red-danger font-inter font-semibold text-sm rounded-8px h-11 px-4 hover:bg-red-danger/5 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </button>
-          </div>
+        {/* Edit + Delete */}
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button
+            className="btn-s"
+            style={{ flex: 1 }}
+            onClick={() => router.push(`/jobs/${job.id}/edit`)}
+          >
+            <Pencil className="w-4 h-4" /> Edit
+          </button>
+          <button
+            className="btn-gh"
+            style={{ flex: 1, color: "#C0392B", borderColor: "#F1C7C2" }}
+            onClick={() => setShowDelete(true)}
+          >
+            <Trash2 className="w-4 h-4" /> Delete job
+          </button>
         </div>
+
+        {isActive && (
+          <div style={{ fontSize: 10, color: "#64748B", textAlign: "center", marginTop: 6 }}>
+            Active signing lets you update progress step by step: navigated, started,
+            signing done, scanback, complete. When done, you will be taken to send invoice.
+          </div>
+        )}
+        {isCompleted && (
+          <div style={{ fontSize: 10, color: "#64748B", textAlign: "center", marginTop: 6 }}>
+            This job is marked as {job.status.toLowerCase().replace(/_/g, " ")}. You can
+            edit details or delete it. To create an invoice, go to Invoices tab.
+          </div>
+        )}
       </div>
 
-      {/* Delete confirmation modal */}
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <div className="p-6 flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-full bg-red-danger/10 border border-red-danger/20 flex items-center justify-center mb-4">
-            <Trash2 className="w-6 h-6 text-red-danger" />
-          </div>
-          <h2 className="font-sora font-bold text-lg text-primary-navy mb-2">
-            Remove this job?
-          </h2>
-          <p className="font-inter text-sm text-slate-secondary leading-relaxed mb-5">
-            This job and its scanback block will be removed. Your route and
-            earnings for this day recalculate immediately.
-          </p>
-          <div className="bg-scanback-bg border border-amber-b rounded-10px p-3 mb-5 w-full text-left">
-            <p className="font-inter text-xs text-amber-warning">
-              Jobs are retained for 30 days before permanent deletion — you can
-              recover it from Settings if needed.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 w-full">
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              isLoading={deleteJob.isPending}
-            >
-              Yes, remove job
-            </Button>
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
-              Cancel — keep job
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-function InvoiceSection({ jobId, invoice }: { jobId: string; invoice: any }) {
-  const { addToast } = useUIStore();
-  const [inv, setInv] = useState<any>(invoice);
-  const [generating, setGenerating] = useState(false);
-  const [sending, setSending] = useState(false);
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      const res = await invoicesApi.generate(jobId);
-      const p = (res as any).data ?? res;
-      setInv((p as any).data ?? p);
-      addToast({ type: "success", title: "Invoice generated" });
-    } catch {
-      addToast({ type: "error", title: "Failed to generate invoice" });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!inv) return;
-    setSending(true);
-    try {
-      await invoicesApi.send(inv.id);
-      setInv({ ...inv, sent_at: new Date().toISOString() });
-      addToast({ type: "success", title: "Invoice sent" });
-    } catch {
-      addToast({ type: "error", title: "Failed to send" });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleMarkPaid = async (method: string) => {
-    if (!inv) return;
-    try {
-      await invoicesApi.markPaid(inv.id, method);
-      setInv({
-        ...inv,
-        is_paid: true,
-        paid_at: new Date().toISOString(),
-        payment_method_used: method,
-      });
-      addToast({ type: "success", title: "Marked as paid" });
-    } catch {
-      addToast({ type: "error", title: "Failed" });
-    }
-  };
-
-  return (
-    <div>
-      <span className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide block mb-2">
-        Invoice
-      </span>
-      <div className="bg-white border border-border rounded-12px p-4">
-        {!inv ? (
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="w-full h-10 bg-primary-navy text-white rounded-8px font-inter text-sm font-semibold disabled:opacity-50"
-          >
-            {generating ? "Generating..." : "Generate invoice"}
-          </button>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="font-inter text-sm font-semibold text-primary-navy">
-                  {inv.invoice_number}
+      {/* Delete confirm modal */}
+      {showDelete && (
+        <div className="modal-overlay" style={{ display: "flex" }}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div style={{ padding: "24px 20px 0", textAlign: "center" }}>
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#FEF2F2",
+                  border: "1px solid #F1C7C2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 12px",
+                  color: "#C0392B",
+                }}
+              >
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div style={{ fontFamily: "Sora, sans-serif", fontSize: 17, fontWeight: 700, color: "#0F2C4E" }}>
+                Remove this job
+              </div>
+            </div>
+            <div style={{ padding: "14px 20px" }}>
+              <div
+                style={{
+                  background: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0F2C4E" }}>
+                    {typeLabel(job.signing_type)} - {formatTime(job.appointment_time)}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#0E7B6C" }}>
+                    {formatCurrency(fee)}
+                  </span>
                 </div>
-                <div className="font-inter text-xs text-slate-secondary">
-                  {formatCurrency(Number(inv.total))}
+                <div style={{ fontSize: 11, color: "#64748B", marginBottom: 6 }}>{job.address}</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  <span className={`chip ${typeChipClass(tk)}`}>{typeLabel(job.signing_type)}</span>
+                  <span className="chip c-plat">{job.platform_name || "Direct"}</span>
                 </div>
               </div>
-              <span
-                className={`font-inter text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${inv.is_paid ? "bg-teal-bg text-teal-success" : inv.sent_at ? "bg-blue-bg text-interactive-blue" : "bg-slate-100 text-slate-secondary"}`}
-              >
-                {inv.is_paid ? "Paid" : inv.sent_at ? "Sent" : "Draft"}
-              </span>
+              <p style={{ fontSize: 12, color: "#64748B", lineHeight: 1.5, marginBottom: 12 }}>
+                This job and its scanback block will be removed. Your route and earnings
+                for this day recalculate immediately.
+              </p>
+              <div className="alert al-blue">
+                <AlertTriangle className="w-4 h-4" />
+                <span style={{ fontSize: 11, lineHeight: 1.4 }}>
+                  Jobs are retained for 30 days before permanent deletion, you can recover
+                  it from Settings.
+                </span>
+              </div>
             </div>
-            <div className="flex gap-2">
-              {!inv.sent_at && (
-                <button
-                  onClick={handleSend}
-                  disabled={sending}
-                  className="flex-1 h-9 bg-primary-navy text-white rounded-8px font-inter text-xs font-semibold disabled:opacity-50"
-                >
-                  {sending ? "Sending..." : "Send invoice"}
-                </button>
-              )}
-              {!inv.is_paid && (
-                <button
-                  onClick={() => handleMarkPaid("Zelle")}
-                  className="flex-1 h-9 border border-teal-success text-teal-success rounded-8px font-inter text-xs font-semibold"
-                >
-                  Mark paid
-                </button>
-              )}
+            <div style={{ padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <button
+                className="btn-danger"
+                onClick={handleDelete}
+                disabled={deleteJob.isPending}
+              >
+                <Trash2 className="w-4 h-4" /> Yes, remove job
+              </button>
+              <button className="btn-gh" onClick={() => setShowDelete(false)}>
+                Cancel, keep job
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }

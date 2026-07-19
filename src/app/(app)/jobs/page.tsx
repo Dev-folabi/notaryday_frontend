@@ -1,235 +1,311 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useJobs } from "@/hooks/useJobs";
-import { useUIStore } from "@/store/uiStore";
-import { queryKeys } from "@/lib/queryClient";
-import { formatCurrency, formatMiles, toDateInputValue } from "@/lib/utils";
-import { Plus, Clock, MapPin, Car, Briefcase, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { format, parseISO } from "date-fns";
+import { MapPin, Clock, DollarSign, Plus, Navigation, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useJobs } from "@/hooks/useJobs";
+import { useUIStore } from "@/store/uiStore";
+import type { Job, JobStatus } from "@/types/job";
+import { formatTime, formatCurrency, profitabilityColor } from "@/lib/utils";
+import JobStatusBadge from "@/components/jobs/JobStatusBadge";
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  PENDING_REVIEW: "Pending Review",
-  CONFIRMED: "Confirmed",
-  IN_PROGRESS: "In Progress",
-  SCANNING: "Scanning",
-  COMPLETE: "Complete",
-  CANCELLED: "Cancelled",
-  DECLINED: "Declined",
+const STATUS_FILTERS = [
+  "All",
+  "Pending",
+  "Confirmed",
+  "In Progress",
+  "Complete",
+  "Cancelled",
+] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+const STATUS_ENUM_MAP: Record<Exclude<StatusFilter, "All">, JobStatus> = {
+  Pending: "PENDING",
+  Confirmed: "CONFIRMED",
+  "In Progress": "IN_PROGRESS",
+  Complete: "COMPLETE",
+  Cancelled: "CANCELLED",
 };
+
+function typeKey(signingType: string): "gen" | "loan" | "hyb" {
+  const t = signingType.toUpperCase();
+  if (t === "LOAN_REFI" || t === "PURCHASE_CLOSING") return "loan";
+  if (t === "HYBRID") return "hyb";
+  return "gen";
+}
+
+function typeChipClass(typeKey: string): string {
+  if (typeKey === "loan") return "bg-blue-100 text-blue-700";
+  if (typeKey === "hyb") return "bg-violet-100 text-violet-700";
+  return "bg-emerald-100 text-emerald-800";
+}
+
+function typeLabel(signingType: string): string {
+  const t = signingType.toUpperCase();
+  if (t === "LOAN_REFI") return "Loan Refi";
+  if (t === "GENERAL") return "General";
+  if (t === "HYBRID") return "Hybrid";
+  if (t === "PURCHASE_CLOSING") return "Purchase Closing";
+  if (t === "FIELD_INSPECTION") return "Field Inspection";
+  if (t === "APOSTILLE") return "Apostille";
+  return signingType;
+}
 
 export default function JobsPage() {
   const router = useRouter();
-  const { activeDate, setActiveDate } = useUIStore();
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [dateFilter, setDateFilter] = useState<string | undefined>(undefined);
-  const { data: jobs = [], isLoading } = useJobs({ date: dateFilter, status: statusFilter });
+  const { openCITT } = useUIStore();
+  const [filter, setFilter] = useState<StatusFilter>("All");
+  const [date, setDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const { data: jobs, isLoading, isError } = useJobs({ date });
 
-  const STATUS_FILTERS = [
-    { value: undefined, label: "All" },
-    { value: "PENDING", label: "Pending" },
-    { value: "CONFIRMED", label: "Confirmed" },
-    { value: "IN_PROGRESS", label: "In Progress" },
-    { value: "COMPLETE", label: "Complete" },
-    { value: "CANCELLED", label: "Cancelled" },
-  ] as const;
+  const filtered =
+    !jobs || filter === "All"
+      ? jobs ?? []
+      : jobs.filter((j) => j.status === STATUS_ENUM_MAP[filter]);
+
+  const totalNet = filtered.reduce(
+    (sum, j) => sum + (parseFloat(j.net_earnings ?? "0") || 0),
+    0,
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 lg:px-8 py-4 lg:py-5 bg-white border-b border-border flex items-center justify-between flex-shrink-0">
-        <div>
-          <h1 className="font-sora font-bold text-xl text-primary-navy">My Jobs</h1>
-          <p className="font-inter text-xs text-slate-secondary mt-0.5">
-            {dateFilter ? format(parseISO(dateFilter), "MMMM d, yyyy") : "All dates"}
-          </p>
-        </div>
-        <Link
-          href="/jobs/new"
-          className="inline-flex items-center gap-2 bg-primary-navy text-white font-inter font-semibold text-sm rounded-button h-11 px-5 hover:bg-navy-active transition-colors"
+    <>
+      <div className="ph">
+        <div className="ph-title">My Jobs</div>
+        <button
+          className="btn-p"
+          style={{ width: "auto", height: 34, padding: "0 12px", fontSize: 11 }}
+          onClick={() => router.push("/jobs/new")}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           Add job
-        </Link>
+        </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="px-4 lg:px-8 py-3 bg-white border-b border-border flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3 flex-shrink-0">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="con">
+        {/* Status filter pills */}
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            marginBottom: 14,
+            flexWrap: "wrap",
+            overflowX: "auto",
+            paddingBottom: 2,
+          }}
+        >
           {STATUS_FILTERS.map((f) => (
             <button
-              key={f.label}
-              onClick={() => setStatusFilter(f.value)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg font-inter text-xs font-medium border transition-colors whitespace-nowrap flex-shrink-0",
-                statusFilter === f.value
-                  ? "border-primary-navy bg-blue-bg text-primary-navy font-semibold"
-                  : "border-border bg-white text-slate-secondary hover:border-slate-secondary"
-              )}
+              key={f}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 7,
+                fontSize: 11,
+                fontWeight: filter === f ? 600 : 500,
+                border: `1.5px solid ${filter === f ? "#0F2C4E" : "#E2E8F0"}`,
+                background: filter === f ? "#EFF6FF" : "#FFFFFF",
+                color: filter === f ? "#0F2C4E" : "#64748B",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+              onClick={() => setFilter(f)}
             >
-              {f.label}
+              {f}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={dateFilter ?? ""}
-            onChange={(e) => setDateFilter(e.target.value || undefined)}
-            className="h-8 px-2 border border-border rounded-lg font-inter text-xs text-slate-secondary bg-white flex-1 min-w-0 lg:flex-none lg:w-auto"
-          />
-          {dateFilter && (
-            <button
-              onClick={() => setDateFilter(undefined)}
-              className="font-inter text-xs text-interactive-blue hover:underline"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+        {/* Date picker + summary */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            marginBottom: 14,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderRadius: 8,
+              padding: "4px 10px",
+              fontSize: 11,
+              color: "#475569",
+            }}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              style={{
+                border: "none",
+                outline: "none",
+                fontSize: 11,
+                color: "#475569",
+                background: "transparent",
+              }}
+            />
           </div>
-        ) : jobs.length === 0 ? (
-          <div className="bg-white border border-border rounded-14px p-8 text-center">
-            <div className="w-14 h-14 rounded-12px bg-blue-bg flex items-center justify-center mx-auto mb-4">
-              <Briefcase className="w-7 h-7 text-interactive-blue" />
-            </div>
-            <h2 className="font-sora font-semibold text-lg text-primary-navy mb-2">
-              No jobs found
-            </h2>
-            <p className="font-inter text-sm text-slate-secondary mb-6 max-w-xs mx-auto">
-              Add your first job to start tracking your schedule and earnings.
-            </p>
-            <Link
-              href="/jobs/new"
-              className="inline-flex items-center gap-2 bg-primary-navy text-white font-inter font-semibold text-sm rounded-button h-11 px-5 hover:bg-navy-active transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add your first job
-            </Link>
+          <button
+            onClick={() => {
+              const d = new Date();
+              setDate(
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+              );
+            }}
+            style={{
+              fontSize: 11,
+              color: "#2563EB",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            Today
+          </button>
+          <span style={{ fontSize: 11, color: "#64748B" }}>
+            {filtered.length} jobs, {formatCurrency(totalNet)} net
+          </span>
+        </div>
+
+        {isLoading && (
+          <div style={{ textAlign: "center", padding: 24, color: "#64748B", fontSize: 12 }}>
+            Loading jobs…
           </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {jobs.map((job) => (
-              <Link
+        )}
+
+        {isError && (
+          <div style={{ textAlign: "center", padding: 24, color: "#C0392B", fontSize: 12 }}>
+            Couldn&apos;t load jobs. Please try again.
+          </div>
+        )}
+
+        {!isLoading && !isError && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {filtered.map((job) => (
+              <JobListItem
                 key={job.id}
-                href={`/jobs/${job.id}`}
-                className="bg-white border border-border rounded-12px p-4 flex items-start justify-between gap-3 hover:border-slate-secondary transition-colors"
-              >
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-8px flex items-center justify-center flex-shrink-0 mt-0.5",
-                      job.scanback_duration_mins > 0 ? "bg-amber-bg" : "bg-blue-bg"
-                    )}
-                  >
-                    <Clock className={cn("w-4 h-4", job.scanback_duration_mins > 0 ? "text-amber-warning" : "text-interactive-blue")} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-inter text-sm font-semibold text-primary-navy">
-                        {format(parseISO(job.appointment_time), "h:mm a")}
-                      </span>
-                      <span className="font-inter text-xs text-muted">
-                        {job.signing_duration_mins} min
-                      </span>
-                      <StatusBadge status={job.status} />
-                    </div>
-                    <div className="font-inter text-xs text-slate-secondary flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{job.address}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <SigningTypeChip type={job.signing_type} />
-                      {job.platform_name && (
-                        <span className="font-inter text-[10px] font-medium uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-secondary">
-                          {job.platform_name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div
-                    className={cn(
-                      "font-sora font-bold text-lg",
-                      getProfitabilityColor(parseFloat(job.net_earnings ?? "0"))
-                    )}
-                  >
-                    {formatCurrency(parseFloat(job.net_earnings ?? "0"))}
-                  </div>
-                  <span className="font-inter text-[10px] text-muted">net</span>
-                  {job.drive_from_prev_mins && (
-                    <div className="flex items-center justify-end gap-1 mt-1 text-muted">
-                      <Car className="w-3 h-3" />
-                      <span className="font-inter text-[10px]">{job.drive_from_prev_mins} min</span>
-                    </div>
-                  )}
-                </div>
-              </Link>
+                job={job}
+                onClick={() => router.push(`/jobs/${job.id}`)}
+              />
             ))}
+            {filtered.length === 0 && (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: 24,
+                  color: "#64748B",
+                  fontSize: 12,
+                }}
+              >
+                No jobs found for this filter
+              </div>
+            )}
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+function JobListItem({ job, onClick }: { job: Job; onClick: () => void }) {
+  const router = useRouter();
+  const isLive = job.status === "IN_PROGRESS";
+  const net = parseFloat(job.net_earnings ?? "0") || 0;
+  const tk = typeKey(job.signing_type);
+
+  return (
+    <div
+      className="jcard"
+      style={{
+        border: isLive ? "2px solid #D97706" : undefined,
+        background: isLive ? "#FFFBEB" : undefined,
+        cursor: "pointer",
+      }}
+      onClick={onClick}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+            marginBottom: 4,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#0F2C4E" }}>
+            {formatTime(job.appointment_time)}
+          </span>
+          <JobStatusBadge status={job.status} />
+          {isLive && (
+            <span
+              className="chip"
+              style={{ background: "#D97706", color: "#fff", fontSize: 8 }}
+            >
+              LIVE - Tap to resume
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#64748B",
+            display: "flex",
+            gap: 4,
+            alignItems: "center",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          <MapPin className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{job.address}</span>
+        </div>
+        <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
+          <span className={`chip ${typeChipClass(tk)}`}>{typeLabel(job.signing_type)}</span>
+          <span className="chip c-plat">{job.platform_name || "Direct"}</span>
+        </div>
+        {isLive && (
+          <button
+            style={{
+              marginTop: 8,
+              background: "#D97706",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 10px",
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push("/active");
+            }}
+          >
+            <Clock className="w-3 h-3 inline" /> Open Active Signing
+          </button>
+        )}
+      </div>
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div className={`text-[14px] font-bold ${profitabilityColor(net)}`}>
+          {formatCurrency(net)}
+        </div>
+        <div style={{ fontSize: 9, color: "#64748B" }}>net</div>
+      </div>
     </div>
   );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    PENDING: "bg-slate-100 text-slate-secondary",
-    PENDING_REVIEW: "bg-violet-bg text-violet",
-    CONFIRMED: "bg-blue-bg text-interactive-blue",
-    IN_PROGRESS: "bg-amber-bg text-amber-warning",
-    SCANNING: "bg-amber-bg text-amber-warning",
-    COMPLETE: "bg-teal-bg text-teal-success",
-    CANCELLED: "bg-slate-100 text-slate-secondary",
-    DECLINED: "bg-red-danger/10 text-red-danger",
-  };
-  return (
-    <span className={cn("font-inter text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded", colorMap[status] ?? "bg-slate-100 text-slate-secondary")}>
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
-function SigningTypeChip({ type }: { type: string }) {
-  const map: Record<string, string> = {
-    GENERAL: "bg-blue-bg text-interactive-blue",
-    LOAN_REFI: "bg-violet-bg text-violet",
-    HYBRID: "bg-violet-bg text-violet",
-    PURCHASE_CLOSING: "bg-violet-bg text-violet",
-    FIELD_INSPECTION: "bg-teal-bg text-teal-success",
-    APOSTILLE: "bg-teal-bg text-teal-success",
-  };
-  const labelMap: Record<string, string> = {
-    GENERAL: "General",
-    LOAN_REFI: "Loan Refi",
-    HYBRID: "Hybrid",
-    PURCHASE_CLOSING: "Purchase",
-    FIELD_INSPECTION: "Field Insp.",
-    APOSTILLE: "Apostille",
-  };
-  return (
-    <span className={cn("font-inter text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded", map[type] ?? "bg-slate-100 text-slate-secondary")}>
-      {labelMap[type] ?? type}
-    </span>
-  );
-}
-
-function getProfitabilityColor(net: number): string {
-  if (net >= 30) return "text-teal-success";
-  if (net >= 10) return "text-amber-warning";
-  return "text-red-danger";
 }

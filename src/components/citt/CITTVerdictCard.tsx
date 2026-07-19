@@ -6,6 +6,7 @@ interface CITTVerdictCardProps {
   result: CITCResult;
   onClose: () => void;
   onAdd: (data: any) => void;
+  onRunAgain?: () => void;
   jobData: any;
   isAdding?: boolean;
   isPro?: boolean;
@@ -15,6 +16,7 @@ export default function CITTVerdictCard({
   result,
   onClose,
   onAdd,
+  onRunAgain,
   jobData,
   isAdding = false,
   isPro = false,
@@ -22,6 +24,7 @@ export default function CITTVerdictCard({
   const {
     net_earnings = 0,
     mileage_cost = 0,
+    platform_fee = 0,
     effective_hourly = 0,
     drive_distance_miles = 0,
     drive_time_mins = 0,
@@ -33,6 +36,8 @@ export default function CITTVerdictCard({
     prev_job = null,
     next_job = null,
   } = result;
+
+  const platformFeeNum = platform_fee ?? (jobData?.platform_fee as number) ?? 0;
 
   const isTakeIt = verdict === "TAKE_IT";
   const isRisky = verdict === "RISKY";
@@ -160,6 +165,17 @@ export default function CITTVerdictCard({
           {drive_time_mins || 0} min drive &middot; $
           {effective_hourly?.toFixed(2) || "0.00"} effective hourly rate
         </div>
+
+        {platformFeeNum > 0 && (
+          <div className="flex items-center justify-between bg-white border border-[#E2E8F0] rounded-[10px] px-4 py-2.5 mb-3">
+            <span className="text-[12px] font-medium text-[#64748B]">
+              Platform fee
+            </span>
+            <span className="font-sora text-[15px] font-bold text-[#D97706]">
+              -${platformFeeNum?.toFixed(2)}
+            </span>
+          </div>
+        )}
 
         <div className="h-[1px] bg-border my-4" />
 
@@ -418,6 +434,16 @@ export default function CITTVerdictCard({
               <span>
                 {isAdding ? "Adding..." : "Override and accept anyway"}
               </span>
+            </button>
+          )}
+
+          {onRunAgain && (
+            <button
+              onClick={onRunAgain}
+              className="bg-transparent text-[#64748B] border border-[#E2E8F0] rounded-button h-11 text-[13px] font-semibold flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Run again</span>
             </button>
           )}
         </div>

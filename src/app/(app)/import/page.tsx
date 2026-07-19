@@ -1,31 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { emailImportApi, screenshotApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
-import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
-import {
-  Mail,
-  Upload,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  FileImage,
-} from "lucide-react";
-
-const STATUS_COLORS: Record<string, string> = {
-  QUEUED: "bg-slate-100 text-slate-secondary",
-  PROCESSING: "bg-amber-bg text-amber-warning",
-  COMPLETE: "bg-teal-bg text-teal-success",
-  FAILED: "bg-red-danger/10 text-red-danger",
-};
+import { Mail, Upload, Check, Copy, FileImage } from "lucide-react";
+import ProGate from "@/components/ui/ProGate";
 
 export default function ImportPage() {
   const { addToast } = useUIStore();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [importEmail] = useState("import@notaryday.app");
 
   const { data: imports = [], isLoading } = useQuery({
     queryKey: ["email-imports"],
@@ -40,177 +26,178 @@ export default function ImportPage() {
     mutationFn: (id: string) => emailImportApi.confirm(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-imports"] });
-      addToast({ type: "success", title: "Job added to schedule" });
+      addToast({
+        type: "success",
+        title: "Job added to schedule",
+      });
     },
+    onError: () => addToast({ type: "error", title: "Could not add job" }),
   });
 
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setUploading(true);
-      try {
-        await screenshotApi.upload(file);
-        addToast({
-          type: "success",
-          title: "Screenshot uploaded — parsing...",
-        });
-        qc.invalidateQueries({ queryKey: ["email-imports"] });
-      } catch {
-        addToast({ type: "error", title: "Upload failed" });
-      } finally {
-        setUploading(false);
-        e.target.value = "";
-      }
-    },
-    [addToast, qc],
-  );
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await screenshotApi.upload(file);
+      addToast({
+        type: "success",
+        title: "Screenshot uploaded — parsing...",
+      });
+      qc.invalidateQueries({ queryKey: ["email-imports"] });
+    } catch {
+      addToast({ type: "error", title: "Upload failed" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const copyEmail = () => {
+    navigator.clipboard.writeText(importEmail);
+    addToast({ type: "success", title: "Copied import address" });
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 lg:px-8 py-4 bg-white border-b border-border flex items-center justify-between flex-shrink-0">
-        <div>
-          <h1 className="font-sora font-bold text-xl text-primary-navy">
-            Import Jobs
-          </h1>
-          <p className="font-inter text-xs text-slate-secondary mt-0.5">
-            Forward emails or upload screenshots
-          </p>
+    <ProGate feature="Email import">
+      <div className="flex flex-col h-full">
+        <div className="ph">
+          <div className="ph-title">Email Import</div>
         </div>
-        <label
-          className={cn(
-            "inline-flex items-center gap-2 bg-primary-navy text-white font-inter font-semibold text-sm rounded-button h-11 px-5 cursor-pointer",
-            uploading && "opacity-50",
-          )}
-        >
-          <Upload className="w-4 h-4" />
-          {uploading ? "Uploading..." : "Upload screenshot"}
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={handleFileUpload}
-            className="hidden"
-            disabled={uploading}
-          />
-        </label>
-      </div>
 
-      {/* Email address info */}
-      <div className="px-4 lg:px-8 py-3 bg-blue-bg border-b border-border">
-        <div className="flex items-center gap-2">
-          <Mail className="w-4 h-4 text-interactive-blue" />
-          <span className="font-inter text-xs text-primary-navy">
-            Forward confirmation emails to:{" "}
-          </span>
-          <code className="font-mono text-xs bg-white px-2 py-0.5 rounded border border-border text-interactive-blue">
-            import@notaryday.app
-          </code>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8">
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
-          </div>
-        ) : imports.length === 0 ? (
-          <div className="bg-white border border-border rounded-14px p-8 text-center">
-            <FileImage className="w-10 h-10 text-slate-secondary mx-auto mb-3" />
-            <p className="font-inter text-sm text-slate-secondary">
-              No imports yet. Forward an email or upload a screenshot to get
-              started.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {imports.map((imp: any) => (
-              <div
-                key={imp.id}
-                className="bg-white border border-border rounded-12px p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-inter text-sm font-semibold text-primary-navy truncate">
-                        {imp.subject ?? imp.from_address}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-inter text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded",
-                          STATUS_COLORS[imp.status],
-                        )}
-                      >
-                        {imp.status}
-                      </span>
-                    </div>
-                    <div className="font-inter text-xs text-slate-secondary flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" />
-                      {format(parseISO(imp.received_at), "MMM d, h:mm a")}
-                    </div>
-                  </div>
+        <div className="con">
+          <div className="alert al-blue mb-4 flex-col items-start">
+            <div className="flex gap-2 w-full">
+              <Mail className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-inter text-[12px] font-semibold mb-1">
+                  Forward any Snapdocs or SigningOrder email to your import address
                 </div>
-
-                {/* Parsed fields */}
-                {imp.status === "COMPLETE" && imp.parsed_address && (
-                  <div className="mt-2 pt-2 border-t border-border">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-3">
-                      {imp.parsed_address && (
-                        <div>
-                          <span className="text-slate-secondary">Address:</span>{" "}
-                          <span className="text-primary-navy font-medium">
-                            {imp.parsed_address}
-                          </span>
-                        </div>
-                      )}
-                      {imp.parsed_fee && (
-                        <div>
-                          <span className="text-slate-secondary">Fee:</span>{" "}
-                          <span className="text-primary-navy font-medium">
-                            ${imp.parsed_fee}
-                          </span>
-                        </div>
-                      )}
-                      {imp.parsed_signing_type && (
-                        <div>
-                          <span className="text-slate-secondary">Type:</span>{" "}
-                          <span className="text-primary-navy font-medium">
-                            {imp.parsed_signing_type}
-                          </span>
-                        </div>
-                      )}
-                      {imp.parsed_platform_name && (
-                        <div>
-                          <span className="text-slate-secondary">
-                            Platform:
-                          </span>{" "}
-                          <span className="text-primary-navy font-medium">
-                            {imp.parsed_platform_name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => confirmImport.mutate(imp.id)}
-                      className="h-9 px-4 bg-teal-success text-white rounded-8px font-inter text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Confirm & add to
-                      schedule
-                    </button>
-                  </div>
-                )}
-
-                {imp.status === "FAILED" && (
-                  <div className="mt-2 pt-2 border-t border-border flex items-center gap-2 text-xs text-red-danger">
-                    <AlertCircle className="w-3.5 h-3.5" />{" "}
-                    {imp.error_message ??
-                      "Parsing failed — please add manually"}
-                  </div>
-                )}
+                <div className="font-inter text-[11px] text-slate-secondary leading-[1.4] mb-2">
+                  Notary Day reads it automatically and runs a CITT check. No
+                  manual entry needed. The job appears here for your review before
+                  it is added to your schedule.
+                </div>
               </div>
-            ))}
+            </div>
+            <div
+              className="w-full font-mono text-[12px] text-teal-success bg-[#0d1117] rounded-[8px] p-[10px_12px] flex justify-between items-center gap-2 border border-[#1e293b] flex-wrap"
+              style={{ color: "#4ade80" }}
+            >
+              <span className="break-all">{importEmail}</span>
+              <button
+                onClick={copyEmail}
+                className="bg-white/10 border border-white/20 rounded-[5px] py-1 px-2.5 font-inter text-[10px] flex items-center gap-1 flex-shrink-0"
+                style={{ color: "#4ade80" }}
+              >
+                <Copy className="w-3 h-3" /> Copy
+              </button>
+            </div>
           </div>
-        )}
+
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+            </div>
+          ) : imports.length === 0 ? (
+            <div className="empty-box">
+              <FileImage className="w-10 h-10 text-slate-secondary mx-auto mb-3" />
+              <p className="font-inter text-sm text-slate-secondary mb-1">
+                No imports yet.
+              </p>
+              <p className="font-inter text-[12px] text-muted mb-4">
+                Forward an email or upload a screenshot to get started.
+              </p>
+              <label className="btn-sm inline-flex cursor-pointer">
+                <Upload className="w-3.5 h-3.5" />
+                {uploading ? "Uploading..." : "Upload screenshot"}
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+          ) : (
+            <>
+              <span className="slbl">Latest imports</span>
+              <div className="flex flex-col gap-2 mb-4">
+                {imports.map((imp: any) => (
+                  <div key={imp.id} className="card p-3 flex gap-2.5">
+                    <div className="w-9 h-9 rounded-[8px] bg-blue-bg text-blue flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-inter text-[12px] font-semibold text-primary-navy mb-0.5">
+                        New job imported from {imp.from_address ?? imp.platform}
+                      </div>
+                      <div className="font-inter text-[11px] text-slate-secondary mb-1.5 leading-[1.3] break-words">
+                        {imp.parsed_address ?? "—"} ·{" "}
+                        {imp.parsed_date ? imp.parsed_date : "—"}
+                        {imp.parsed_time ? ` · ${imp.parsed_time}` : ""}
+                        {imp.parsed_fee
+                          ? ` · nets $${imp.net_earnings ?? imp.parsed_fee} after mileage`
+                          : ""}
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap mb-2">
+                        <span className="chip c-imported">
+                          <Check className="w-3 h-3" /> Parsed successfully
+                        </span>
+                        {imp.citt_verdict && (
+                          <span
+                            className="chip"
+                            style={{
+                              background: "var(--amber-bg)",
+                              color: "var(--amber)",
+                              border: "1px solid var(--amber-b)",
+                            }}
+                          >
+                            CITT: {imp.citt_verdict}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => confirmImport.mutate(imp.id)}
+                          disabled={confirmImport.isPending}
+                          className="btn-p"
+                          style={{ width: "auto", height: 32, fontSize: 11, padding: "0 12px" }}
+                        >
+                          {confirmImport.isPending ? "Adding..." : "Add to schedule"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            addToast({ type: "info", title: "Declined" })
+                          }
+                          className="btn-gh"
+                          style={{ width: "auto", height: 32 }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <span className="slbl">How it works</span>
+              <div className="card p-3.5">
+                <div className="font-inter text-[12px] text-slate-secondary leading-[1.5]">
+                  1. Forward confirmation email to your unique address
+                  <br />
+                  2. AI extracts address, date, time, fee, client name
+                  <br />
+                  3. CITT check runs automatically
+                  <br />
+                  4. You review and add to schedule in one tap
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </ProGate>
   );
 }

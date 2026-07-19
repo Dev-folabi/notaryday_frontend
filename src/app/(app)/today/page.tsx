@@ -1,25 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { jobsApi } from "@/api/jobs.api";
 import { queryKeys } from "@/lib/queryClient";
+import { useGaps } from "@/hooks/usePlanner";
 import {
   formatCurrency,
-  formatMiles,
   toDateInputValue,
-  getInitials,
+  profitabilityColor,
 } from "@/lib/utils";
 import {
   CalendarDays,
   Plus,
   Sparkles,
-  Info,
   Clock,
   Car,
-  ChevronRight,
+  MapPin,
   ArrowRight,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -31,10 +32,8 @@ import {
   endOfWeek,
   parseISO,
   isToday,
-  getDay,
 } from "date-fns";
-import { useEffect } from "react";
-import { useGaps } from "@/hooks/usePlanner";
+import type { Job } from "@/types/job";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -60,26 +59,26 @@ export default function TodayPage() {
       day: d.getDate(),
       iso: toDateInputValue(d),
       isToday: isToday(d),
+      hasJobs: false as boolean,
     };
   });
 
   // Query jobs for the current active date
-  const { data: jobs = [], isLoading } = useQuery({
+  const {
+    data: jobs = [],
+    isLoading,
+    refetch: refetchJobs,
+  } = useQuery({
     queryKey: queryKeys.jobs.all({ date: activeDate }),
     queryFn: async () => {
       const res = await jobsApi.list({ date: activeDate, limit: 50 });
-      return (res as any).data;
+      const payload = (res as any).data ?? res;
+      return (payload.data ?? payload) as Job[];
     },
     enabled: !!activeDate,
   });
 
-  // Fetch gap opportunities for today (pro only)
-  const { data: gaps = [] } = useGaps(isPro ? todayIso : "");
-  const gapsWithCandidates = gaps.filter((g) => g.candidates.length > 0);
-  const firstGap = gapsWithCandidates[0];
-  const bestCandidate = firstGap?.candidates[0];
-
-  // Query jobs for the whole week to power the week stats
+  // mark which week days have jobs
   const weekJobsQuery = useQuery({
     queryKey: queryKeys.jobs.all({ date: toDateInputValue(weekStart) }),
     queryFn: async () => {
@@ -87,14 +86,24 @@ export default function TodayPage() {
         date: toDateInputValue(weekStart),
         limit: 100,
       });
-      return (res as any).data;
+      const payload = (res as any).data ?? res;
+      return (payload.data ?? payload) as Job[];
     },
   });
-  const weekJobs = (weekJobsQuery.data as any[]) ?? [];
+  const weekJobs = (weekJobsQuery.data as Job[]) ?? [];
+  weekDays.forEach((d) => {
+    d.hasJobs = weekJobs.some((j) => j.appointment_time?.startsWith(d.iso));
+  });
 
-  // Metrics
+  // Fetch gap opportunities for today (pro only)
+  const { data: gaps = [] } = useGaps(isPro ? activeDate : "");
+  const gapsWithCandidates = gaps.filter((g) => g.candidates.length > 0);
+  const firstGap = gapsWithCandidates[0];
+  const bestCandidate = firstGap?.candidates[0];
+
+  // Metrics — this week
   const weeklyEarnings = weekJobs.reduce(
-    (sum: number, j: any) =>
+    (sum: number, j: Job) =>
       sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
     0,
   );
@@ -103,17 +112,18 @@ export default function TodayPage() {
     weeklyJobsCount > 0 ? weeklyEarnings / weeklyJobsCount : 0;
 
   const todayEarnings = jobs.reduce(
-    (sum: number, j: any) =>
+    (sum: number, j: Job) =>
       sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
     0,
   );
   const totalDriveMins = jobs.reduce(
-    (sum: number, j: any) =>
-      sum + (parseInt(j.drive_from_prev_mins ?? "0") || 0),
+    (sum: number, j: Job) =>
+      sum + (j.drive_from_prev_mins != null ? j.drive_from_prev_mins : 0),
     0,
   );
 
   const jobCount = jobs.length;
+  const activeJob = jobs.find((j) => j.status === "IN_PROGRESS");
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -121,394 +131,331 @@ export default function TodayPage() {
     if (h < 17) return "afternoon";
     return "evening";
   })();
-  const userName = user?.full_name?.split(" ")[0] ?? user?.username ?? "there";
+  const userName =
+    user?.full_name?.split(" ")[0] ?? user?.username ?? "there";
 
   const isEmpty = jobCount === 0 && weeklyJobsCount === 0;
 
   return (
-    <div className="flex flex-col h-full bg-bg">
-      <div className="flex flex-1 overflow-hidden flex-col">
-        <div className="flex-1 overflow-y-auto w-full">
-          {/* Week Strip */}
-          <div className="bg-white border-b border-border flex px-4 lg:px-7 flex-shrink-0 overflow-x-auto">
-            {weekDays.map((d) => {
-              const hasJobs = weekJobs.some((j: any) =>
-                j.appointment_time?.startsWith(d.iso),
-              );
-              return (
-                <button
-                  key={d.iso}
-                  onClick={() => setActiveDate(d.iso)}
-                  className={cn(
-                    "flex-1 flex flex-col items-center py-[10px] px-[2px] pb-[8px] cursor-pointer gap-1 transition-colors border-b-2",
-                    d.iso === activeDate
-                      ? "border-primary-navy"
-                      : "border-transparent",
-                  )}
-                >
-                  <span className="text-[10px] font-medium text-muted uppercase tracking-[0.5px]">
-                    {d.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "w-[30px] h-[30px] rounded-full flex items-center justify-center text-[14px] font-semibold",
-                      d.iso === activeDate
-                        ? "bg-primary-navy text-white"
-                        : d.isToday
-                          ? "bg-blue-bg text-interactive-blue"
-                          : "text-slate-body",
-                    )}
-                  >
-                    {d.day}
-                  </span>
-                  <span
-                    className={cn(
-                      "w-1 h-1 rounded-full",
-                      hasJobs ? "bg-primary-navy" : "opacity-0",
-                    )}
-                  />
-                </button>
-              );
-            })}
-          </div>
+    <div className="flex flex-col h-full">
+      {/* Week strip */}
+      <div className="wstrip">
+        {weekDays.map((d) => (
+          <button
+            key={d.iso}
+            onClick={() => setActiveDate(d.iso)}
+            className={cn(
+              "wday",
+              d.iso === activeDate && "today",
+              !d.hasJobs && "empty",
+            )}
+          >
+            <span className="wd-n">{d.label}</span>
+            <span className="wd-d">{d.day}</span>
+            <span className="wd-dot" />
+          </button>
+        ))}
+      </div>
 
-          {!isEmpty ? (
-            /* DASHBOARD HOME (Weekly Overview) */
-            <div className="p-5 lg:p-7 pt-4">
-              <div className="flex flex-col md:flex-row md:items-baseline justify-between mb-4 gap-4">
-                <div>
-                  <h1 className="font-sora text-[20px] font-bold text-primary-navy">
-                    Good {greeting}, {userName}.
-                  </h1>
-                  <div className="text-[13px] text-slate-secondary mt-[3px]">
-                    {format(new Date(), "EEEE, MMMM d")} · {jobCount} signing
-                    {jobCount !== 1 ? "s" : ""} scheduled
+      <div className="con">
+        {!isEmpty ? (
+          <>
+            <div className="flex justify-between items-start gap-3 flex-wrap mb-4">
+              <div>
+                <div className="font-sora text-[18px] font-bold text-primary-navy">
+                  Good {greeting}, {userName}.
+                </div>
+                <div className="text-[12px] text-slate-secondary mt-0.5">
+                  {format(new Date(), "EEEE, MMMM d")} · {jobCount} signings
+                  on today&apos;s schedule
+                </div>
+              </div>
+              <Link
+                href="/jobs/new"
+                className="btn-p"
+                style={{ width: "auto", height: 34, padding: "0 12px", fontSize: 12 }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Add job
+              </Link>
+            </div>
+
+            <span className="slbl">This week</span>
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <div className="mcard">
+                <span className="mc-v text-teal-success">
+                  {formatCurrency(weeklyEarnings)}
+                </span>
+                <span className="mc-l">Net earned</span>
+              </div>
+              <div className="mcard">
+                <span className="mc-v">{weeklyJobsCount}</span>
+                <span className="mc-l">Signings</span>
+              </div>
+              <div className="mcard">
+                <span className="mc-v">{formatCurrency(avgNetPerJob)}</span>
+                <span className="mc-l">Avg net per job</span>
+              </div>
+            </div>
+
+            <div className="card p-3.5 mb-4">
+              <div className="flex justify-between mb-2.5">
+                <span className="text-[12px] font-semibold text-primary-navy">
+                  Week at a glance
+                </span>
+                <span className="text-[11px] text-slate-secondary">
+                  {format(weekStart, "MMM d")} to {format(endOfWeek(weekStart), "d")}
+                </span>
+              </div>
+              <WeekAtAGlanceBars weekDays={weekDays} weekJobs={weekJobs} />
+            </div>
+
+            {activeJob && (
+              <div
+                className="al-amber"
+                style={{
+                  border: "2px solid",
+                  borderRadius: 12,
+                  padding: 14,
+                  marginBottom: 14,
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  boxShadow: "0 2px 8px rgba(217,119,6,.15)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "#D97706",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Clock className="w-[18px] h-[18px]" />
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <div className="text-[12px] font-bold text-amber mb-0.5">
+                    Active signing in progress
+                  </div>
+                  <div className="text-[12px] font-semibold text-primary-navy">
+                    {formatSigningType(activeJob.signing_type)} ·{" "}
+                    {format(parseISO(activeJob.appointment_time), "h:mm a")} ·{" "}
+                    {activeJob.address}
+                  </div>
+                  <div className="text-[10px] text-slate-secondary mt-0.5">
+                    Tap to update progress: navigated, started, done, scanback,
+                    complete
                   </div>
                 </div>
-                <Link
-                  href="/jobs/new"
-                  className="inline-flex items-center justify-center bg-primary-navy text-white border-none rounded-[8px] h-[40px] text-[13px] font-semibold px-[16px] gap-1.5 w-full md:w-auto"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add job</span>
+                <Link href="/active" className="btn-p" style={{ width: "auto", height: 36, padding: "0 14px", fontSize: 11, background: "#D97706" }}>
+                  <Clock className="w-3.5 h-3.5" /> Resume Signing
                 </Link>
               </div>
+            )}
 
-              {/* THIS WEEK */}
-              <span className="text-[10px] font-semibold text-slate-secondary tracking-[0.6px] uppercase block mb-3">
-                This week
+            <div className="flex justify-between items-center mb-2">
+              <span className="slbl" style={{ margin: 0 }}>
+                Today&apos;s schedule
               </span>
-              <div className="flex gap-[10px] mb-5">
-                <div className="bg-white border border-border rounded-[12px] p-4 flex-1">
-                  <span className="font-sora text-[22px] font-bold text-teal-success block mb-[3px]">
-                    {formatCurrency(weeklyEarnings)}
-                  </span>
-                  <span className="text-[11px] text-slate-secondary block">
-                    Net earned
-                  </span>
-                </div>
-                <div className="bg-white border border-border rounded-[12px] p-4 flex-1">
-                  <span className="font-sora text-[22px] font-bold text-primary-navy block mb-[3px]">
-                    {weeklyJobsCount}
-                  </span>
-                  <span className="text-[11px] text-slate-secondary block">
-                    Signings
-                  </span>
-                </div>
-                <div className="bg-white border border-border rounded-[12px] p-4 flex-1">
-                  <span className="font-sora text-[22px] font-bold text-slate-body block mb-[3px]">
-                    {formatCurrency(avgNetPerJob)}
-                  </span>
-                  <span className="text-[11px] text-slate-secondary block">
-                    Avg net/job
-                  </span>
-                </div>
-              </div>
+              <span className="text-[11px] text-muted">{jobCount} jobs today</span>
+            </div>
 
-              {/* DAILY BARS */}
-              <div className="bg-white border border-border rounded-[12px] py-[18px] px-5 mb-5">
-                <div className="flex items-center justify-between mb-[14px]">
-                  <span className="text-[13px] font-semibold text-primary-navy">
-                    Week at a glance
-                  </span>
-                  <span className="text-[11px] text-slate-secondary">
-                    {format(weekStart, "MMM d")}–
-                    {format(endOfWeek(weekStart), "d")}
-                  </span>
-                </div>
-                <WeekAtAGlanceBars
-                  weekDays={weekDays}
-                  weekJobs={weekJobs}
-                  maxEarn={
-                    weeklyEarnings > 0
-                      ? (weeklyEarnings / weeklyJobsCount) * 1.5
-                      : 300
-                  }
-                />
+            <div className="dstrip" onClick={() => router.push("/day")}>
+              <div className="ds">
+                <span className="ds-v">{jobCount}</span>
+                <span className="ds-l">Signings</span>
               </div>
-
-              {/* TODAY PREVIEW */}
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[10px] font-semibold text-slate-secondary tracking-[0.6px] uppercase m-0">
-                  Today's schedule
+              <div className="ds-div" />
+              <div className="ds">
+                <span className="ds-v">{formatCurrency(todayEarnings)}</span>
+                <span className="ds-l">Est. net</span>
+              </div>
+              <div className="ds-div" />
+              <div className="ds">
+                <span className="ds-v">
+                  {Math.floor(totalDriveMins / 60)}h {totalDriveMins % 60}m
                 </span>
-                <Link
-                  href="/day"
-                  className="text-[12px] font-medium text-interactive-blue cursor-pointer flex items-center gap-[1px]"
-                >
-                  Open day view{" "}
-                  <ChevronRight className="w-3.5 h-3.5 stroke-2" />
-                </Link>
+                <span className="ds-l">Drive</span>
               </div>
+              <button
+                className="sday-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push("/day");
+                }}
+              >
+                <ArrowRight className="w-3.5 h-3.5" /> Start
+              </button>
+            </div>
 
-              {/* TODAY MINI STRIP */}
-              <div className="bg-primary-navy rounded-[10px] p-[12px] px-[16px] flex items-center gap-0 mb-3">
-                <div className="flex-1 text-center">
-                  <div className="font-sora text-[17px] font-bold text-white leading-none">
-                    {jobCount}
-                  </div>
-                  <div className="text-[10px] text-white/50 mt-[3px]">
-                    Signings
-                  </div>
-                </div>
-                <div className="w-[1px] h-[28px] bg-white/10 flex-shrink-0"></div>
-                <div className="flex-1 text-center">
-                  <div className="font-sora text-[17px] font-bold text-white leading-none">
-                    {formatCurrency(todayEarnings)}
-                  </div>
-                  <div className="text-[10px] text-white/50 mt-[3px]">
-                    Est. net
-                  </div>
-                </div>
-                <div className="w-[1px] h-[28px] bg-white/10 flex-shrink-0"></div>
-                <div className="flex-1 text-center">
-                  <div className="font-sora text-[17px] font-bold text-white leading-none">
-                    {totalDriveMins}m
-                  </div>
-                  <div className="text-[10px] text-white/50 mt-[3px]">
-                    Drive
-                  </div>
-                </div>
-                <button
-                  onClick={() => router.push("/day")}
-                  className="bg-pro-gold text-primary-navy border-none rounded-[8px] py-[7px] px-[12px] text-[12px] font-bold cursor-pointer flex items-center gap-[5px] ml-3.5 whitespace-nowrap"
+            {jobs.slice(0, 4).map((job) => (
+              <JobCardItem key={job.id} job={job} />
+            ))}
+
+            {isPro && firstGap && bestCandidate && (
+              <div
+                className="gap-card"
+                style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}
+              >
+                <div
+                  className="spark"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    background: "rgba(124,58,237,.12)",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    color: "#7C3AED",
+                  }}
                 >
-                  <ArrowRight className="w-[13px] h-[13px] stroke-2" />
-                  <span>Start</span>
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <div className="text-[12px] font-semibold text-primary-navy mb-0.5">
+                    {gapsWithCandidates.length} gap opportunit
+                    {gapsWithCandidates.length === 1 ? "y" : "ies"} found today
+                  </div>
+                  <div className="text-[11px] text-slate-secondary">
+                    {bestCandidate.address} ·{" "}
+                    {formatCurrency(bestCandidate.fee)} offered ·{" "}
+                    {format(parseISO(firstGap.gap_start), "h:mm a")}
+                  </div>
+                </div>
+                <span
+                  className="text-[11px] font-semibold text-violet cursor-pointer whitespace-nowrap"
+                  onClick={() =>
+                    useUIStore.getState().openCITT({
+                      address: bestCandidate.address,
+                      time: bestCandidate.appointment_time,
+                      fee: bestCandidate.fee,
+                    })
+                  }
+                >
+                  CITT <ChevronRight className="w-3.5 h-3.5 inline" />
+                </span>
+              </div>
+            )}
+
+            <div style={{ height: 20 }} />
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-[14px] font-medium text-slate-secondary">
+                Good {greeting} · {format(parseISO(activeDate), "EEEE, MMMM d")}
+              </span>
+              <Link href="/jobs/new" className="btn-p" style={{ width: "auto", height: 36, padding: "0 14px", fontSize: 11 }}>
+                <Plus className="w-3.5 h-3.5" /> Add job
+              </Link>
+            </div>
+
+            <div className="empty-box">
+              <div className="w-[52px] h-[52px] rounded-[12px] bg-blue-bg flex items-center justify-center mx-auto mb-[18px] text-blue">
+                <CalendarDays className="w-6 h-6" />
+              </div>
+              <div className="font-sora font-semibold text-[18px] text-primary-navy mb-2">
+                No signings today
+              </div>
+              <p className="text-[13px] text-slate-secondary leading-[1.6] max-w-[280px] mx-auto mb-6">
+                Add your first job or run a Can I Take This? check on an incoming
+                signing request to get started.
+              </p>
+              <div className="flex flex-col gap-[10px] max-w-[300px] mx-auto">
+                <Link href="/jobs/new" className="btn-p" style={{ height: 44 }}>
+                  <Plus className="w-4 h-4" /> Add a job
+                </Link>
+                <button
+                  onClick={() => useUIStore.getState().openCITT()}
+                  className="btn-s"
+                  style={{ height: 44 }}
+                >
+                  <Sparkles className="w-4 h-4" /> Run Can I Take This?
                 </button>
               </div>
+            </div>
 
-              {/* COMPACT JOB LIST */}
-              <div className="flex flex-col">
-                {jobs.map((job: any) => (
-                  <CompactJobItem key={job.id} job={job} />
-                ))}
+            <div className="flex gap-2.5 mt-3">
+              <div className="mcard">
+                <span className="mc-v">$0</span>
+                <span className="mc-l">This week</span>
               </div>
+              <div className="mcard">
+                <span className="mc-v">0</span>
+                <span className="mc-l">Jobs this month</span>
+              </div>
+              <div className="mcard">
+                <span className="mc-v">—</span>
+                <span className="mc-l">Avg net/job</span>
+              </div>
+            </div>
 
-              {/* GAP FINDER HINT */}
-              {isPro && jobs.length > 0 && firstGap && bestCandidate && (
-                <div className="bg-violet-light border border-violet-200 rounded-[10px] p-[14px] px-[16px] mt-1 flex items-center gap-3">
-                  <div className="w-[36px] h-[36px] bg-violet-100 rounded-[8px] flex items-center justify-center flex-shrink-0 text-violet">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-primary-navy mb-[2px]">
-                      {gapsWithCandidates.length} gap opportunit
-                      {gapsWithCandidates.length === 1 ? "y" : "ies"} found
-                      today
-                    </div>
-                    <div className="text-[12px] text-slate-secondary truncate">
-                      {bestCandidate.address} ·{" "}
-                      {formatCurrency(bestCandidate.net_earnings)} net ·{" "}
-                      {format(parseISO(firstGap.gap_start), "h:mm a")}
-                    </div>
-                  </div>
+            {!isPro && (
+              <div className="alert al-amber mt-3">
+                <Sparkles className="w-4 h-4" />
+                <div className="text-[12px] leading-[1.5]">
+                  You are on Free plan.{" "}
                   <span
-                    onClick={() =>
-                      useUIStore.getState().openCITT({
-                        address: bestCandidate.address,
-                        time: bestCandidate.appointment_time,
-                        fee: bestCandidate.fee,
-                      })
-                    }
-                    className="text-[12px] font-semibold text-violet cursor-pointer flex items-center gap-[3px] flex-shrink-0"
+                    className="text-blue font-medium cursor-pointer"
+                    onClick={() => router.push("/settings/billing")}
                   >
-                    CITT <ChevronRight className="w-3.5 h-3.5 stroke-2" />
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* EMPTY DASHBOARD */
-            <div className="flex-1">
-              <div className="p-[14px] px-5 lg:px-7 bg-white border-b border-border flex items-center justify-between flex-shrink-0">
-                <span className="text-[14px] font-medium text-slate-secondary">
-                  Good {greeting} ·{" "}
-                  {format(parseISO(activeDate), "EEEE, MMMM d")}
-                </span>
-                <Link
-                  href="/jobs/new"
-                  className="bg-primary-navy text-white border-none rounded-[8px] h-[36px] text-[13px] font-semibold cursor-pointer inline-flex items-center justify-center gap-[6px] px-[14px] font-inter"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add job</span>
-                </Link>
-              </div>
-              <div className="p-5 lg:p-7 flex flex-col gap-3">
-                <div className="bg-white border border-border rounded-[14px] py-[40px] px-7 text-center shadow-sm">
-                  <div className="w-[52px] h-[52px] rounded-[12px] bg-blue-light flex items-center justify-center mx-auto mb-[18px] text-interactive-blue">
-                    <CalendarDays className="w-6 h-6 stroke-2" />
-                  </div>
-                  <div className="font-sora font-semibold text-[18px] text-primary-navy mb-2">
-                    No signings today
-                  </div>
-                  <p className="text-[13px] text-slate-secondary leading-[1.6] max-w-[280px] mx-auto mb-6">
-                    Add your first job or run a Can I Take This? check on an
-                    incoming signing request to get started.
-                  </p>
-                  <div className="flex flex-col gap-[10px] max-w-[300px] mx-auto">
-                    <Link
-                      href="/jobs/new"
-                      className="bg-primary-navy text-white rounded-[8px] h-[44px] text-[14px] font-semibold flex items-center justify-center gap-[6px] px-5"
-                    >
-                      <Plus className="w-4 h-4 stroke-2" />
-                      <span>Add a job</span>
-                    </Link>
-                    <button
-                      onClick={() => useUIStore.getState().openCITT()}
-                      className="bg-white border-[1.5px] border-primary-navy text-primary-navy rounded-[8px] h-[44px] text-[14px] font-semibold flex items-center justify-center gap-[6px] px-5"
-                    >
-                      <Sparkles className="w-4 h-4 stroke-2" />
-                      <span>Run Can I Take This?</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex gap-[10px]">
-                  <div className="bg-white border border-border rounded-[12px] p-4 flex-1 text-center">
-                    <span className="font-sora text-[22px] font-bold text-navy block mb-[3px]">
-                      $0
-                    </span>
-                    <span className="text-[11px] text-slate-secondary block">
-                      This week
-                    </span>
-                  </div>
-                  <div className="bg-white border border-border rounded-[12px] p-4 flex-1 text-center">
-                    <span className="font-sora text-[22px] font-bold text-navy block mb-[3px]">
-                      0
-                    </span>
-                    <span className="text-[11px] text-slate-secondary block">
-                      Jobs this month
-                    </span>
-                  </div>
-                  <div className="bg-white border border-border rounded-[12px] p-4 flex-1 text-center">
-                    <span className="font-sora text-[22px] font-bold text-navy block mb-[3px]">
-                      —
-                    </span>
-                    <span className="text-[11px] text-slate-secondary block">
-                      Avg net/job
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-border rounded-[12px] py-[16px] px-[18px] flex items-start gap-3">
-                  <div className="w-[36px] h-[36px] bg-amber-light rounded-[8px] flex items-center justify-center flex-shrink-0 text-amber-warning">
-                    <Info className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-semibold text-primary-navy mb-[3px]">
-                      Try a CITT check first
-                    </div>
-                    <div className="text-[12px] text-slate-secondary leading-[1.5]">
-                      Got an incoming signing request? Check if it fits your
-                      schedule and what you'll actually earn after mileage —
-                      before you commit.
-                    </div>
-                  </div>
+                    Upgrade to Pro
+                  </span>{" "}
+                  to unlock route optimisation, Gap Finder, and more.
                 </div>
               </div>
-
-              {/* PRO BANNER */}
-              {!isPro && (
-                <div className="bg-white border-t border-border py-[14px] px-[20px] lg:px-[28px] flex items-center justify-between gap-3 flex-shrink-0">
-                  <div>
-                    <div className="text-[13px] font-semibold text-primary-navy mb-[2px]">
-                      Upgrade to Pro
-                    </div>
-                    <div className="text-[12px] text-slate-secondary">
-                      Route optimisation · Gap Finder · Booking page · Auto
-                      invoicing
-                    </div>
-                  </div>
-                  <Link
-                    href="/settings/billing"
-                    className="bg-pro-gold text-primary-navy rounded-[8px] py-[8px] px-[16px] text-[13px] font-bold flex items-center gap-[5px] whitespace-nowrap"
-                  >
-                    <Sparkles className="w-[14px] h-[14px]" />
-                    <span>Upgrade</span>
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-/* CompactJobItem (S-10 List Style)  */
-function CompactJobItem({ job }: { job: any }) {
+function JobCardItem({ job }: { job: Job }) {
   const net = parseFloat(job.net_earnings ?? job.fee ?? "0") || 0;
-  const isGood = net >= 30;
-  const isFair = net >= 10 && net < 30;
-  const feeColor = isGood
-    ? "text-teal-success"
-    : isFair
-      ? "text-amber-warning"
-      : "text-slate-body";
   const startTime = job.appointment_time
     ? format(parseISO(job.appointment_time), "h:mm a")
     : "—";
-
-  // Basic scanback check
-  const hasScanback =
-    Number(job.scanback_duration_mins) > 0 || job.signing_type === "LOAN_REFI";
-
+  const isAnchored = (job as any).anchored;
   return (
-    <Link
-      href={`/jobs/${job.id}`}
-      className="bg-white border border-border rounded-[10px] p-[12px] px-[14px] mb-[7px] flex items-center justify-between gap-[10px] hover:border-slate-secondary transition-colors"
-    >
-      <div className="flex items-center gap-[10px] flex-1 min-w-0">
-        <div
-          className={cn(
-            "w-[36px] h-[36px] rounded-[8px] flex items-center justify-center flex-shrink-0",
-            hasScanback
-              ? "bg-amber-light text-amber-warning"
-              : "bg-blue-light text-interactive-blue",
+    <Link href={`/jobs/${job.id}`} className="jcard">
+      <div className="flex-1 min-w-0">
+        <div className="text-[12px] font-semibold text-primary-navy mb-0.5 flex gap-1.5 items-center flex-wrap">
+          {startTime} · {job.signing_duration_mins ?? 30} min
+          {isAnchored && (
+            <span className="chip" style={{ background: "#DBEAFE", color: "#1D4ED8", fontSize: 8 }}>
+              Anchored
+            </span>
           )}
-        >
-          <Clock className="w-4 h-4 stroke-2" />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-primary-navy mb-[2px]">
-            {startTime} · {job.signing_duration_mins ?? 30} min
-          </div>
-          <div className="text-[12px] text-slate-secondary whitespace-nowrap overflow-hidden text-ellipsis">
-            {job.address || "No address"}
-          </div>
+        <div className="text-[11px] text-slate-secondary whitespace-nowrap overflow-hidden text-ellipsis flex gap-1 items-center">
+          <MapPin className="w-3 h-3 flex-shrink-0" /> {job.address || "No address"}
+        </div>
+        <div className="flex gap-1 mt-1.5 flex-wrap">
+          <span className={cn("chip", getTypeChipClass(job.signing_type))}>
+            {formatSigningType(job.signing_type)}
+          </span>
+          {job.platform_name && (
+            <span className="chip c-plat">{job.platform_name}</span>
+          )}
         </div>
       </div>
       <div className="text-right flex-shrink-0">
-        <div className={cn("text-[14px] font-bold mb-[2px]", feeColor)}>
+        <div className={cn("text-[13px] font-bold", profitabilityColor(net))}>
           {formatCurrency(net)}
         </div>
         <span
-          className={cn(
-            "inline-flex items-center gap-[3px] px-[7px] py-[3px] rounded-[4px] text-[10px] font-semibold tracking-[0.2px] uppercase whitespace-nowrap",
-            getTypeColorClass(job.signing_type),
-          )}
+          className={cn("chip mt-1", getTypeChipClass(job.signing_type))}
+          style={{ fontSize: 8 }}
         >
           {formatSigningType(job.signing_type)}
         </span>
@@ -517,16 +464,16 @@ function CompactJobItem({ job }: { job: any }) {
   );
 }
 
-function getTypeColorClass(type: string): string {
+function getTypeChipClass(type: string): string {
   const map: Record<string, string> = {
-    GENERAL: "bg-[#D1FAE5] text-[#065F46]",
-    LOAN_REFI: "bg-[#DBEAFE] text-[#1D4ED8]",
-    HYBRID: "bg-violet-light text-violet",
-    PURCHASE_CLOSING: "bg-[#F1F5F9] text-[#64748B]",
-    FIELD_INSPECTION: "bg-[#FEF3C7] text-[#92400E]",
-    APOSTILLE: "bg-[#FCE7F3] text-[#9D174D]",
+    GENERAL: "c-gen",
+    LOAN_REFI: "c-loan",
+    HYBRID: "c-hyb",
+    PURCHASE_CLOSING: "c-loan",
+    FIELD_INSPECTION: "c-gen",
+    APOSTILLE: "c-gen",
   };
-  return map[type] ?? "bg-[#F1F5F9] text-[#64748B]";
+  return map[type] ?? "c-gen";
 }
 
 function formatSigningType(type: string): string {
@@ -534,59 +481,43 @@ function formatSigningType(type: string): string {
     GENERAL: "General",
     LOAN_REFI: "Loan Refi",
     HYBRID: "Hybrid",
-    PURCHASE_CLOSING: "Purchase",
-    FIELD_INSPECTION: "Field Insp.",
+    PURCHASE_CLOSING: "Purchase Closing",
+    FIELD_INSPECTION: "Field Inspection",
     APOSTILLE: "Apostille",
   };
   return map[type] ?? type ?? "Job";
 }
 
-/* ==============================================================
-   WeekAtAGlanceBars Component
-   ============================================================== */
-function WeekAtAGlanceBars({ weekDays, weekJobs, maxEarn }: any) {
+function WeekAtAGlanceBars({
+  weekDays,
+  weekJobs,
+}: {
+  weekDays: any[];
+  weekJobs: Job[];
+}) {
   return (
-    <div className="flex items-end gap-[6px] h-[56px]">
-      {weekDays.map((d: any, idx: number) => {
-        const dayJobs = weekJobs.filter((j: any) =>
-          j.appointment_time?.startsWith(d.iso),
-        );
+    <div className="bar-wrap">
+      {weekDays.map((d: any) => {
+        const dayJobs = weekJobs.filter((j) => j.appointment_time?.startsWith(d.iso));
         const dayEarn = dayJobs.reduce(
-          (sum: number, j: any) =>
+          (sum: number, j: Job) =>
             sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
           0,
         );
-
-        let h = 4;
-        if (dayJobs.length > 0 && maxEarn > 0) {
-          h = Math.max(4, Math.min(52, (dayEarn / maxEarn) * 52));
-        }
-
+        const h = dayJobs.length > 0 ? Math.max(dayEarn > 0 ? 24 : 4, 4) : 4;
         return (
-          <div
-            key={d.iso}
-            className="flex-1 flex flex-col items-center gap-[4px]"
-          >
-            <span className="text-[10px] text-slate-secondary font-medium min-h-[14px]">
-              {dayJobs.length > 0 ? formatCurrency(dayEarn) : ""}
+          <div key={d.iso} className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[9px] text-slate-secondary whitespace-nowrap">
+              {dayJobs.length > 0 ? formatCurrency(dayEarn) : "—"}
             </span>
             <div
-              className={cn(
-                "w-full rounded-t-[4px] transition-all min-h-[4px]",
-                d.isToday
-                  ? "bg-primary-navy"
-                  : dayJobs.length > 0
-                    ? "bg-[#BFDBFE]"
-                    : "bg-border",
-              )}
+              className={cn("bar", d.isToday && "active", dayJobs.length > 0 && !d.isToday && "has")}
               style={{ height: `${h}px` }}
             />
             <span
               className={cn(
-                "text-[10px]",
-                d.isToday
-                  ? "text-primary-navy font-semibold"
-                  : "text-muted font-normal",
+                "text-[9px]",
+                d.isToday ? "text-navy font-semibold" : "text-muted",
               )}
             >
               {d.label}

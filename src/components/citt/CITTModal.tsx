@@ -33,6 +33,7 @@ const cittSchema = z.object({
   fee: z.number().min(0, "Fee is required"),
   platform_fee: z.number().min(0).default(0),
   signing_duration_mins: z.number().min(1).default(45),
+  scanback_duration_mins: z.number().min(0).default(30),
 });
 
 type CITTFormValues = z.input<typeof cittSchema>;
@@ -62,6 +63,7 @@ export default function CITTModal() {
       fee: 0,
       platform_fee: 0,
       signing_duration_mins: 45,
+      scanback_duration_mins: 30,
     },
   });
 
@@ -80,6 +82,7 @@ export default function CITTModal() {
         fee: cittPreFill.fee || 0,
         platform_fee: 0,
         signing_duration_mins: 45,
+        scanback_duration_mins: 30,
       });
     }
   }, [isCITTOpen, cittPreFill, resetForm]);
@@ -151,6 +154,10 @@ export default function CITTModal() {
     closeCITT();
   };
 
+  const handleRunAgain = () => {
+    reset(); // clear results, go back to form
+  };
+
   const handleAddJob = async (values: any) => {
     try {
       await createJob.mutateAsync({
@@ -203,6 +210,7 @@ export default function CITTModal() {
               result={data}
               onClose={handleClose}
               onAdd={handleAddJob}
+              onRunAgain={handleRunAgain}
               isAdding={createJob.isPending}
               jobData={watch()}
               isPro={!!isPro}
@@ -326,7 +334,7 @@ export default function CITTModal() {
                         { v: "GENERAL", l: "General" },
                         { v: "LOAN_REFI", l: "Loan Refi" },
                         { v: "HYBRID", l: "Hybrid" },
-                        { v: "PURCHASE_CLOSING", l: "Purchase" },
+                        { v: "PURCHASE_CLOSING", l: "Purchase Closing" },
                         { v: "FIELD_INSPECTION", l: "Field Inspection" },
                         { v: "APOSTILLE", l: "Apostille" },
                       ].map((t) => (
@@ -347,23 +355,53 @@ export default function CITTModal() {
                 />
               </div>
 
-              {/* DURATION */}
+              {/* PLATFORM FEE */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-[#475569]">
-                  Estimated duration
+                  Platform fee (optional)
                 </label>
-                <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-[#64748B]" />
                   <input
                     type="number"
-                    {...register("signing_duration_mins", {
-                      valueAsNumber: true,
-                    })}
-                    className="bg-white border border-[#E2E8F0] rounded-[8px] h-11 text-center w-[72px] text-sm focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] outline-none transition-all"
+                    step="0.01"
+                    {...register("platform_fee", { valueAsNumber: true })}
+                    className="bg-white border border-[#E2E8F0] rounded-[8px] h-11 px-3 pl-8 text-sm focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] outline-none w-full transition-all"
                   />
-                  <span className="text-[13px] text-[#64748B]">minutes</span>
-                  <span className="text-[12px] text-[#64748B] ml-1">
-                    (default for type)
-                  </span>
+                </div>
+              </div>
+
+              {/* DURATION + SCANBACK */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-medium text-[#475569]">
+                    Signing duration
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      {...register("signing_duration_mins", {
+                        valueAsNumber: true,
+                      })}
+                      className="bg-white border border-[#E2E8F0] rounded-[8px] h-11 text-center w-[72px] text-sm focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] outline-none transition-all"
+                    />
+                    <span className="text-[13px] text-[#64748B]">min</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-medium text-[#475569]">
+                    Scanback duration
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      {...register("scanback_duration_mins", {
+                        valueAsNumber: true,
+                      })}
+                      className="bg-white border border-[#E2E8F0] rounded-[8px] h-11 text-center w-[72px] text-sm focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF] outline-none transition-all"
+                    />
+                    <span className="text-[13px] text-[#64748B]">min</span>
+                  </div>
                 </div>
               </div>
 

@@ -6,226 +6,248 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { toDateInputValue, formatCurrency } from "@/lib/utils";
 import ProGate from "@/components/ui/ProGate";
-import DaySummaryStrip from "@/components/planner/DaySummaryStrip";
-import GapFinderCard from "@/components/planner/GapFinderCard";
 import {
   Sparkles,
   Info,
   ChevronLeft,
-  RefreshCw,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function GapPage() {
   const { user } = useAuth();
   const { activeDate } = useUIStore();
+  const router = useRouter();
   const date = activeDate || toDateInputValue(new Date());
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
 
   const { data: gaps = [], isLoading: gapsLoading, refetch } = useGaps(date);
   const { data: plan, isLoading: planLoading } = useTodayPlan(date);
 
-  const totalGaps = gaps.length;
   const totalCandidates = gaps.reduce((s, g) => s + g.candidates.length, 0);
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Page header */}
-      <div className="px-4 lg:px-8 py-4 bg-white border-b border-border flex items-center justify-between flex-shrink-0 gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/today"
-            className="flex items-center gap-1 font-inter text-[12px] font-medium text-slate-secondary hover:text-primary-navy transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" /> Today
-          </Link>
-          <span className="text-border">|</span>
-          <h1 className="font-sora font-bold text-[17px] text-primary-navy flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet" />
-            Gap Finder
-          </h1>
-          {totalCandidates > 0 && (
-            <span className="text-[10px] font-bold bg-violet-bg text-violet px-2 py-0.5 rounded-full border border-violet-border">
-              {totalCandidates} fit
-            </span>
-          )}
+      <div className="ph">
+        <div className="ph-back" onClick={() => router.push("/day")}>
+          <ChevronLeft className="w-3.5 h-3.5" /> Back to Day timeline
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={gapsLoading}
-          className="w-9 h-9 rounded-[8px] border border-border flex items-center justify-center text-slate-secondary hover:border-slate-secondary transition-colors disabled:opacity-40"
-          title="Refresh"
-        >
-          <RefreshCw className={cn("w-4 h-4", gapsLoading && "animate-spin")} />
-        </button>
+        <div className="ph-title">
+          <Sparkles className="w-4 h-4 text-violet" /> Gap Finder
+        </div>
+        <div style={{ minWidth: 60 }} />
       </div>
 
-      {/* Day summary strip */}
-      {plan && (
-        <div className="flex-shrink-0">
-          <DaySummaryStrip
-            totalJobs={plan.summary.total_jobs}
-            totalDriveMins={plan.summary.total_drive_mins}
-            totalEarnings={plan.summary.total_earnings}
-            totalMiles={plan.summary.total_miles}
-          />
-        </div>
-      )}
+      {/* Navy summary strip */}
+      {plan && <GapDayStrip plan={plan} />}
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-8 max-w-2xl mx-auto">
-          {/* Explainer */}
-          <div className="flex items-start gap-2.5 p-3 bg-violet-bg border border-violet-border rounded-[10px] mb-5">
-            <Sparkles className="w-4 h-4 text-violet flex-shrink-0 mt-0.5" />
-            <p className="font-inter text-[11px] text-violet leading-relaxed">
-              <strong>Gap Finder</strong> scans your confirmed schedule and surfaces
-              pending jobs that physically fit inside free windows — accounting for
-              drive time, signing duration, and scanback commitments. Tap{" "}
-              <strong>CITT</strong> on any match to evaluate before accepting.
-            </p>
+      <div className="con">
+        <div className="alert al-violet mb-4">
+          <Sparkles className="w-4 h-4" />
+          <div className="text-[11px] leading-[1.4]">
+            <strong>Gap Finder</strong> scans your pending jobs and surfaces ones
+            that fit inside free windows in your day based on geography, drive
+            time, and scanback commitments. Tap CITT to evaluate before accepting.
           </div>
+        </div>
 
-          {gapsLoading || planLoading ? (
-            <div className="flex justify-center py-16">
-              <div className="w-6 h-6 border-2 border-border border-t-violet rounded-full animate-spin" />
-            </div>
-          ) : gaps.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-12 h-12 rounded-full bg-violet-bg flex items-center justify-center mb-4">
-                <Sparkles className="w-5 h-5 text-violet" />
-              </div>
-              <p className="font-inter text-sm font-semibold text-primary-navy mb-1">
-                No gaps found today
-              </p>
-              <p className="font-inter text-xs text-slate-secondary max-w-[260px] leading-relaxed">
-                Either your schedule is fully packed, or there are no pending
-                jobs that fit your open windows. Add pending jobs to see
-                opportunities.
-              </p>
-              <Link
-                href="/jobs/new"
-                className="mt-4 font-inter text-sm font-semibold text-interactive-blue hover:underline"
-              >
-                Add a pending job
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {gaps.map((gap, gapIdx) => {
-                const startLabel = format(parseISO(gap.gap_start), "h:mm a");
-                const endLabel = format(parseISO(gap.gap_end), "h:mm a");
-                const hours = Math.floor(gap.gap_mins / 60);
-                const mins = gap.gap_mins % 60;
-                const durationLabel =
-                  hours > 0
-                    ? `${hours}h ${mins > 0 ? `${mins}m` : ""}`.trim()
-                    : `${mins}m`;
-
-                return (
-                  <div key={gapIdx}>
-                    {/* Gap window header */}
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-[3px] h-8 bg-violet rounded-full flex-shrink-0" />
-                      <div>
-                        <p className="font-inter text-[13px] font-bold text-primary-navy">
-                          Gap — {startLabel} to {endLabel}
-                        </p>
-                        <p className="font-inter text-[11px] text-slate-secondary">
-                          {durationLabel} free window ·{" "}
-                          {gap.candidates.length} job
-                          {gap.candidates.length !== 1 ? "s" : ""} fit this
-                          window
-                        </p>
+        {gapsLoading || planLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-border border-t-violet rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            {gaps.map((gap, gapIdx) => {
+              const startLabel = format(parseISO(gap.gap_start), "h:mm a");
+              const endLabel = format(parseISO(gap.gap_end), "h:mm a");
+              const hasCandidates = gap.candidates.length > 0;
+              return (
+                <div key={gapIdx} className="mb-3">
+                  <div className="flex gap-2 items-center mb-2">
+                    <div
+                      className="w-[3px] h-8 rounded-full flex-shrink-0"
+                      style={{ background: hasCandidates ? "#7C3AED" : "var(--border)" }}
+                    />
+                    <div>
+                      <div className="text-[12px] font-bold text-primary-navy">
+                        Gap - {startLabel} to {endLabel}
+                      </div>
+                      <div className="text-[11px] text-slate-secondary">
+                        {gap.gap_mins} min free,{" "}
+                        {gapIdx === 0
+                          ? "After Job 4 scanback, Before end of day"
+                          : "Before first signing"}
+                        {hasCandidates
+                          ? ""
+                          : ", No pending jobs fit this window"}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Candidates */}
-                    {gap.candidates.length > 0 ? (
-                      <div className="ml-3 space-y-2">
-                        {gap.candidates.map((candidate, cIdx) => (
-                          <div
-                            key={cIdx}
-                            className="bg-violet-bg border-l-[3px] border-l-violet rounded-r-[12px] p-3.5"
-                          >
-                            <div className="flex items-start justify-between gap-3 mb-2.5">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-inter text-[13px] font-semibold text-primary-navy truncate mb-0.5">
-                                  {candidate.address}
-                                </p>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-inter text-[11px] text-slate-secondary">
-                                    {candidate.signing_type
-                                      ? (
-                                          {
-                                            GENERAL: "General",
-                                            LOAN_REFI: "Loan Refi",
-                                            HYBRID: "Hybrid",
-                                            PURCHASE_CLOSING: "Purchase",
-                                            FIELD_INSPECTION: "Field Inspection",
-                                            APOSTILLE: "Apostille",
-                                          }[candidate.signing_type] ??
-                                          candidate.signing_type
-                                        )
-                                      : ""}
-                                  </span>
-                                  <span className="text-muted text-[10px]">·</span>
-                                  <span className="font-inter text-[11px] text-slate-secondary">
-                                    Offered:{" "}
-                                    <span className="font-semibold text-primary-navy">
-                                      {formatCurrency(candidate.fee)}
-                                    </span>
-                                  </span>
-                                  <span className="text-muted text-[10px]">·</span>
-                                  <span className="font-inter text-[11px] text-teal-success font-semibold">
-                                    ~{formatCurrency(candidate.net_earnings)} net
-                                  </span>
-                                </div>
+                  <div className="ml-2.5">
+                    {hasCandidates ? (
+                      gap.candidates.map((candidate, cIdx) => (
+                        <div
+                          key={cIdx}
+                          className="gap-card"
+                          style={{ marginBottom: 8 }}
+                        >
+                          <div className="flex justify-between gap-2 mb-1.5 flex-wrap">
+                            <div className="flex-1 min-w-[160px]">
+                              <div className="text-[12px] font-bold text-primary-navy mb-0.5">
+                                {candidate.address}
+                              </div>
+                              <div className="text-[11px] text-slate-secondary mb-1.5 flex gap-1.5 flex-wrap">
+                                <span>
+                                  {formatSigningType(candidate.signing_type as string)} -{" "}
+                                  {(candidate as any).signing_duration_mins ?? "?"} min
+                                </span>
+                                <span>
+                                  {format(parseISO(candidate.appointment_time), "h:mm a")} start
+                                </span>
+                                <span>
+                                  {(candidate as any).miles_from ?? "?"}{" "}
+                                  {(candidate as any).miles_from != null ? "mi" : ""}
+                                  {(candidate as any).miles_from_of
+                                    ? ` from Job ${(candidate as any).miles_from_of}`
+                                    : ""}
+                                </span>
+                              </div>
+                              <div className="flex gap-1 flex-wrap">
+                                <span className={cn("chip", getTypeChipClass(candidate.signing_type as string))}>
+                                  {formatSigningType(candidate.signing_type as string)}
+                                </span>
+                                {(candidate as any).platform_name && (
+                                  <span className="chip c-plat">{(candidate as any).platform_name}</span>
+                                )}
                               </div>
                             </div>
-
-                            {/* CITT CTA */}
-                            <GapFinderCard gap={{ ...gap, candidates: [candidate] }} />
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-[14px] font-bold text-primary-navy">
+                                {formatCurrency(candidate.fee)}
+                              </div>
+                              <div className="text-[9px] text-slate-secondary">offered</div>
+                              <div className="text-[12px] font-bold text-teal mt-0.5">
+                                ~{formatCurrency(candidate.net_earnings)} net
+                              </div>
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <button
+                            className="btn-sm w-full"
+                            style={{ borderColor: "#C4B5FD", color: "#7C3AED" }}
+                            onClick={() =>
+                              useUIStore.getState().openCITT({
+                                address: candidate.address,
+                                time: candidate.appointment_time,
+                                type: candidate.signing_type,
+                                fee: candidate.fee,
+                              })
+                            }
+                          >
+                            <Zap className="w-3 h-3" /> Run CITT check
+                          </button>
+                        </div>
+                      ))
                     ) : (
-                      <div className="ml-3 flex items-center gap-2 p-3 bg-slate-50 border border-border rounded-[10px]">
+                      <div
+                        className="bg-bg border border-border rounded-[8px] p-2.5 flex gap-2 items-center"
+                      >
                         <Info className="w-4 h-4 text-muted flex-shrink-0" />
-                        <p className="font-inter text-[11px] text-muted">
-                          No pending jobs fit this window
-                        </p>
+                        <span className="text-[11px] text-muted">
+                          No pending jobs match this gap geographically.
+                        </span>
                       </div>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
 
-              {/* Footer tip */}
-              <div className="flex items-start gap-2 p-3 bg-blue-bg border border-blue-border rounded-[10px]">
-                <Info className="w-4 h-4 text-interactive-blue flex-shrink-0 mt-0.5" />
-                <p className="font-inter text-[11px] text-interactive-blue leading-relaxed">
-                  Gap Finder only evaluates jobs in{" "}
-                  <strong>Pending</strong> status. To add more candidates,
-                  create jobs with Pending status from{" "}
-                  <Link href="/jobs" className="underline font-semibold">
-                    My Jobs
-                  </Link>
-                  .
-                </p>
+            <div className="h-px bg-border my-3.5" />
+
+            <div className="alert al-blue">
+              <Info className="w-4 h-4" />
+              <div>
+                <div className="text-[11px] font-semibold mb-0.5">
+                  {totalCandidates} pending jobs in inbox
+                </div>
+                <div className="text-[11px] leading-[1.4]">
+                  {totalCandidates} matched today&apos;s gaps, forward Snapdocs
+                  emails to{" "}
+                  <span
+                    className="font-mono text-[10px]"
+                    style={{ background: "rgba(37,99,235,.1)", padding: "1px 4px", borderRadius: 3 }}
+                  >
+                    import@notaryday.app
+                  </span>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
 
   if (!isPro) {
-    return <ProGate feature="Gap Finder">{content}</ProGate>;
+    return (
+      <div className="h-full">
+        <ProGate feature="Gap Finder">{content}</ProGate>
+      </div>
+    );
   }
 
   return content;
+}
+
+function GapDayStrip({ plan }: { plan: any }) {
+  const s = plan.summary ?? {};
+  const driveMins = s.total_drive_mins ?? 0;
+  return (
+    <div className="dstrip" style={{ cursor: "default" }}>
+      <div className="ds">
+        <span className="ds-v">{s.total_jobs ?? 0}</span>
+        <span className="ds-l">Signings</span>
+      </div>
+      <div className="ds-div" />
+      <div className="ds">
+        <span className="ds-v">{formatCurrency(s.total_earnings ?? 0)}</span>
+        <span className="ds-l">Est. net</span>
+      </div>
+      <div className="ds-div" />
+      <div className="ds">
+        <span className="ds-v">
+          {Math.floor(driveMins / 60)}h {driveMins % 60}m
+        </span>
+        <span className="ds-l">Drive time</span>
+      </div>
+    </div>
+  );
+}
+
+function getTypeChipClass(type: string): string {
+  const map: Record<string, string> = {
+    GENERAL: "c-gen",
+    LOAN_REFI: "c-loan",
+    HYBRID: "c-hyb",
+    PURCHASE_CLOSING: "c-loan",
+    FIELD_INSPECTION: "c-gen",
+    APOSTILLE: "c-gen",
+  };
+  return map[type] ?? "c-gen";
+}
+
+function formatSigningType(type: string): string {
+  const map: Record<string, string> = {
+    GENERAL: "General",
+    LOAN_REFI: "Loan Refi",
+    HYBRID: "Hybrid",
+    PURCHASE_CLOSING: "Purchase Closing",
+    FIELD_INSPECTION: "Field Inspection",
+    APOSTILLE: "Apostille",
+  };
+  return map[type] ?? type ?? "Job";
 }
