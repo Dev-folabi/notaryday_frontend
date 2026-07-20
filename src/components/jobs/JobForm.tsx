@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Check, X } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail, Check, X } from "lucide-react";
 import { useCreateJob, useUpdateJob, useJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import type { SigningType } from "@/types/user";
@@ -45,6 +45,7 @@ interface FormState {
   scanback_duration_mins: string;
   client_name: string;
   client_phone: string;
+  client_email: string;
   notes: string;
 }
 
@@ -60,6 +61,7 @@ const EMPTY: FormState = {
   scanback_duration_mins: "30",
   client_name: "",
   client_phone: "",
+  client_email: "",
   notes: "",
 };
 
@@ -148,6 +150,7 @@ export default function JobForm({
         scanback_duration_mins: String(job.scanback_duration_mins),
         client_name: job.client_name ?? "",
         client_phone: job.client_phone ?? "",
+        client_email: job.client_email ?? "",
         notes: job.notes ?? "",
       });
       setSelectedType(job.signing_type);
@@ -176,6 +179,7 @@ export default function JobForm({
       platform_name: form.platform_name.trim() || undefined,
       client_name: form.client_name.trim() || undefined,
       client_phone: form.client_phone.trim() || undefined,
+      client_email: form.client_email.trim() || undefined,
       notes: form.notes.trim() || undefined,
     };
 
@@ -476,6 +480,21 @@ export default function JobForm({
                     placeholder="(555) 555-5555"
                     value={form.client_phone}
                     onChange={(e) => set("client_phone", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label className="lbl">Client email</label>
+                <div className="icw">
+                  <span className="ico">
+                    <Mail className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="email"
+                    className="inp has-icon"
+                    placeholder="client@example.com"
+                    value={form.client_email}
+                    onChange={(e) => set("client_email", e.target.value)}
                   />
                 </div>
               </div>

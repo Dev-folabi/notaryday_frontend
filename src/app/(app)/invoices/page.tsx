@@ -111,9 +111,14 @@ export default function InvoicesPage() {
   useEffect(() => {
     if (focusId && invoices.length > 0 && !selected) {
       const match = invoices.find((inv) => inv.id === focusId);
-      if (match) setSelected(match);
+      if (match) {
+        setSelected(match);
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("focus");
+        router.replace(`/invoices?${params.toString()}`, { scroll: false });
+      }
     }
-  }, [focusId, invoices, selected]);
+  }, [focusId, invoices, selected, searchParams, router]);
 
   const markPaid = useMutation({
     mutationFn: (id: string) => invoicesApi.markPaid(id),
@@ -127,7 +132,8 @@ export default function InvoicesPage() {
   });
 
   const resend = useMutation({
-    mutationFn: (id: string) => invoicesApi.send(id),
+    mutationFn: ({ id, email }: { id: string; email?: string }) =>
+      invoicesApi.send(id, email),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       addToast({ title: "Invoice sent", type: "success" });
@@ -330,13 +336,13 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {selected && (
+       {selected && (
         <InvoiceModal
           invoice={selected}
           status={statusOf(selected)}
           onClose={() => setSelected(null)}
           onMarkPaid={() => markPaid.mutate(selected.id)}
-          onResend={() => resend.mutate(selected.id)}
+          onResend={(email) => resend.mutate({ id: selected.id, email })}
           isMarking={markPaid.isPending}
           onDownload={() =>
             addToast({ title: "Downloading PDF", type: "info" })
@@ -360,10 +366,13 @@ function InvoiceModal({
   status: Exclude<FilterTab, "all">;
   onClose: () => void;
   onMarkPaid: () => void;
-  onResend: () => void;
+  onResend: (email?: string) => void;
   onDownload: () => void;
   isMarking: boolean;
 }) {
+  const [resendEmail, setResendEmail] = useState(
+    invoice.recipient_email ?? "",
+  );
   const client = invoice.recipient_name ?? invoice.job?.client_name ?? "Client";
   const fee = invoice.job?.fee ?? invoice.subtotal ?? invoice.total;
   const mileage = invoice.job?.mileage_cost ?? 0;
@@ -520,9 +529,28 @@ function InvoiceModal({
             </button>
           )}
           {status !== "paid" && (
-            <button className="btn-sm w-full !h-11" onClick={onResend}>
-              <Mail className="w-3.5 h-3.5" /> Resend invoice
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="icw">
+                <span className="ico">
+                  <Mail className="w-3.5 h-3.5" />
+                </span>
+                <input
+                  className="inp has-icon"
+                  type="email"
+                  placeholder="client@example.com"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn-sm w-full !h-11"
+                onClick={() =>
+                  onResend(resendEmail.trim() || undefined)
+                }
+              >
+                <Mail className="w-3.5 h-3.5" /> Resend invoice
+              </button>
+            </div>
           )}
           <button className="btn-p" onClick={onDownload}>
             <Download className="w-4 h-4" /> Download PDF
