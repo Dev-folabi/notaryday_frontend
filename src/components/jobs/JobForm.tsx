@@ -160,6 +160,10 @@ export default function JobForm({
   const set = (k: keyof FormState, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  // Stable idempotency key for the current manual create — generated on the
+  // first submit and reused on retries so a failed request never duplicates.
+  const idempotencyKeyRef = useRef<string | null>(null);
+
   const submit = () => {
     if (!form.address.trim()) {
       setAddrError(true);
@@ -184,18 +188,27 @@ export default function JobForm({
     };
 
     if (mode === "new") {
-      createJob.mutate(payload as any, {
-        onSuccess: () => {
-          addToast({ type: "success", title: "Job saved, route recalculated" });
-          router.push("/jobs");
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
+      createJob.mutate(
+        { ...payload, idempotencyKey: idempotencyKeyRef.current } as any,
+        {
+          onSuccess: () => {
+            addToast({ type: "success", title: "Job saved, route recalculated" });
+            router.push("/jobs");
+          },
+          onError: (err) =>
+            addToast({
+              type: "error",
+              title: "Couldn't save job",
+              message: errMsg(err),
+            }),
         },
-        onError: (err) =>
-          addToast({
-            type: "error",
-            title: "Couldn't save job",
-            message: errMsg(err),
-          }),
-      });
+      );
     } else {
       updateJob.mutate(
         { id: jobId!, data: { ...payload, status: statusToEnum(form.status) } as any },

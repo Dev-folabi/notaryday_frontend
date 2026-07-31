@@ -8,7 +8,12 @@ export const jobsApi = {
     limit?: number;
   }) => api.get("/jobs", { params }),
 
-  create: (data: Record<string, unknown>) => api.post("/jobs", data),
+  create: (data: Record<string, unknown>, idempotencyKey?: string) =>
+    api.post("/jobs", data, {
+      headers: idempotencyKey
+        ? { "Idempotency-Key": idempotencyKey }
+        : undefined,
+    }),
 
   get: (id: string) => api.get(`/jobs/${id}`),
 

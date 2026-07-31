@@ -38,8 +38,14 @@ export function useJob(id: string) {
 export function useCreateJob() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateJobInput) =>
-      jobsApi.create(data as unknown as Record<string, unknown>),
+    mutationFn: (args: CreateJobInput | (CreateJobInput & { idempotencyKey?: string })) => {
+      const data = args as CreateJobInput & { idempotencyKey?: string };
+      const { idempotencyKey, ...payload } = data;
+      return jobsApi.create(
+        payload as unknown as Record<string, unknown>,
+        idempotencyKey,
+      );
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
     },
