@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -98,6 +98,7 @@ export default function InvoicesPage() {
   const [selected, setSelected] = useState<InvoiceRow | null>(null);
   const searchParams = useSearchParams();
   const focusId = searchParams.get("focus");
+  const consumedFocus = useRef(false);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices", "all"],
@@ -109,10 +110,11 @@ export default function InvoicesPage() {
   });
 
   useEffect(() => {
-    if (focusId && invoices.length > 0 && !selected) {
+    if (focusId && invoices.length > 0 && !selected && !consumedFocus.current) {
       const match = invoices.find((inv) => inv.id === focusId);
       if (match) {
         setSelected(match);
+        consumedFocus.current = true;
         const params = new URLSearchParams(searchParams.toString());
         params.delete("focus");
         router.replace(`/invoices?${params.toString()}`, { scroll: false });

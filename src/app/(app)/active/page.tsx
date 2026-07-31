@@ -148,6 +148,24 @@ export default function ActiveSigningPage() {
     }
   };
 
+  const resetProgress = async () => {
+    try {
+      if (activeJob.status === "SCANNING") {
+        await updateStatus.mutateAsync({
+          id: activeJob.id,
+          status: "IN_PROGRESS",
+        });
+      }
+      setManualOverride(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["jobs", "active-today", today],
+      });
+      addToast({ title: "Progress reset", type: "info" });
+    } catch {
+      setManualOverride(2);
+    }
+  };
+
   const steps = [
     { label: "Navigated to location", time: startTime },
     { label: "Signing started", time: startedTime ?? undefined },
@@ -383,12 +401,8 @@ export default function ActiveSigningPage() {
           </button>
           <button
             className="btn-gh"
-            onClick={() => {
-              setManualOverride(null);
-              queryClient.invalidateQueries({
-                queryKey: ["jobs", "active-today", today],
-              });
-            }}
+            onClick={resetProgress}
+            disabled={updateStatus.isPending}
           >
             Reset progress
           </button>
