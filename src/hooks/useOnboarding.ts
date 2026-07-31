@@ -5,12 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import { usersApi } from "@/api/users.api";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 import type { UserSettings } from "@/types/user";
 
 export function useOnboarding() {
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { addToast, setOnboardingStep } = useUIStore();
 
   // Save home base + username
@@ -111,6 +113,13 @@ export function useOnboarding() {
 
   const completeOnboarding = useMutation({
     mutationFn: () => usersApi.completeOnboarding(),
+    onSuccess: (res) => {
+      const updated = (res as { data?: unknown }).data;
+      if (updated) {
+        queryClient.setQueryData(queryKeys.auth.me, updated);
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+    },
     onError: (err: { message?: string }) => {
       addToast({
         type: "error",

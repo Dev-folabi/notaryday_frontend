@@ -4,14 +4,9 @@ import { useGaps } from "@/hooks/usePlanner";
 import { useTodayPlan } from "@/hooks/usePlanner";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
-import { toDateInputValue, formatCurrency } from "@/lib/utils";
+import { toDateInputValue, formatCurrency, importEmailFor } from "@/lib/utils";
 import ProGate from "@/components/ui/ProGate";
-import {
-  Sparkles,
-  Info,
-  ChevronLeft,
-  Zap,
-} from "lucide-react";
+import { Sparkles, Info, ChevronLeft, Zap } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -48,9 +43,10 @@ export default function GapPage() {
         <div className="alert al-violet mb-4">
           <Sparkles className="w-4 h-4" />
           <div className="text-[11px] leading-[1.4]">
-            <strong>Gap Finder</strong> scans your pending jobs and surfaces ones
-            that fit inside free windows in your day based on geography, drive
-            time, and scanback commitments. Tap CITT to evaluate before accepting.
+            <strong>Gap Finder</strong> scans your pending jobs and surfaces
+            ones that fit inside free windows in your day based on geography,
+            drive time, and scanback commitments. Tap CITT to evaluate before
+            accepting.
           </div>
         </div>
 
@@ -69,7 +65,9 @@ export default function GapPage() {
                   <div className="flex gap-2 items-center mb-2">
                     <div
                       className="w-[3px] h-8 rounded-full flex-shrink-0"
-                      style={{ background: hasCandidates ? "#7C3AED" : "var(--border)" }}
+                      style={{
+                        background: hasCandidates ? "#7C3AED" : "var(--border)",
+                      }}
                     />
                     <div>
                       <div className="text-[12px] font-bold text-primary-navy">
@@ -102,26 +100,48 @@ export default function GapPage() {
                               </div>
                               <div className="text-[11px] text-slate-secondary mb-1.5 flex gap-1.5 flex-wrap">
                                 <span>
-                                  {formatSigningType(candidate.signing_type as string)} -{" "}
-                                  {(candidate as any).signing_duration_mins ?? "?"} min
+                                  {formatSigningType(
+                                    candidate.signing_type as string,
+                                  )}{" "}
+                                  -{" "}
+                                  {(candidate as any).signing_duration_mins ??
+                                    "?"}{" "}
+                                  min
                                 </span>
                                 <span>
-                                  {format(parseISO(candidate.appointment_time), "h:mm a")} start
+                                  {format(
+                                    parseISO(candidate.appointment_time),
+                                    "h:mm a",
+                                  )}{" "}
+                                  start
                                 </span>
                                 <span>
                                   {(candidate as any).miles_from ?? "?"}{" "}
-                                  {(candidate as any).miles_from != null ? "mi" : ""}
+                                  {(candidate as any).miles_from != null
+                                    ? "mi"
+                                    : ""}
                                   {(candidate as any).miles_from_of
                                     ? ` from Job ${(candidate as any).miles_from_of}`
                                     : ""}
                                 </span>
                               </div>
                               <div className="flex gap-1 flex-wrap">
-                                <span className={cn("chip", getTypeChipClass(candidate.signing_type as string))}>
-                                  {formatSigningType(candidate.signing_type as string)}
+                                <span
+                                  className={cn(
+                                    "chip",
+                                    getTypeChipClass(
+                                      candidate.signing_type as string,
+                                    ),
+                                  )}
+                                >
+                                  {formatSigningType(
+                                    candidate.signing_type as string,
+                                  )}
                                 </span>
                                 {(candidate as any).platform_name && (
-                                  <span className="chip c-plat">{(candidate as any).platform_name}</span>
+                                  <span className="chip c-plat">
+                                    {(candidate as any).platform_name}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -129,7 +149,9 @@ export default function GapPage() {
                               <div className="text-[14px] font-bold text-primary-navy">
                                 {formatCurrency(candidate.fee)}
                               </div>
-                              <div className="text-[9px] text-slate-secondary">offered</div>
+                              <div className="text-[9px] text-slate-secondary">
+                                offered
+                              </div>
                               <div className="text-[12px] font-bold text-teal mt-0.5">
                                 ~{formatCurrency(candidate.net_earnings)} net
                               </div>
@@ -152,9 +174,7 @@ export default function GapPage() {
                         </div>
                       ))
                     ) : (
-                      <div
-                        className="bg-bg border border-border rounded-[8px] p-2.5 flex gap-2 items-center"
-                      >
+                      <div className="bg-bg border border-border rounded-[8px] p-2.5 flex gap-2 items-center">
                         <Info className="w-4 h-4 text-muted flex-shrink-0" />
                         <span className="text-[11px] text-muted">
                           No pending jobs match this gap geographically.
@@ -179,9 +199,13 @@ export default function GapPage() {
                   emails to{" "}
                   <span
                     className="font-mono text-[10px]"
-                    style={{ background: "rgba(37,99,235,.1)", padding: "1px 4px", borderRadius: 3 }}
+                    style={{
+                      background: "rgba(37,99,235,.1)",
+                      padding: "1px 4px",
+                      borderRadius: 3,
+                    }}
                   >
-                    import@notaryday.app
+                    importEmailFor(user?.username)
                   </span>
                 </div>
               </div>

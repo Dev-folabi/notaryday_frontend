@@ -86,7 +86,7 @@ export default function CITTVerdictCard({
       {/* Floating Close Button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+        className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#475569] hover:bg-[#F1F5F9] transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

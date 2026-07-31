@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const SCANBACK_OPTIONS = [20, 25, 30, 35, 40];
 const DEFAULT_SCANBACK = 30;
+const DEFAULT_IRS_RATE = 0.725;
 
 export default function OnboardingScanbackPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function OnboardingScanbackPage() {
   const { setOnboardingStep } = useUIStore();
 
   const [scanbackDuration, setScanbackDuration] = useState(DEFAULT_SCANBACK);
+  const [irsRate, setIrsRate] = useState(DEFAULT_IRS_RATE);
 
   // Set step on mount
   useEffect(() => {
@@ -25,9 +27,13 @@ export default function OnboardingScanbackPage() {
   }, [setOnboardingStep]);
 
   const handleSubmit = async () => {
+    const rate =
+      typeof irsRate === "number" && isFinite(irsRate) && irsRate > 0
+        ? irsRate
+        : DEFAULT_IRS_RATE;
     saveScanback.mutate({
       scanback_duration_mins: scanbackDuration,
-      irs_rate_per_mile: 0.725,
+      irs_rate_per_mile: rate,
     });
   };
 
@@ -95,6 +101,44 @@ export default function OnboardingScanbackPage() {
                 </span>
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="font-inter font-bold text-xs text-primary-navy uppercase tracking-widest block mb-4">
+              Mileage reimbursement rate
+            </label>
+            <div className="flex items-center justify-between p-4 bg-bg border border-border rounded-16px group focus-within:border-interactive-blue transition-colors">
+              <span className="font-inter text-sm font-bold text-primary-navy">
+                IRS rate per mile
+              </span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  <span className="font-inter text-sm font-extrabold text-muted">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.005"
+                    value={irsRate}
+                    onChange={(e) =>
+                      setIrsRate(
+                        e.target.value === ""
+                          ? 0
+                          : parseFloat(e.target.value),
+                      )
+                    }
+                    className="w-16 bg-transparent text-right font-inter font-extrabold text-interactive-blue focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="font-inter text-[11px] text-muted font-medium mt-2 leading-relaxed">
+              Used to calculate mileage cost in CITT checks and profitability.
+              The default is ${DEFAULT_IRS_RATE}/mile — you can change it later
+              in Settings.
+            </p>
           </div>
 
           {/* Live Preview */}

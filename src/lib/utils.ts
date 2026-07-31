@@ -22,7 +22,10 @@ export function unwrap<T>(res: unknown): T {
  * The api.ts interceptor rejects with an object carrying `message`
  * (the backend's error message). Falls back to a generic message.
  */
-export function errMsg(err: unknown, fallback = "Something went wrong"): string {
+export function errMsg(
+  err: unknown,
+  fallback = "Something went wrong",
+): string {
   if (!err) return fallback;
   if (typeof err === "string") return err;
   const e = err as {
@@ -149,6 +152,20 @@ export function truncateAddress(address: string, maxLen = 40): string {
   const cleaned = address.replace(/\s+/g, " ").trim();
   if (cleaned.length <= maxLen) return cleaned;
   return cleaned.slice(0, maxLen - 1) + "…";
+}
+
+/**
+ * Domain used for per-user email import addresses.
+ */
+export const IMPORT_EMAIL_DOMAIN: string =
+  process.env.NEXT_PUBLIC_IMPORT_EMAIL_DOMAIN ?? "inbound.notaryday.app";
+
+/**
+ * Per-user email import address: import+username@inbound.notaryday.app
+ */
+export function importEmailFor(username?: string | null): string {
+  const u = username?.trim().toLowerCase();
+  return `import+${u || "user"}@${IMPORT_EMAIL_DOMAIN}`;
 }
 
 /**

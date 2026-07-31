@@ -5,6 +5,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useCITTCheck } from "@/hooks/useCITT";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateJob } from "@/hooks/useJobs";
+import { importEmailFor } from "@/lib/utils";
 import {
   X,
   Zap,
@@ -412,7 +413,7 @@ export default function CITTModal() {
                   <strong>Pro tip:</strong> Forward Snapdocs or SigningOrder
                   confirmation emails to{" "}
                   <span className="font-mono bg-[#2563EB]/10 px-1.5 py-0.5 rounded-[3px] font-medium">
-                    {user?.username || "user"}@import.notaryday.app
+                    {importEmailFor(user?.username)}
                   </span>{" "}
                   and this form fills automatically.
                 </div>

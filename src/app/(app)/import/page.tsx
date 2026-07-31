@@ -4,14 +4,17 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { emailImportApi, screenshotApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
+import { useAuth } from "@/hooks/useAuth";
+import { importEmailFor } from "@/lib/utils";
 import { Mail, Upload, Check, Copy, FileImage } from "lucide-react";
 import ProGate from "@/components/ui/ProGate";
 
 export default function ImportPage() {
   const { addToast } = useUIStore();
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
-  const [importEmail] = useState("import@notaryday.app");
+  const importEmail = importEmailFor(user?.username);
 
   const { data: imports = [], isLoading } = useQuery({
     queryKey: ["email-imports"],
@@ -71,12 +74,13 @@ export default function ImportPage() {
               <Mail className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-inter text-[12px] font-semibold mb-1">
-                  Forward any Snapdocs or SigningOrder email to your import address
+                  Forward any Snapdocs or SigningOrder email to your import
+                  address
                 </div>
                 <div className="font-inter text-[11px] text-slate-secondary leading-[1.4] mb-2">
                   Notary Day reads it automatically and runs a CITT check. No
-                  manual entry needed. The job appears here for your review before
-                  it is added to your schedule.
+                  manual entry needed. The job appears here for your review
+                  before it is added to your schedule.
                 </div>
               </div>
             </div>
@@ -163,9 +167,16 @@ export default function ImportPage() {
                           onClick={() => confirmImport.mutate(imp.id)}
                           disabled={confirmImport.isPending}
                           className="btn-p"
-                          style={{ width: "auto", height: 32, fontSize: 11, padding: "0 12px" }}
+                          style={{
+                            width: "auto",
+                            height: 32,
+                            fontSize: 11,
+                            padding: "0 12px",
+                          }}
                         >
-                          {confirmImport.isPending ? "Adding..." : "Add to schedule"}
+                          {confirmImport.isPending
+                            ? "Adding..."
+                            : "Add to schedule"}
                         </button>
                         <button
                           onClick={() =>

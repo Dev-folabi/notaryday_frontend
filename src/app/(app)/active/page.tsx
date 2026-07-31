@@ -110,6 +110,21 @@ export default function ActiveSigningPage() {
     SIGNING_TYPE_LABELS[activeJob.signing_type] ?? activeJob.signing_type;
   const needsScanback = (activeJob.scanback_duration_mins ?? 0) > 0;
   const startTime = format(parseISO(activeJob.appointment_time), "h:mm a");
+  const scanbackDuration = activeJob.scanback_duration_mins ?? 0;
+  const startedTime = activeJob.started_at
+    ? format(parseISO(activeJob.started_at), "h:mm a")
+    : null;
+  const nextJob = jobs
+    .filter(
+      (j) =>
+        j.status === "CONFIRMED" &&
+        new Date(j.appointment_time) > new Date(activeJob.appointment_time),
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.appointment_time).getTime() -
+        new Date(b.appointment_time).getTime(),
+    )[0];
 
   const advance = async (next: "SCANNING" | "COMPLETE") => {
     try {
@@ -134,10 +149,14 @@ export default function ActiveSigningPage() {
   };
 
   const steps = [
-    { label: "Navigated to location" },
-    { label: "Signing started" },
+    { label: "Navigated to location", time: startTime },
+    { label: "Signing started", time: startedTime ?? undefined },
     { label: "Signing in progress", active: progress === 2 },
-    { label: "Scanback (18 min)", dashed: true, disabled: !needsScanback },
+    {
+      label: `Scanback (${scanbackDuration} min)`,
+      dashed: true,
+      disabled: !needsScanback,
+    },
     { label: "Complete - Invoice sent", dashed: true, disabled: true },
   ];
 
@@ -266,9 +285,11 @@ export default function ActiveSigningPage() {
                   >
                     {step.label}
                   </span>
-                  <span className="ml-auto text-[10px] text-muted">
-                    {startTime}
-                  </span>
+                  {step.time && (
+                    <span className="ml-auto text-[10px] text-muted">
+                      {step.time}
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -336,22 +357,25 @@ export default function ActiveSigningPage() {
           </div>
         )}
 
-        <div
-          className="flex gap-2 p-2.5 rounded-[10px]"
-          style={{
-            background: "var(--blue-bg)",
-            border: "1px solid var(--blue-border)",
-          }}
-        >
-          <Info className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
-          <div className="text-[11px] text-slate-secondary leading-[1.4]">
-            When you tap Signing done, an ETA notification is sent to your next
-            client:{" "}
-            <strong className="text-primary-navy">
-              Your notary is on their way - arriving approx 2:15 PM
-            </strong>
+        {nextJob && (
+          <div
+            className="flex gap-2 p-2.5 rounded-[10px]"
+            style={{
+              background: "var(--blue-bg)",
+              border: "1px solid var(--blue-border)",
+            }}
+          >
+            <Info className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
+            <div className="text-[11px] text-slate-secondary leading-[1.4]">
+              When you tap Signing done, an ETA notification is sent to your
+              next client:{" "}
+              <strong className="text-primary-navy">
+                Your notary is on their way - arriving approx{" "}
+                {format(parseISO(nextJob.appointment_time), "h:mm a")}
+              </strong>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-2 mt-4">
           <button className="btn-gh" onClick={() => router.push("/day")}>
@@ -425,11 +449,18 @@ function ScanbackCountdown({
   }, []);
 
   const end = getScanbackEnd(job);
-  const totalMs = job.scanback_duration_mins
-    ? job.scanback_duration_mins * 60_000
-    : end
-      ? Math.max(end - (now - 1000), 1)
-      : 1;
+  const startedMs = job.scanning_started_at
+    ? new Date(job.scanning_started_at).getTime()
+    : null;
+
+  const totalMs =
+    end && startedMs
+      ? Math.max(end - startedMs, 1)
+      : job.scanback_duration_mins
+        ? job.scanback_duration_mins * 60_000
+        : 1;
+
+  const totalLabel = `${String(Math.floor(totalMs / 60_000)).padStart(2, "0")}:${String(Math.floor((totalMs % 60_000) / 1000)).padStart(2, "0")}`;
 
   const remainingMs = end ? Math.max(end - now, 0) : 0;
   const pct = totalMs > 0 ? Math.min(100, ((totalMs - remainingMs) / totalMs) * 100) : 0;
@@ -437,10 +468,6 @@ function ScanbackCountdown({
   const mm = Math.floor(remainingMs / 60_000);
   const ss = Math.floor((remainingMs % 60_000) / 1000);
   const remainingLabel = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-
-  const endLabel = end
-    ? new Date(end).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    : "—";
 
   return (
     <div
@@ -458,7 +485,7 @@ function ScanbackCountdown({
         {remainingLabel}
       </div>
       <div className="text-[11px] text-slate-secondary">
-        of {endLabel} remaining
+        of {totalLabel} remaining
       </div>
       <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
         <div className="h-full bg-amber" style={{ width: `${pct}%` }} />

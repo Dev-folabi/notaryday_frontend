@@ -33,6 +33,7 @@ export default function SettingsPage() {
     if (user) {
       setProfile({
         fullName: user.full_name ?? "",
+        username: user.username ?? "",
         email: user.email ?? "",
         phone: user.phone ?? "",
         state: "California",
@@ -106,8 +107,9 @@ export default function SettingsPage() {
               <div className="font-inter text-[12px] font-semibold text-navy mb-3 flex gap-1.5 items-center"><User className="w-4 h-4" /> Profile</div>
               <div className="g2">
                 <div className="field"><label className="lbl">Full name</label><input className="inp" value={profile.fullName} onChange={(e) => sel("fullName", e.target.value)} /></div>
-                <div className="field"><label className="lbl">Email address</label><input className="inp" value={profile.email} onChange={(e) => sel("email", e.target.value)} /></div>
+                <div className="field"><label className="lbl">Username</label><input className="inp" value={profile.username} readOnly style={{ background: "#F8FAFC", cursor: "not-allowed" }} /><span className="hint">Username cannot be changed.</span></div>
               </div>
+              <div className="field"><label className="lbl">Email address</label><input className="inp" value={profile.email} readOnly style={{ background: "#F8FAFC", cursor: "not-allowed" }} /><span className="hint">Email cannot be changed.</span></div>
               <div className="g2">
                 <div className="field"><label className="lbl">Phone number</label><input className="inp" value={profile.phone} onChange={(e) => sel("phone", e.target.value)} /></div>
                 <div className="field"><label className="lbl">US state</label>
