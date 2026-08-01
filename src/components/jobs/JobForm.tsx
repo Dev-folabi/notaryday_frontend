@@ -180,6 +180,7 @@ export default function JobForm({
       signing_duration_mins: parseInt(form.signing_duration_mins) || 45,
       scanback_duration_mins: parseInt(form.scanback_duration_mins) || 0,
       fee: parseFloat(form.fee) || 0,
+      status: statusToEnum(form.status),
       platform_name: form.platform_name.trim() || undefined,
       client_name: form.client_name.trim() || undefined,
       client_phone: form.client_phone.trim() || undefined,
@@ -211,7 +212,7 @@ export default function JobForm({
       );
     } else {
       updateJob.mutate(
-        { id: jobId!, data: { ...payload, status: statusToEnum(form.status) } as any },
+        { id: jobId!, data: payload } as any,
         {
           onSuccess: () => {
             addToast({ type: "success", title: "Job updated, route recalculated" });

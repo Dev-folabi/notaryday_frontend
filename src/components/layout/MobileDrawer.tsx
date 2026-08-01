@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { jobsApi } from "@/api/jobs.api";
+import { toDateInputValue } from "@/lib/utils";
+import type { Job } from "@/types/job";
 
 interface NavItem {
   href: string;
@@ -75,6 +79,22 @@ export function MobileDrawer({ isPro = false, username, notifCount = 0 }: Mobile
   const openCITT = useUIStore((s) => s.openCITT);
   const { logoutMutation } = useAuth();
 
+  // Check if there is an active (IN_PROGRESS or SCANNING) job today
+  const today = toDateInputValue(new Date());
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["jobs", "sidebar-active", today],
+    queryFn: async () => {
+      const res = await jobsApi.list({ date: today });
+      const p = (res as any).data ?? res;
+      return (p.data ?? p) as Job[];
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const hasActiveJob = jobs.some(
+    (j) => j.status === "IN_PROGRESS" || j.status === "SCANNING",
+  );
+
   const displayInitials = username
     ? username.substring(0, 2).toUpperCase()
     : "ND";
@@ -112,7 +132,7 @@ export function MobileDrawer({ isPro = false, username, notifCount = 0 }: Mobile
                   const isActive =
                     pathname === href || (href !== "/" && pathname.startsWith(href));
                   const showNotifBadge = badgeKey === "notif" && notifCount > 0;
-                  const showLive = liveTag; // static "Live" display in drawer
+                  const showLive = liveTag && hasActiveJob;
 
                   return (
                     <Link

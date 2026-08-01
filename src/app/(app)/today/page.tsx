@@ -44,7 +44,7 @@ export default function TodayPage() {
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const today = new Date();
   const todayIso = toDateInputValue(today);
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday start
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday start
 
   // Ensure activeDate is today on mount
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function TodayPage() {
   });
 
   // mark which week days have jobs
-  const weekEnd = addDays(endOfWeek(weekStart, { weekStartsOn: 0 }), 1);
+  const weekEnd = addDays(endOfWeek(weekStart, { weekStartsOn: 1 }), 1);
   const weekFromIso = toDateInputValue(weekStart);
   const weekToIso = toDateInputValue(weekEnd);
   const weekJobsQuery = useQuery({
@@ -207,7 +207,8 @@ export default function TodayPage() {
                   Week at a glance
                 </span>
                 <span className="text-[11px] text-slate-secondary">
-                  {format(weekStart, "MMM d")} to {format(endOfWeek(weekStart), "d")}
+                  {format(weekStart, "MMM d")} to{" "}
+                  {format(endOfWeek(weekStart, { weekStartsOn: 1 }), "d")}
                 </span>
               </div>
               <WeekAtAGlanceBars weekDays={weekDays} weekJobs={weekJobs} />
@@ -499,23 +500,36 @@ function WeekAtAGlanceBars({
   weekDays: any[];
   weekJobs: Job[];
 }) {
+  const dayStats = weekDays.map((d: any) => {
+    const dayJobs = weekJobs.filter((j) => j.appointment_time?.startsWith(d.iso));
+    const earn = dayJobs.reduce(
+      (sum: number, j: Job) =>
+        sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
+      0,
+    );
+    return { ...d, count: dayJobs.length, earn };
+  });
+  const maxEarn = Math.max(...dayStats.map((d) => d.earn), 0);
   return (
     <div className="bar-wrap">
-      {weekDays.map((d: any) => {
-        const dayJobs = weekJobs.filter((j) => j.appointment_time?.startsWith(d.iso));
-        const dayEarn = dayJobs.reduce(
-          (sum: number, j: Job) =>
-            sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
-          0,
-        );
-        const h = dayJobs.length > 0 ? Math.max(dayEarn > 0 ? 24 : 4, 4) : 4;
+      {dayStats.map((d) => {
+        const h =
+          d.earn > 0 && maxEarn > 0
+            ? Math.max(24, Math.round((d.earn / maxEarn) * 52))
+            : 4;
         return (
-          <div key={d.iso} className="flex-1 flex flex-col items-center gap-1">
+          <div
+            key={d.iso}
+            className="flex-1 flex flex-col items-center"
+            style={{ gap: 3 }}
+          >
             <span className="text-[9px] text-slate-secondary whitespace-nowrap">
-              {dayJobs.length > 0 ? formatCurrency(dayEarn) : "—"}
+              {d.count > 0
+                ? `$${Math.round(d.earn).toLocaleString("en-US")}`
+                : "—"}
             </span>
             <div
-              className={cn("bar", d.isToday && "active", dayJobs.length > 0 && !d.isToday && "has")}
+              className={cn("bar", d.isToday && "active", d.count > 0 && !d.isToday && "has")}
               style={{ height: `${h}px` }}
             />
             <span

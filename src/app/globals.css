@@ -735,6 +735,17 @@ textarea {
   @apply flex items-center gap-2.5;
 }
 
+/* Desktop: the mobile topbar/drawer must never render. These custom classes are
+   un-layered, so their display beats Tailwind's layered lg:hidden utility. */
+@media (min-width: 1024px) {
+  .topbar {
+    display: none;
+  }
+  .drawer-overlay {
+    display: none;
+  }
+}
+
 /* Bottom nav */
 .bnav {
   height: 64px;
