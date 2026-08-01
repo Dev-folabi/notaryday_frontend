@@ -6,7 +6,7 @@ import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { jobsApi } from "@/api/jobs.api";
 import { queryKeys } from "@/lib/queryClient";
-import { useGaps } from "@/hooks/usePlanner";
+import { useGaps, useTodayPlan } from "@/hooks/usePlanner";
 import {
   formatCurrency,
   toDateInputValue,
@@ -105,6 +105,10 @@ export default function TodayPage() {
   const firstGap = gapsWithCandidates[0];
   const bestCandidate = firstGap?.candidates[0];
 
+  // The day plan carries the computed drive legs (populated on the backend on
+  // demand); use its summary for the Drive stat instead of the raw job rows.
+  const { data: plan } = useTodayPlan(activeDate);
+
   // Metrics — this week
   const weeklyEarnings = weekJobs.reduce(
     (sum: number, j: Job) =>
@@ -120,11 +124,7 @@ export default function TodayPage() {
       sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
     0,
   );
-  const totalDriveMins = jobs.reduce(
-    (sum: number, j: Job) =>
-      sum + (j.drive_from_prev_mins != null ? j.drive_from_prev_mins : 0),
-    0,
-  );
+  const totalDriveMins = plan?.summary?.total_drive_mins ?? 0;
 
   const jobCount = jobs.length;
   const activeJob = jobs.find((j) => j.status === "IN_PROGRESS");
@@ -498,16 +498,25 @@ function formatSigningType(type: string): string {
   return map[type] ?? type ?? "Job";
 }
 
+interface WeekDayItem {
+  date: Date;
+  label: string;
+  day: number;
+  iso: string;
+  isToday: boolean;
+  hasJobs: boolean;
+}
+
 function WeekAtAGlanceBars({
   weekDays,
   weekJobs,
 }: {
-  weekDays: any[];
+  weekDays: WeekDayItem[];
   weekJobs: Job[];
 }) {
   const { activeDate, setActiveDate } = useUIStore();
 
-  const dayStats = weekDays.map((d: any) => {
+  const dayStats = weekDays.map((d) => {
     const dayJobs = weekJobs.filter((j) =>
       j.appointment_time?.startsWith(d.iso)
     );
@@ -519,40 +528,49 @@ function WeekAtAGlanceBars({
     return { ...d, count: dayJobs.length, earn };
   });
 
+  const maxEarn = Math.max(...dayStats.map((d) => d.earn), 0);
+
   return (
-    <div className="grid grid-cols-7 gap-2 sm:gap-3.5 items-center pt-1">
+    <div className="flex items-end gap-1.5 sm:gap-2 h-[64px] mb-1">
       {dayStats.map((d) => {
         const isActive = d.iso === activeDate;
         const hasEarn = d.earn > 0;
+
+        // Calculate vertical bar height proportional to earnings relative to maxEarn
+        const h =
+          hasEarn && maxEarn > 0
+            ? Math.max(16, Math.round((d.earn / maxEarn) * 44))
+            : 4;
 
         return (
           <button
             key={d.iso}
             type="button"
             onClick={() => setActiveDate(d.iso)}
-            className="flex flex-col items-center group cursor-pointer border-none bg-transparent p-0 outline-none transition-opacity hover:opacity-85"
+            className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer border-none bg-transparent p-0 outline-none"
           >
             {/* Top earnings value or dash */}
-            <span className="text-[11px] sm:text-[12px] text-slate-secondary font-normal mb-2 h-[18px] flex items-center justify-center whitespace-nowrap">
+            <span className="text-[10px] sm:text-[11px] text-slate-secondary font-medium mb-1 whitespace-nowrap leading-none">
               {hasEarn ? `$${Math.round(d.earn).toLocaleString("en-US")}` : "-"}
             </span>
 
-            {/* Horizontal pill bar indicator */}
+            {/* Vertical Bar Chart Bar */}
             <div
               className={cn(
-                "w-full h-[5px] rounded-full transition-all duration-150",
+                "w-full rounded-t-[4px] transition-all duration-200",
                 isActive
                   ? "bg-primary-navy shadow-sm"
                   : hasEarn
                   ? "bg-[#93C5FD] group-hover:bg-[#60A5FA]"
                   : "bg-[#E2E8F0] group-hover:bg-[#CBD5E1]"
               )}
+              style={{ height: `${h}px` }}
             />
 
             {/* Bottom day name label */}
             <span
               className={cn(
-                "text-[11px] sm:text-[12px] mt-2 transition-colors",
+                "text-[10px] sm:text-[11px] mt-1 transition-colors leading-none",
                 isActive
                   ? "font-bold text-primary-navy"
                   : "font-normal text-muted group-hover:text-slate-secondary"

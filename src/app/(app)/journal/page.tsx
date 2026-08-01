@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Plus, Search, Edit2, Trash2, Check } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useUIStore } from "@/store/uiStore";
+import {
+  useJournal,
+  useCreateJournalEntry,
+  useUpdateJournalEntry,
+  useDeleteJournalEntry,
+} from "@/hooks/useJournal";
+import type { CreateJournalEntryInput, JournalEntry } from "@/types/journal";
 
 const TYPES = ["All", "Loan Refi", "General", "Hybrid", "Purchase Closing", "Field Inspection", "Apostille"];
 const ID_TYPES = ["CA Driver License", "US Passport", "State ID"];
@@ -17,29 +24,46 @@ const TYPE_CHIP: Record<string, string> = {
   Apostille: "c-gen",
 };
 
-interface Entry {
-  id: string;
-  date: string;
-  time: string;
-  type: string;
-  act: string;
-  signer: string;
-  idType: string;
-  idNo: string;
-  doc: string;
-  addr: string;
-  fee: string;
-}
+const TYPE_TO_ENUM: Record<string, string> = {
+  "Loan Refi": "LOAN_REFI",
+  General: "GENERAL",
+  Hybrid: "HYBRID",
+  "Purchase Closing": "PURCHASE_CLOSING",
+  "Field Inspection": "FIELD_INSPECTION",
+  Apostille: "APOSTILLE",
+};
+
+const ENUM_TO_TYPE: Record<string, string> = Object.fromEntries(
+  Object.entries(TYPE_TO_ENUM).map(([label, value]) => [value, label]),
+);
+
+const todayLocal = () => {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+};
+
+const formatFee = (fee: number | string | null | undefined) => {
+  if (fee === null || fee === undefined || fee === "") return "$0";
+  const n = Number(fee);
+  return Number.isNaN(n) ? "$0" : `$${n}`;
+};
+
+const parseFee = (raw: string): number | undefined => {
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const n = parseFloat(cleaned);
+  return Number.isNaN(n) ? undefined : n;
+};
 
 export default function JournalPage() {
   const { addToast } = useUIStore();
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Entry | null>(null);
+  const [editing, setEditing] = useState<JournalEntry | null>(null);
   const [form, setForm] = useState({
-    date: "2026-03-18",
+    date: todayLocal(),
     time: "14:00",
     act: "Acknowledgement",
     type: "General",
@@ -51,6 +75,37 @@ export default function JournalPage() {
     fee: "",
   });
 
+  const { data, isLoading, isError } = useJournal();
+  const createEntry = useCreateJournalEntry();
+  const updateEntry = useUpdateJournalEntry();
+  const deleteEntry = useDeleteJournalEntry();
+
+  const entries: Array<{
+    id: string;
+    date: string;
+    time: string;
+    type: string;
+    act: string;
+    signer: string;
+    idType: string;
+    idNo: string;
+    doc: string;
+    addr: string;
+    fee: string;
+  }> = (data ?? []).map((e) => ({
+    id: e.id,
+    date: e.entry_date,
+    time: e.act_time ?? "",
+    type: ENUM_TO_TYPE[e.signing_type ?? ""] ?? e.signing_type ?? "General",
+    act: e.act_type,
+    signer: e.signer_name,
+    idType: e.signer_id_type ?? "—",
+    idNo: e.signer_id_number ?? "—",
+    doc: e.document_type ?? "—",
+    addr: e.address ?? "—",
+    fee: formatFee(e.fee_charged),
+  }));
+
   const filtered = entries.filter((e) => {
     if (filter !== "All" && e.type !== filter) return false;
     if (search) {
@@ -61,10 +116,13 @@ export default function JournalPage() {
     return true;
   });
 
+  const monthPrefix = todayLocal().slice(0, 7);
+  const thisMonth = entries.filter((e) => e.date.startsWith(monthPrefix)).length;
+
   const openNew = () => {
     setEditing(null);
     setForm({
-      date: "2026-03-18",
+      date: todayLocal(),
       time: "14:00",
       act: "Acknowledgement",
       type: "General",
@@ -78,50 +136,60 @@ export default function JournalPage() {
     setModalOpen(true);
   };
 
-  const openEdit = (e: Entry) => {
-    setEditing(e);
+  const openEdit = (e: (typeof entries)[number]) => {
+    const original = (data ?? []).find((x) => x.id === e.id);
+    setEditing(original ?? null);
     setForm({
       date: e.date,
       time: e.time,
       act: e.act,
       type: e.type,
-      signer: e.signer,
-      idType: e.idType,
-      idNo: e.idNo,
-      doc: e.doc,
-      addr: e.addr,
-      fee: e.fee,
+      signer: e.signer === "—" ? "" : e.signer,
+      idType: e.idType === "—" ? ID_TYPES[0] : e.idType,
+      idNo: e.idNo === "—" ? "" : e.idNo,
+      doc: e.doc === "—" ? "" : e.doc,
+      addr: e.addr === "—" ? "" : e.addr,
+      fee: e.fee === "$0" ? "" : String(Number(e.fee.replace("$", ""))),
     });
     setModalOpen(true);
   };
 
-  const save = () => {
-    const next: Entry = {
-      id: editing?.id ?? `#JN-${(entries.length + 129).toString()}`,
-      date: form.date,
-      time: form.time,
-      act: form.act,
-      type: form.type,
-      signer: form.signer || "New Signer",
-      idType: form.idType,
-      idNo: form.idNo || "X0000000",
-      doc: form.doc || "General Document",
-      addr: form.addr || "Los Angeles, CA",
-      fee: form.fee || "$0",
-    };
-    if (editing) {
-      setEntries((prev) => prev.map((e) => (e.id === editing.id ? next : e)));
-      addToast({ type: "success", title: "Journal entry updated" });
-    } else {
-      setEntries((prev) => [next, ...prev]);
-      addToast({ type: "success", title: "Journal entry added" });
+  const buildPayload = (): CreateJournalEntryInput => ({
+    entry_date: form.date,
+    act_type: form.act,
+    signing_type: TYPE_TO_ENUM[form.type] ?? form.type,
+    act_time: form.time || undefined,
+    signer_name: form.signer || "New Signer",
+    signer_id_type: form.idType || undefined,
+    signer_id_number: form.idNo || undefined,
+    document_type: form.doc || undefined,
+    address: form.addr || undefined,
+    fee_charged: parseFee(form.fee),
+  });
+
+  const save = async () => {
+    const payload = buildPayload();
+    try {
+      if (editing) {
+        await updateEntry.mutateAsync({ id: editing.id, data: payload });
+        addToast({ type: "success", title: "Journal entry updated" });
+      } else {
+        await createEntry.mutateAsync(payload);
+        addToast({ type: "success", title: "Journal entry added" });
+      }
+      setModalOpen(false);
+    } catch {
+      addToast({ type: "error", title: "Could not save journal entry" });
     }
-    setModalOpen(false);
   };
 
-  const remove = (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-    addToast({ type: "info", title: "Journal entry deleted" });
+  const remove = async (id: string) => {
+    try {
+      await deleteEntry.mutateAsync(id);
+      addToast({ type: "info", title: "Journal entry deleted" });
+    } catch {
+      addToast({ type: "error", title: "Could not delete journal entry" });
+    }
   };
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -166,10 +234,10 @@ export default function JournalPage() {
       <div className="bg-white border-b border-border px-3.5 py-2 flex gap-5 flex-shrink-0 flex-wrap">
         <div>
           <span className="font-sora text-[16px] font-bold text-navy">{entries.length}</span>
-          <span className="font-inter text-[10px] text-muted ml-1">Total acts, 2026</span>
+          <span className="font-inter text-[10px] text-muted ml-1">Total acts, {todayLocal().slice(0, 4)}</span>
         </div>
         <div>
-          <span className="font-sora text-[16px] font-bold text-navy">0</span>
+          <span className="font-sora text-[16px] font-bold text-navy">{thisMonth}</span>
           <span className="font-inter text-[10px] text-muted ml-1">This month</span>
         </div>
         <div className="ml-auto font-inter text-[11px] text-slate-secondary">
@@ -187,7 +255,15 @@ export default function JournalPage() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-box">
+            <p className="font-inter text-sm text-slate-secondary">Loading entries…</p>
+          </div>
+        ) : isError ? (
+          <div className="empty-box">
+            <p className="font-inter text-sm text-red">Could not load journal entries</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="empty-box">
             <p className="font-inter text-sm text-slate-secondary">No entries found</p>
           </div>
@@ -200,7 +276,7 @@ export default function JournalPage() {
                   <span className={`chip ${TYPE_CHIP[e.type] ?? "c-gen"}`} style={{ fontSize: 8 }}>{e.type}</span>
                   <span className="bg-background border border-border rounded-[4px] font-inter text-[9px] font-medium text-slate-secondary px-1.5 py-0.5">{e.act}</span>
                 </div>
-                <span className="font-inter text-[10px] text-muted">{e.date} · {e.time}</span>
+                <span className="font-inter text-[10px] text-muted">{e.time ? `${e.date} · ${e.time}` : e.date}</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2">
                 {[
@@ -264,7 +340,9 @@ export default function JournalPage() {
           <div className="field"><label className="lbl">Fee charged</label><input className="inp" placeholder="$0" value={form.fee} onChange={(e) => set("fee", e.target.value)} /></div>
         </div>
         <div className="modal-foot flex-col gap-2">
-          <button onClick={save} className="btn-p"><Check className="w-4 h-4" /> {editing ? "Update" : "Add"} entry</button>
+          <button onClick={save} className="btn-p" disabled={createEntry.isPending || updateEntry.isPending}>
+            <Check className="w-4 h-4" /> {editing ? "Update" : "Add"} entry
+          </button>
           <button onClick={() => setModalOpen(false)} className="btn-gh">Cancel</button>
         </div>
       </Modal>

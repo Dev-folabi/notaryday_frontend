@@ -85,6 +85,10 @@ export const queryKeys = {
     detail: (id: string) => ["invoices", id] as const,
   },
 
+  journal: {
+    all: ["journal"] as const,
+  },
+
   reports: {
     earnings: (params: {
       from?: string;
@@ -102,19 +106,6 @@ export const queryKeys = {
       ] as const,
 
     mileage: (year: number) => ["reports", "mileage", year] as const,
-
-    journal: (params: {
-      from?: string;
-      to?: string;
-    }) =>
-      [
-        "reports",
-        "journal",
-        {
-          from: params.from ?? null,
-          to: params.to ?? null,
-        },
-      ] as const,
   },
 
   notifications: {

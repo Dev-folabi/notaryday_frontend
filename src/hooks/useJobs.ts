@@ -82,6 +82,9 @@ export function useUpdateJobStatus() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.jobs.detail(vars.id) });
       qc.invalidateQueries({ queryKey: ["jobs"] });
+      if (vars.status === "COMPLETE") {
+        qc.invalidateQueries({ queryKey: ["journal"] });
+      }
     },
   });
 }

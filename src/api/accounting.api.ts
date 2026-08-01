@@ -37,5 +37,7 @@ export const journalApi = {
   list: (params?: { from?: string; to?: string; search?: string }) =>
     api.get("/journal", { params }),
   create: (data: Record<string, unknown>) => api.post("/journal", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/journal/${id}`, data),
   delete: (id: string) => api.delete(`/journal/${id}`),
 };
