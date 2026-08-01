@@ -251,7 +251,7 @@ export default function ActiveSigningPage() {
             {steps.map((step, idx) => {
               const stepNum = idx + 1;
               const isDone = progress >= stepNum && !step.disabled;
-              const isCurrent = progress === stepNum;
+              const isCurrent = progress === stepNum - 1;
               const isFuture = progress < stepNum;
               return (
                 <div

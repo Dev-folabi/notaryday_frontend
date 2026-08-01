@@ -314,7 +314,7 @@ export default function JobDetailPage() {
         >
           {[
             ["Client", job.client_name || "—"],
-            ["Phone", job.client_phone || "(555) 555-0000"],
+            ["Phone", job.client_phone || "—"],
             ["Status", job.status.replace(/_/g, " ").toLowerCase()],
             ["Platform", job.platform_name || "Direct"],
             ["Date", formatDate(job.appointment_time)],

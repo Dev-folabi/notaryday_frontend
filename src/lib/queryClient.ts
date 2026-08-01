@@ -31,6 +31,8 @@ export const queryKeys = {
       status?: string;
       page?: number;
       limit?: number;
+      from?: string;
+      to?: string;
     }) =>
       [
         "jobs",
@@ -39,6 +41,8 @@ export const queryKeys = {
           status: filters?.status ?? null,
           page: filters?.page ?? null,
           limit: filters?.limit ?? null,
+          from: filters?.from ?? null,
+          to: filters?.to ?? null,
         },
       ] as const,
 

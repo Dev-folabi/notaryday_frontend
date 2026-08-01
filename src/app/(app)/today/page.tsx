@@ -79,11 +79,15 @@ export default function TodayPage() {
   });
 
   // mark which week days have jobs
+  const weekEnd = addDays(endOfWeek(weekStart, { weekStartsOn: 0 }), 1);
+  const weekFromIso = toDateInputValue(weekStart);
+  const weekToIso = toDateInputValue(weekEnd);
   const weekJobsQuery = useQuery({
-    queryKey: queryKeys.jobs.all({ date: toDateInputValue(weekStart) }),
+    queryKey: queryKeys.jobs.all({ from: weekFromIso, to: weekToIso }),
     queryFn: async () => {
       const res = await jobsApi.list({
-        date: toDateInputValue(weekStart),
+        from: weekFromIso,
+        to: weekToIso,
         limit: 100,
       });
       const payload = (res as any).data ?? res;

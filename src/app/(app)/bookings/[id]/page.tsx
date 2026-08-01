@@ -89,7 +89,7 @@ export default function BookingDetailPage() {
               <div className="flex-1 min-w-[160px]">
                 <div className="font-inter text-[13px] font-semibold text-primary-navy">{name}</div>
                 <div className="font-inter text-[11px] text-slate-secondary break-words">
-                  {booking.client_email} · {booking.client_phone ?? "(310) 555-0142"}
+                  {booking.client_email} · {booking.client_phone ?? "—"}
                 </div>
               </div>
               <span className="chip c-hyb" style={{ height: 20 }}>{booking.status?.replace("_", " ")}</span>
@@ -102,7 +102,7 @@ export default function BookingDetailPage() {
                 ["Time", booking.requested_time?.split("T")[1] ?? booking.requested_time],
                 ["Address", booking.address],
                 ["Document type", booking.document_type ?? "Refinance — 180 pages"],
-                ["Client phone", booking.client_phone ?? "(310) 555-0142"],
+                ["Client phone", booking.client_phone ?? "—"],
                 ["Client email", booking.client_email],
                 ["Notes", booking.notes ?? "Gate code #4421. Please call on arrival."],
               ].map(([label, value]) => (

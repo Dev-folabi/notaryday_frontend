@@ -31,6 +31,7 @@ interface InvoiceRow {
   is_paid: boolean;
   paid_at?: string | null;
   sent_at?: string | null;
+  pdf_url?: string | null;
   created_at?: string;
   payment_method_used?: string | null;
   job_id?: string;
@@ -81,6 +82,13 @@ function fmtLongDate(iso?: string | null) {
   });
 }
 
+interface InvoiceTotals {
+  billed: number;
+  paid: number;
+  outstanding: number;
+  overdue: number;
+}
+
 const FILTERS: FilterTab[] = ["all", "sent", "paid", "overdue", "draft"];
 const FILTER_LABELS: Record<FilterTab, string> = {
   all: "All",
@@ -105,6 +113,17 @@ export default function InvoicesPage() {
     queryFn: async () => {
       const res = await invoicesApi.list();
       return (unwrap<InvoiceRow[]>(res) ?? []) as InvoiceRow[];
+    },
+    staleTime: 30 * 1000,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["invoices", "stats"],
+    queryFn: async () => {
+      const res = await invoicesApi.stats();
+      return (
+        unwrap<InvoiceTotals>(res) ?? { billed: 0, paid: 0, outstanding: 0, overdue: 0 }
+      );
     },
     staleTime: 30 * 1000,
   });
@@ -151,20 +170,8 @@ export default function InvoicesPage() {
     [invoices, tab],
   );
 
-  const totals = useMemo(() => {
-    let billed = 0;
-    let paid = 0;
-    let outstanding = 0;
-    let overdue = 0;
-    for (const inv of invoices) {
-      const s = statusOf(inv);
-      billed += inv.total ?? 0;
-      if (s === "paid") paid += inv.total ?? 0;
-      else outstanding += inv.total ?? 0;
-      if (s === "overdue") overdue += inv.total ?? 0;
-    }
-    return { billed, paid, outstanding, overdue };
-  }, [invoices]);
+  const totals: InvoiceTotals =
+    stats ?? { billed: 0, paid: 0, outstanding: 0, overdue: 0 };
 
   return (
     <div className="flex flex-col h-full">
@@ -346,9 +353,16 @@ export default function InvoicesPage() {
           onMarkPaid={() => markPaid.mutate(selected.id)}
           onResend={(email) => resend.mutate({ id: selected.id, email })}
           isMarking={markPaid.isPending}
-          onDownload={() =>
-            addToast({ title: "Downloading PDF", type: "info" })
-          }
+          onDownload={() => {
+            if (!selected.pdf_url) {
+              addToast({
+                title: "PDF not ready yet — check back in a minute",
+                type: "error",
+              });
+              return;
+            }
+            window.open(selected.pdf_url, "_blank", "noopener,noreferrer");
+          }}
         />
       )}
     </div>

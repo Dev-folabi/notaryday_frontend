@@ -6,6 +6,8 @@ export const jobsApi = {
     status?: string;
     page?: number;
     limit?: number;
+    from?: string;
+    to?: string;
   }) => api.get("/jobs", { params }),
 
   create: (data: Record<string, unknown>, idempotencyKey?: string) =>
