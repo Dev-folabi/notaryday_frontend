@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Check } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Check, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useUIStore } from "@/store/uiStore";
+import { errMsg } from "@/lib/utils";
+import { sanitizeText, sanitizeOptional } from "@/lib/sanitize";
 import {
   useJournal,
   useCreateJournalEntry,
@@ -62,6 +64,8 @@ export default function JournalPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<JournalEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; signer: string } | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     date: todayLocal(),
     time: "14:00",
@@ -156,18 +160,32 @@ export default function JournalPage() {
 
   const buildPayload = (): CreateJournalEntryInput => ({
     entry_date: form.date,
-    act_type: form.act,
+    act_type: sanitizeText(form.act, 200),
     signing_type: TYPE_TO_ENUM[form.type] ?? form.type,
-    act_time: form.time || undefined,
-    signer_name: form.signer || "New Signer",
-    signer_id_type: form.idType || undefined,
-    signer_id_number: form.idNo || undefined,
-    document_type: form.doc || undefined,
-    address: form.addr || undefined,
+    act_time: sanitizeText(form.time, 10),
+    signer_name: sanitizeText(form.signer, 300),
+    signer_id_type: sanitizeOptional(form.idType, 200),
+    signer_id_number: sanitizeOptional(form.idNo, 100),
+    document_type: sanitizeOptional(form.doc, 300),
+    address: sanitizeOptional(form.addr, 500),
     fee_charged: parseFee(form.fee),
   });
 
+  const validate = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+    if (!form.date) e.date = "Date is required";
+    if (!form.time) e.time = "Time is required";
+    if (!form.signer.trim()) e.signer = "Signer name is required";
+    return e;
+  };
+
   const save = async () => {
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) {
+      addToast({ type: "error", title: "Please complete the required fields" });
+      return;
+    }
     const payload = buildPayload();
     try {
       if (editing) {
@@ -178,21 +196,33 @@ export default function JournalPage() {
         addToast({ type: "success", title: "Journal entry added" });
       }
       setModalOpen(false);
-    } catch {
-      addToast({ type: "error", title: "Could not save journal entry" });
+      setErrors({});
+    } catch (err) {
+      addToast({ type: "error", title: "Could not save journal entry", message: errMsg(err) });
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = (id: string, signer: string) => setDeleteTarget({ id, signer });
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteEntry.mutateAsync(id);
+      await deleteEntry.mutateAsync(deleteTarget.id);
       addToast({ type: "info", title: "Journal entry deleted" });
-    } catch {
-      addToast({ type: "error", title: "Could not delete journal entry" });
+      setDeleteTarget(null);
+    } catch (err) {
+      addToast({ type: "error", title: "Could not delete journal entry", message: errMsg(err) });
     }
   };
 
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[k];
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -203,8 +233,8 @@ export default function JournalPage() {
         </button>
       </div>
 
-      <div className="bg-white border-b border-border px-3.5 py-2.5 flex gap-2 flex-shrink-0 flex-wrap items-center">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="bg-white border-b border-border px-3.5 py-2.5 flex flex-col lg:flex-row gap-2 lg:items-center">
+        <div className="relative lg:flex-1 lg:min-w-[200px]">
           <Search className="w-3.5 h-3.5 text-slate-secondary absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             value={search}
@@ -213,7 +243,7 @@ export default function JournalPage() {
             className="w-full h-9 bg-background border border-border rounded-[8px] pl-8 pr-3 font-inter text-[12px] text-navy outline-none focus:border-blue"
           />
         </div>
-        <div className="flex gap-1 bg-border p-0.5 rounded-[8px] overflow-x-auto flex-shrink-0">
+        <div className="flex gap-1 bg-border p-0.5 rounded-[8px] overflow-x-auto lg:flex-shrink-0">
           {TYPES.map((t) => (
             <button
               key={t}
@@ -296,7 +326,7 @@ export default function JournalPage() {
                 <button onClick={() => openEdit(e)} className="font-inter text-[11px] font-medium text-blue bg-transparent border-none cursor-pointer flex items-center gap-1">
                   <Edit2 className="w-3.5 h-3.5" /> Edit
                 </button>
-                <button onClick={() => remove(e.id)} className="font-inter text-[11px] font-medium text-red bg-transparent border-none cursor-pointer flex items-center gap-1">
+                <button onClick={() => remove(e.id, e.signer)} className="font-inter text-[11px] font-medium text-red bg-transparent border-none cursor-pointer flex items-center gap-1">
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </button>
               </div>
@@ -308,8 +338,16 @@ export default function JournalPage() {
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit journal entry" : "New journal entry"} showClose>
         <div className="flex flex-col gap-3">
           <div className="g2">
-            <div className="field"><label className="lbl">Date</label><input type="date" className="inp" value={form.date} onChange={(e) => set("date", e.target.value)} /></div>
-            <div className="field"><label className="lbl">Time</label><input type="time" className="inp" value={form.time} onChange={(e) => set("time", e.target.value)} /></div>
+            <div className="field">
+              <label className="lbl">Date <span className="req">*</span></label>
+              <input type="date" className={`inp ${errors.date ? "err" : ""}`} value={form.date} onChange={(e) => set("date", e.target.value)} />
+              {errors.date && <span className="err-msg"><X className="w-3 h-3" /> {errors.date}</span>}
+            </div>
+            <div className="field">
+              <label className="lbl">Time <span className="req">*</span></label>
+              <input type="time" className={`inp ${errors.time ? "err" : ""}`} value={form.time} onChange={(e) => set("time", e.target.value)} />
+              {errors.time && <span className="err-msg"><X className="w-3 h-3" /> {errors.time}</span>}
+            </div>
           </div>
           <div className="g2">
             <div className="field">
@@ -325,7 +363,11 @@ export default function JournalPage() {
               </select>
             </div>
           </div>
-          <div className="field"><label className="lbl">Signer name</label><input className="inp" placeholder="Signer full name" value={form.signer} onChange={(e) => set("signer", e.target.value)} /></div>
+          <div className="field">
+            <label className="lbl">Signer name <span className="req">*</span></label>
+            <input className={`inp ${errors.signer ? "err" : ""}`} placeholder="Signer full name" value={form.signer} onChange={(e) => set("signer", e.target.value)} />
+            {errors.signer && <span className="err-msg"><X className="w-3 h-3" /> {errors.signer}</span>}
+          </div>
           <div className="g2">
             <div className="field">
               <label className="lbl">ID type</label>
@@ -344,6 +386,21 @@ export default function JournalPage() {
             <Check className="w-4 h-4" /> {editing ? "Update" : "Add"} entry
           </button>
           <button onClick={() => setModalOpen(false)} className="btn-gh">Cancel</button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete journal entry" size="sm" showClose>
+        <div className="flex flex-col gap-4">
+          <p className="font-inter text-[13px] text-slate leading-[1.5]">
+            Are you sure you want to delete the entry for <span className="font-medium text-navy">{deleteTarget?.signer}</span>?
+            This action cannot be undone.
+          </p>
+          <div className="modal-foot flex-col gap-2">
+            <button onClick={confirmDelete} className="btn-danger" disabled={deleteEntry.isPending}>
+              <Trash2 className="w-4 h-4" /> Delete entry
+            </button>
+            <button onClick={() => setDeleteTarget(null)} className="btn-gh">Cancel</button>
+          </div>
         </div>
       </Modal>
     </div>
