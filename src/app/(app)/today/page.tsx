@@ -201,14 +201,19 @@ export default function TodayPage() {
               </div>
             </div>
 
-            <div className="card p-3.5 mb-4">
-              <div className="flex justify-between mb-2.5">
-                <span className="text-[12px] font-semibold text-primary-navy">
+            <div className="card p-4 lg:p-5 mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="font-sora text-[13px] font-bold text-primary-navy">
                   Week at a glance
                 </span>
-                <span className="text-[11px] text-slate-secondary">
+                <span className="text-[11px] text-slate-secondary font-medium">
                   {format(weekStart, "MMM d")} to{" "}
-                  {format(endOfWeek(weekStart, { weekStartsOn: 1 }), "d")}
+                  {format(
+                    addDays(weekStart, 6),
+                    format(weekStart, "M") === format(addDays(weekStart, 6), "M")
+                      ? "d"
+                      : "MMM d"
+                  )}
                 </span>
               </div>
               <WeekAtAGlanceBars weekDays={weekDays} weekJobs={weekJobs} />
@@ -500,47 +505,62 @@ function WeekAtAGlanceBars({
   weekDays: any[];
   weekJobs: Job[];
 }) {
+  const { activeDate, setActiveDate } = useUIStore();
+
   const dayStats = weekDays.map((d: any) => {
-    const dayJobs = weekJobs.filter((j) => j.appointment_time?.startsWith(d.iso));
+    const dayJobs = weekJobs.filter((j) =>
+      j.appointment_time?.startsWith(d.iso)
+    );
     const earn = dayJobs.reduce(
       (sum: number, j: Job) =>
         sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),
-      0,
+      0
     );
     return { ...d, count: dayJobs.length, earn };
   });
-  const maxEarn = Math.max(...dayStats.map((d) => d.earn), 0);
+
   return (
-    <div className="bar-wrap">
+    <div className="grid grid-cols-7 gap-2 sm:gap-3.5 items-center pt-1">
       {dayStats.map((d) => {
-        const h =
-          d.earn > 0 && maxEarn > 0
-            ? Math.max(24, Math.round((d.earn / maxEarn) * 52))
-            : 4;
+        const isActive = d.iso === activeDate;
+        const hasEarn = d.earn > 0;
+
         return (
-          <div
+          <button
             key={d.iso}
-            className="flex-1 flex flex-col items-center"
-            style={{ gap: 3 }}
+            type="button"
+            onClick={() => setActiveDate(d.iso)}
+            className="flex flex-col items-center group cursor-pointer border-none bg-transparent p-0 outline-none transition-opacity hover:opacity-85"
           >
-            <span className="text-[9px] text-slate-secondary whitespace-nowrap">
-              {d.count > 0
-                ? `$${Math.round(d.earn).toLocaleString("en-US")}`
-                : "—"}
+            {/* Top earnings value or dash */}
+            <span className="text-[11px] sm:text-[12px] text-slate-secondary font-normal mb-2 h-[18px] flex items-center justify-center whitespace-nowrap">
+              {hasEarn ? `$${Math.round(d.earn).toLocaleString("en-US")}` : "-"}
             </span>
+
+            {/* Horizontal pill bar indicator */}
             <div
-              className={cn("bar", d.isToday && "active", d.count > 0 && !d.isToday && "has")}
-              style={{ height: `${h}px` }}
+              className={cn(
+                "w-full h-[5px] rounded-full transition-all duration-150",
+                isActive
+                  ? "bg-primary-navy shadow-sm"
+                  : hasEarn
+                  ? "bg-[#93C5FD] group-hover:bg-[#60A5FA]"
+                  : "bg-[#E2E8F0] group-hover:bg-[#CBD5E1]"
+              )}
             />
+
+            {/* Bottom day name label */}
             <span
               className={cn(
-                "text-[9px]",
-                d.isToday ? "text-navy font-semibold" : "text-muted",
+                "text-[11px] sm:text-[12px] mt-2 transition-colors",
+                isActive
+                  ? "font-bold text-primary-navy"
+                  : "font-normal text-muted group-hover:text-slate-secondary"
               )}
             >
               {d.label}
             </span>
-          </div>
+          </button>
         );
       })}
     </div>
