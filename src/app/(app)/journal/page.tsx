@@ -46,6 +46,40 @@ const todayLocal = () => {
   return `${d.getFullYear()}-${m}-${day}`;
 };
 
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Stable, human-friendly entry reference instead of the raw DB id, e.g. #JN-3K9F
+const entryLabel = (id: string): string => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return `#JN-${(hash % 1679616).toString(36).toUpperCase().padStart(4, "0")}`;
+};
+
+// entry_date is stored as a UTC date — keep it timezone-stable for the date input
+const toDateInputValueUtc = (dateISO: string): string => {
+  const d = new Date(dateISO);
+  if (Number.isNaN(d.getTime())) return dateISO;
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${m}-${day}`;
+};
+
+const formatEntryDate = (dateISO: string): string => {
+  const d = new Date(dateISO);
+  if (Number.isNaN(d.getTime())) return dateISO;
+  return `${WEEKDAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+};
+
+const formatTime12h = (time: string): string => {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+};
+
 const formatFee = (fee: number | string | null | undefined) => {
   if (fee === null || fee === undefined || fee === "") return "$0";
   const n = Number(fee);
@@ -86,8 +120,11 @@ export default function JournalPage() {
 
   const entries: Array<{
     id: string;
+    label: string;
     date: string;
     time: string;
+    dateLabel: string;
+    timeLabel: string;
     type: string;
     act: string;
     signer: string;
@@ -98,8 +135,11 @@ export default function JournalPage() {
     fee: string;
   }> = (data ?? []).map((e) => ({
     id: e.id,
-    date: e.entry_date,
+    label: entryLabel(e.id),
+    date: toDateInputValueUtc(e.entry_date),
     time: e.act_time ?? "",
+    dateLabel: formatEntryDate(e.entry_date),
+    timeLabel: formatTime12h(e.act_time ?? ""),
     type: ENUM_TO_TYPE[e.signing_type ?? ""] ?? e.signing_type ?? "General",
     act: e.act_type,
     signer: e.signer_name,
@@ -302,11 +342,11 @@ export default function JournalPage() {
             <div key={e.id} className="card p-3 mb-2">
               <div className="flex justify-between gap-2 mb-1.5 flex-wrap">
                 <div className="flex gap-1.5 flex-wrap items-center">
-                  <span className="font-sora text-[12px] font-bold text-navy">{e.id}</span>
+                  <span className="font-sora text-[12px] font-bold text-navy">{e.label}</span>
                   <span className={`chip ${TYPE_CHIP[e.type] ?? "c-gen"}`} style={{ fontSize: 8 }}>{e.type}</span>
                   <span className="bg-background border border-border rounded-[4px] font-inter text-[9px] font-medium text-slate-secondary px-1.5 py-0.5">{e.act}</span>
                 </div>
-                <span className="font-inter text-[10px] text-muted">{e.time ? `${e.date} · ${e.time}` : e.date}</span>
+                <span className="font-inter text-[10px] text-muted">{e.timeLabel ? `${e.dateLabel} - ${e.timeLabel}` : e.dateLabel}</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2">
                 {[
