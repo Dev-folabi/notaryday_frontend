@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
@@ -12,10 +12,12 @@ import {
   Phone,
   Clock,
   CalendarDays,
-  FileText,
+  Info,
+  Ban,
+  SearchX,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
-import { unwrap, getInitials } from "@/lib/utils";
+import { unwrap, getInitials, errMsg } from "@/lib/utils";
 import { BOOKING_SERVICE_LIST, normalizeBookingServices } from "@/lib/booking";
 
 type NotaryInfo = {
@@ -30,7 +32,43 @@ type NotaryInfo = {
 
 type SlotData = { slots: string[]; notary: NotaryInfo | null };
 
+type PhotonFeature = {
+  properties: {
+    name?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+  };
+};
+
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function StateView({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+      <div className="bg-white rounded-14px border border-border p-8 text-center max-w-md w-full">
+        <div className="w-16 h-16 rounded-full bg-bg border-2 border-border flex items-center justify-center mx-auto mb-4 text-slate-secondary">
+          {icon}
+        </div>
+        <h1 className="font-sora font-bold text-xl text-primary-navy mb-2">
+          {title}
+        </h1>
+        <p className="font-inter text-sm text-slate-secondary leading-[1.5]">
+          {body}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function PublicBookingPage() {
   const { username } = useParams<{ username: string }>();
@@ -40,20 +78,79 @@ export default function PublicBookingPage() {
   const [serviceType, setServiceType] = useState<string>("GENERAL");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [form, setForm] = useState({
     client_name: "",
     client_email: "",
     client_phone: "",
     address: "",
-    document_type: "",
     notes: "",
   });
 
-  const { data: slotsData, isLoading } = useQuery({
+  // Address autocomplete (Photon) — same pattern as the job/CITT forms
+  const [suggestions, setSuggestions] = useState<PhotonFeature[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const addrWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        addrWrapRef.current &&
+        !addrWrapRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const q = form.address;
+    if (!q || q.length < 3) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=en&countrycode=us`,
+        );
+        if (!res.ok) throw new Error("Search failed");
+        const json = await res.json();
+        setSuggestions(json.features || []);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.address]);
+
+  const handleSelectAddress = (feature: PhotonFeature) => {
+    const { name, street, city, state, postcode } = feature.properties;
+    const label = [name || street, city, state, postcode]
+      .filter(Boolean)
+      .join(", ");
+    setForm((f) => ({ ...f, address: label }));
+    setShowSuggestions(false);
+  };
+
+  const {
+    data: slotsData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["booking-page", username, date, serviceType],
     queryFn: async () =>
       unwrap<SlotData>(await bookingApi.getSlots(username, date, serviceType)),
     enabled: !!username && !!date,
+    retry: false,
   });
 
   const submitBooking = useMutation({
@@ -64,8 +161,11 @@ export default function PublicBookingPage() {
         requested_time: selectedSlot,
       });
     },
-    onSuccess: () => setSubmitted(true),
-    onError: () => setSubmitted(false),
+    onSuccess: () => {
+      setSubmitted(true);
+      setSubmitError(null);
+    },
+    onError: (e) => setSubmitError(errMsg(e, "Could not submit your request")),
   });
 
   const notary = slotsData?.notary ?? null;
@@ -75,17 +175,17 @@ export default function PublicBookingPage() {
     return normalized.length > 0 ? normalized : BOOKING_SERVICE_LIST;
   }, [notary?.services]);
 
-  const serviceOptions = useMemo(
-    () => (serviceType === "GENERAL" && services.length ? services : services),
-    [services, serviceType],
-  );
-
   const dayKey = useMemo(() => {
     const d = new Date(`${date}T00:00:00`);
     return DAY_KEYS[d.getDay()];
   }, [date]);
 
-  const activeHours = notary?.active_hours?.[dayKey];
+  const activeHours = useMemo(() => {
+    const hours = notary?.active_hours ?? {};
+    const lower: Record<string, { start?: string; end?: string }> = {};
+    for (const [k, v] of Object.entries(hours)) lower[k.toLowerCase()] = v;
+    return lower[dayKey];
+  }, [notary?.active_hours, dayKey]);
 
   const timeGrid = useMemo(() => {
     if (!activeHours?.start || !activeHours?.end) return [];
@@ -98,7 +198,11 @@ export default function PublicBookingPage() {
     end.setHours(eh, em, 0, 0);
     const available = new Set(slotsData?.slots ?? []);
     const out: { iso: string; label: string; available: boolean }[] = [];
-    for (let t = start.getTime(); t + 30 * 60_000 <= end.getTime(); t += 30 * 60_000) {
+    for (
+      let t = start.getTime();
+      t + 30 * 60_000 <= end.getTime();
+      t += 30 * 60_000
+    ) {
       const d = new Date(t);
       out.push({
         iso: d.toISOString(),
@@ -109,23 +213,62 @@ export default function PublicBookingPage() {
     return out;
   }, [activeHours, date, slotsData]);
 
+  const errorStatus = (error as { statusCode?: number } | undefined)
+    ?.statusCode;
+
   if (submitted) {
     return (
+      <StateView
+        icon={<CheckCircle2 className="w-8 h-8 text-teal-success" />}
+        title="Appointment requested"
+        body={`${notary?.full_name ?? "Your notary"} will review your request and confirm shortly. A confirmation email will be sent to ${form.client_email}.`}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
       <div className="min-h-screen bg-bg flex items-center justify-center p-4">
-        <div className="bg-white rounded-14px border border-border p-8 text-center max-w-md w-full">
-          <div className="w-16 h-16 rounded-full bg-teal-bg border-2 border-teal-b flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-teal-success" />
-          </div>
-          <h1 className="font-sora font-bold text-xl text-primary-navy mb-2">
-            Appointment requested
-          </h1>
-          <p className="font-inter text-sm text-slate-secondary">
-            {notary?.full_name ?? "Your notary"} will review your request and
-            confirm shortly. A confirmation email will be sent to{" "}
-            <span className="font-semibold text-navy">{form.client_email}</span>.
-          </p>
-        </div>
+        <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (isError) {
+    if (errorStatus === 404) {
+      return (
+        <StateView
+          icon={<SearchX className="w-8 h-8" />}
+          title="Notary not found"
+          body={`We couldn't find a notary at notaryday.app/book/${username}. Check the link and try again.`}
+        />
+      );
+    }
+    if (errorStatus === 400) {
+      return (
+        <StateView
+          icon={<Ban className="w-8 h-8" />}
+          title="Bookings are currently unavailable"
+          body="This notary isn't accepting online bookings right now. Please contact them directly."
+        />
+      );
+    }
+    return (
+      <StateView
+        icon={<Info className="w-8 h-8" />}
+        title="Something went wrong"
+        body="We couldn't load the booking page right now. Please try again in a moment."
+      />
+    );
+  }
+
+  if (notary === null) {
+    return (
+      <StateView
+        icon={<Ban className="w-8 h-8" />}
+        title="Bookings are paused"
+        body="This notary isn't accepting online bookings at the moment. Please check back later or contact them directly."
+      />
     );
   }
 
@@ -133,6 +276,15 @@ export default function PublicBookingPage() {
 
   return (
     <div className="min-h-screen bg-bg">
+      <div className="border-b border-border bg-white px-4 py-3 flex justify-between items-center">
+        <div className="font-sora font-bold text-sm text-primary-navy">
+          Notary Day
+        </div>
+        <span className="text-[11px] text-slate-secondary">
+          Scheduling powered by Notary Day
+        </span>
+      </div>
+
       <div className="max-w-4xl mx-auto md:flex md:min-h-screen">
         {/* Notary profile sidebar */}
         <div className="md:w-[320px] md:flex-shrink-0 md:border-r md:border-border bg-white px-5 py-6 md:min-h-screen">
@@ -210,7 +362,7 @@ export default function PublicBookingPage() {
                 }}
                 className="w-full h-11 border border-border rounded-8px px-3 font-inter text-sm bg-white"
               >
-                {serviceOptions.map((s) => (
+                {services.map((s) => (
                   <option key={s.signing_type} value={s.signing_type}>
                     {s.name}
                   </option>
@@ -222,39 +374,90 @@ export default function PublicBookingPage() {
               <label className="font-inter text-xs font-medium text-slate-body">
                 Signing address <span className="text-red-danger">*</span>
               </label>
-              <div className="relative">
+              <div className="relative" ref={addrWrapRef}>
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
                 <input
                   placeholder="Enter the signing location address"
+                  autoComplete="off"
                   value={form.address}
-                  onChange={(e) =>
-                    setForm({ ...form, address: e.target.value })
-                  }
+                  onFocus={() => setShowSuggestions(true)}
+                  onChange={(e) => {
+                    setForm({ ...form, address: e.target.value });
+                    setShowSuggestions(true);
+                  }}
                   className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
                 />
+                {showSuggestions &&
+                  (suggestions.length > 0 || isSearching) && (
+                    <ul
+                      className="absolute left-0 right-0 z-20 bg-white border border-border rounded-8px shadow-lg max-h-60 overflow-y-auto"
+                      style={{ marginTop: 4, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}
+                    >
+                      {isSearching && suggestions.length === 0 && (
+                        <li className="px-3 py-2.5 text-[11px] text-slate-secondary text-center">
+                          Searching addresses…
+                        </li>
+                      )}
+                      {suggestions.map((s, i) => {
+                        const { name, street, city, state, postcode } =
+                          s.properties;
+                        const label = [name || street, city, state, postcode]
+                          .filter(Boolean)
+                          .join(", ");
+                        return (
+                          <li
+                            key={i}
+                            onClick={() => handleSelectAddress(s)}
+                            className="px-3 py-2 text-xs text-slate border-b border-border cursor-pointer hover:bg-bg"
+                          >
+                            {label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Preferred date <span className="text-red-danger">*</span>
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  setSelectedSlot(null);
-                }}
-                min={format(new Date(), "yyyy-MM-dd")}
-                className="w-full h-11 border border-border rounded-8px px-3 font-inter text-sm"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="font-inter text-xs font-medium text-slate-body">
+                  Preferred date <span className="text-red-danger">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    setSelectedSlot(null);
+                  }}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  className="w-full h-11 border border-border rounded-8px px-3 font-inter text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="font-inter text-xs font-medium text-slate-body">
+                  Preferred time <span className="text-red-danger">*</span>
+                </label>
+                <div className="flex items-center h-11">
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+                  ) : timeGrid.length === 0 ? (
+                    <span className="font-inter text-xs text-slate-secondary">
+                      No available times
+                    </span>
+                  ) : (
+                    <span className="font-inter text-sm font-semibold text-primary-navy">
+                      {selectedSlot
+                        ? format(new Date(selectedSlot), "h:mm a")
+                        : "Pick a time"}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Preferred time <span className="text-red-danger">*</span>
-              </label>
+            <div>
               {isLoading ? (
                 <div className="flex justify-center py-6">
                   <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
@@ -280,11 +483,19 @@ export default function PublicBookingPage() {
                           : "bg-background text-muted cursor-default"
                       }`}
                     >
-                      {t.label}
+                      {t.available ? t.label : "Unavail"}
                     </button>
                   ))}
                 </div>
               )}
+              {timeGrid.length > 0 &&
+                selectedSlot &&
+                minNotice > 0 && (
+                  <p className="font-inter text-[10px] text-muted mt-2">
+                    Requested slot is {minNotice} hour
+                    {minNotice > 1 ? "s" : ""} from now or later.
+                  </p>
+                )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -342,23 +553,6 @@ export default function PublicBookingPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="font-inter text-xs font-medium text-slate-body">
-                Document type
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
-                <input
-                  placeholder="e.g. Deed of Trust (optional)"
-                  value={form.document_type}
-                  onChange={(e) =>
-                    setForm({ ...form, document_type: e.target.value })
-                  }
-                  className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
                 Special notes
               </label>
               <textarea
@@ -368,6 +562,10 @@ export default function PublicBookingPage() {
                 className="w-full min-h-[70px] border border-border rounded-8px p-3 font-inter text-sm resize-none"
               />
             </div>
+
+            {submitError && (
+              <p className="font-inter text-xs text-red-danger">{submitError}</p>
+            )}
 
             <button
               onClick={() => submitBooking.mutate()}
