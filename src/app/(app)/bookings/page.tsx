@@ -1,30 +1,35 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import ProGate from "@/components/ui/ProGate";
 import { Link2, Copy } from "lucide-react";
+import { format } from "date-fns";
+import { unwrap, getBookingUrl } from "@/lib/utils";
+import { queryKeys } from "@/lib/queryClient";
+import type { Booking } from "@/types/booking";
+import { BookingStatus } from "@/types/booking";
 
 export default function BookingsPage() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
-  const qc = useQueryClient();
 
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["bookings"],
-    queryFn: async () => {
-      const res = await bookingApi.list();
-      const p = (res as any).data ?? res;
-      return (p.data ?? p) as any[];
-    },
+  const { data: bookings = [], isLoading } = useQuery<Booking[]>({
+    queryKey: queryKeys.bookings.all(),
+    queryFn: async () =>
+      unwrap<Booking[]>(await bookingApi.list()),
   });
 
-  const pending = bookings.filter((b: any) => b.status === "PENDING_REVIEW");
-  const confirmed = bookings.filter((b: any) => b.status === "CONFIRMED");
-  const bookingUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${user?.username ?? ""}`;
+  const pending = bookings.filter(
+    (b) => b.status === BookingStatus.PENDING_REVIEW,
+  );
+  const confirmed = bookings.filter(
+    (b) => b.status === BookingStatus.CONFIRMED,
+  );
+  const bookingUrl = getBookingUrl(user?.username);
 
   const copyLink = () => {
     navigator.clipboard.writeText(bookingUrl);
@@ -61,7 +66,7 @@ export default function BookingsPage() {
                 No pending bookings
               </div>
             ) : (
-              pending.map((b: any) => (
+              pending.map((b) => (
                 <Link
                   key={b.id}
                   href={`/bookings/${b.id}`}
@@ -69,12 +74,12 @@ export default function BookingsPage() {
                 >
                   <div className="flex-1 min-w-[200px]">
                     <div className="font-inter text-[12px] font-semibold text-primary-navy">
-                      {b.client_name ?? b.client} ·{" "}
+                      {b.client_name} ·{" "}
                       {b.service_type?.replace(/_/g, " ")}
                     </div>
                     <div className="font-inter text-[11px] text-slate-secondary mt-0.5 break-words">
-                      {b.requested_date ?? b.requested_time} ·{" "}
-                      {b.requested_time?.split("T")[1] ?? ""} · {b.address}
+                      {format(new Date(b.requested_time), "MMM d '·' h:mm a")} ·{" "}
+                      {b.address}
                     </div>
                     <span className="chip c-hyb mt-1.5" style={{ fontSize: 9 }}>
                       Pending review
@@ -93,7 +98,7 @@ export default function BookingsPage() {
                 No confirmed bookings
               </div>
             ) : (
-              confirmed.map((b: any) => (
+              confirmed.map((b) => (
                 <Link
                   key={b.id}
                   href={`/bookings/${b.id}`}
@@ -101,12 +106,11 @@ export default function BookingsPage() {
                 >
                   <div className="flex-1 min-w-[200px]">
                     <div className="font-inter text-[12px] font-semibold text-primary-navy">
-                      {b.client_name ?? b.client} ·{" "}
+                      {b.client_name} ·{" "}
                       {b.service_type?.replace(/_/g, " ")}
                     </div>
                     <div className="font-inter text-[11px] text-slate-secondary mt-0.5">
-                      {b.requested_date ?? b.requested_time} ·{" "}
-                      {b.requested_time?.split("T")[1] ?? ""}
+                      {format(new Date(b.requested_time), "MMM d '·' h:mm a")}
                     </div>
                     <span
                       className="chip c-paid mt-1.5"

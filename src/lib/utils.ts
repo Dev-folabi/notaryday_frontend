@@ -155,6 +155,15 @@ export function truncateAddress(address: string, maxLen = 40): string {
 }
 
 /**
+ * Public booking page URL for a username.
+ */
+export function getBookingUrl(username?: string | null): string {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/book/${username ?? ""}`;
+}
+
+/**
  * Domain used for per-user email import addresses.
  */
 export const IMPORT_EMAIL_DOMAIN: string =

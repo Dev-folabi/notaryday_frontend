@@ -31,6 +31,7 @@ export interface UserSettings {
 }
 
 export interface BookingPageService {
+  signing_type: SigningType;
   name: string;
   duration_mins: number;
   scanback_mins: number;

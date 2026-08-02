@@ -7,10 +7,9 @@ import { useUIStore } from "@/store/uiStore";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { ROUTES } from "@/config/routes";
 import { cn } from "@/lib/utils";
-import { Copy, Check, Sparkles, Link2, CheckCircle2 } from "lucide-react";
+import { Copy, Check, Sparkles, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-
-const SERVICES = ["General Notary", "Loan Refi", "Hybrid", "Purchase Closing", "Field Inspection", "Apostille"];
+import { buildBookingPageServices, BOOKING_SERVICE_LIST } from "@/lib/booking";
 
 export default function OnboardingBookingPage() {
   const router = useRouter();
@@ -20,7 +19,7 @@ export default function OnboardingBookingPage() {
   const [services, setServices] = useState<string[]>([
     "General Notary",
     "Loan Refi",
-    "Hybrid",
+    "Hybrid Signing",
   ]);
   const [minNotice, setMinNotice] = useState(2);
   const [advanceLimit, setAdvanceLimit] = useState(30);
@@ -33,7 +32,7 @@ export default function OnboardingBookingPage() {
     setSaving(true);
     try {
       await usersApi.updateSettings({
-        booking_page_services: services,
+        booking_page_services: buildBookingPageServices(services),
         booking_min_notice_hours: minNotice,
         booking_advance_limit_days: advanceLimit,
       } as Record<string, unknown>);
@@ -97,17 +96,17 @@ export default function OnboardingBookingPage() {
 
           <span className="slbl">Services you accept</span>
           <div className="flex gap-1.5 flex-wrap mb-4">
-            {SERVICES.map((t) => (
+            {BOOKING_SERVICE_LIST.map((s) => (
               <div
-                key={t}
-                className={cn("tpill", services.includes(t) && "on")}
+                key={s.signing_type}
+                className={cn("tpill", services.includes(s.name) && "on")}
                 onClick={() =>
                   setServices((prev) =>
-                    prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
+                    prev.includes(s.name) ? prev.filter((x) => x !== s.name) : [...prev, s.name],
                   )
                 }
               >
-                {t}
+                {s.name}
               </div>
             ))}
           </div>

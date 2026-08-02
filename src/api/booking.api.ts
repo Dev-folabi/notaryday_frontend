@@ -11,15 +11,13 @@ export const bookingApi = {
   list: (status?: string) =>
     api.get("/bookings", { params: status ? { status } : undefined }),
   get: (id: string) => api.get(`/bookings/${id}`),
+  analyze: (id: string) => api.get(`/bookings/${id}/analysis`),
   approve: (id: string) => api.post(`/bookings/${id}/approve`),
   decline: (
     id: string,
     data: { reason?: string; alternative_times?: string[] },
   ) => api.patch(`/bookings/${id}/decline`, data),
-};
-
-export const calendarApi = {
-  getFeedToken: () => api.get("/calendar/feed-token"),
+  cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
 };
 
 export const jobImportApi = {
