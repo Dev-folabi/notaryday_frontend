@@ -1,40 +1,59 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { emailImportApi, screenshotApi } from "@/api/booking.api";
+import { jobImportApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
-import { importEmailFor } from "@/lib/utils";
-import { Mail, Upload, Check, Copy, FileImage } from "lucide-react";
+import { importEmailFor, unwrap } from "@/lib/utils";
+import { Mail, Upload, Check, Copy, FileImage, Camera } from "lucide-react";
 import ProGate from "@/components/ui/ProGate";
+import { ImportReviewModal } from "@/components/jobs/ImportReviewModal";
+import { ImportEditModal } from "@/components/jobs/ImportEditModal";
+import type { JobImport, ImportConfirmOverrides } from "@/types/import";
 
 export default function ImportPage() {
   const { addToast } = useUIStore();
   const { user } = useAuth();
+  const router = useRouter();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [reviewing, setReviewing] = useState<JobImport | null>(null);
+  const [modalView, setModalView] = useState<"review" | "edit">("review");
+  const [overrides, setOverrides] = useState<ImportConfirmOverrides>({});
   const importEmail = importEmailFor(user?.username);
 
   const { data: imports = [], isLoading } = useQuery({
-    queryKey: ["email-imports"],
-    queryFn: async () => {
-      const res = await emailImportApi.list();
-      const p = (res as any).data ?? res;
-      return (p.data ?? p) as any[];
-    },
+    queryKey: ["imports"],
+    queryFn: async () => unwrap<JobImport[]>(await jobImportApi.list()),
   });
 
   const confirmImport = useMutation({
-    mutationFn: (id: string) => emailImportApi.confirm(id),
+    mutationFn: ({
+      id,
+      overrides: o,
+    }: {
+      id: string;
+      overrides: ImportConfirmOverrides;
+    }) => jobImportApi.confirm(id, o),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["email-imports"] });
-      addToast({
-        type: "success",
-        title: "Job added to schedule",
-      });
+      qc.invalidateQueries({ queryKey: ["imports"] });
+      addToast({ type: "success", title: "Job added to schedule" });
+      setReviewing(null);
+      router.push("/jobs");
     },
     onError: () => addToast({ type: "error", title: "Could not add job" }),
+  });
+
+  const declineImport = useMutation({
+    mutationFn: (id: string) => jobImportApi.decline(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["imports"] });
+      addToast({ type: "success", title: "Import declined" });
+      setReviewing(null);
+    },
+    onError: () => addToast({ type: "error", title: "Could not decline import" }),
   });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,12 +61,12 @@ export default function ImportPage() {
     if (!file) return;
     setUploading(true);
     try {
-      await screenshotApi.upload(file);
+      await jobImportApi.upload(file);
       addToast({
         type: "success",
         title: "Screenshot uploaded — parsing...",
       });
-      qc.invalidateQueries({ queryKey: ["email-imports"] });
+      qc.invalidateQueries({ queryKey: ["imports"] });
     } catch {
       addToast({ type: "error", title: "Upload failed" });
     } finally {
@@ -61,11 +80,25 @@ export default function ImportPage() {
     addToast({ type: "success", title: "Copied import address" });
   };
 
+  const openReview = (imp: JobImport) => {
+    setOverrides({});
+    setModalView("review");
+    setReviewing(imp);
+  };
+
+  const openEdit = () => setModalView("edit");
+
+  const handleSaveEdits = (o: ImportConfirmOverrides) => {
+    setOverrides(o);
+    addToast({ type: "info", title: "Fields updated, running CITT again" });
+    setModalView("review");
+  };
+
   return (
-    <ProGate feature="Email import">
+    <ProGate feature="Job import">
       <div className="flex flex-col h-full">
         <div className="ph">
-          <div className="ph-title">Email Import</div>
+          <div className="ph-title">Job Import</div>
         </div>
 
         <div className="con">
@@ -99,6 +132,34 @@ export default function ImportPage() {
             </div>
           </div>
 
+          <div className="card p-3.5 mb-4">
+            <div className="flex items-start gap-2.5">
+              <div className="w-9 h-9 rounded-[8px] bg-blue-bg text-blue flex items-center justify-center flex-shrink-0">
+                <Camera className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-inter text-[12px] font-semibold text-primary-navy mb-0.5">
+                  Import from a screenshot
+                </div>
+                <div className="font-inter text-[11px] text-slate-secondary leading-[1.4] mb-2">
+                  Upload a screenshot of a signing order and Notary Day will
+                  extract the details for review.
+                </div>
+                <label className="btn-sm inline-flex cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" />
+                  {uploading ? "Uploading..." : "Upload screenshot"}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="flex justify-center py-16">
               <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
@@ -109,63 +170,54 @@ export default function ImportPage() {
               <p className="font-inter text-sm text-slate-secondary mb-1">
                 No imports yet.
               </p>
-              <p className="font-inter text-[12px] text-muted mb-4">
+              <p className="font-inter text-[12px] text-muted">
                 Forward an email or upload a screenshot to get started.
               </p>
-              <label className="btn-sm inline-flex cursor-pointer">
-                <Upload className="w-3.5 h-3.5" />
-                {uploading ? "Uploading..." : "Upload screenshot"}
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
             </div>
           ) : (
             <>
               <span className="slbl">Latest imports</span>
               <div className="flex flex-col gap-2 mb-4">
-                {imports.map((imp: any) => (
+                {imports.map((imp) => (
                   <div key={imp.id} className="card p-3 flex gap-2.5">
                     <div className="w-9 h-9 rounded-[8px] bg-blue-bg text-blue flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-4 h-4" />
+                      {imp.import_type === "EMAIL" ? (
+                        <Mail className="w-4 h-4" />
+                      ) : (
+                        <Camera className="w-4 h-4" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-inter text-[12px] font-semibold text-primary-navy mb-0.5">
-                        New job imported from {imp.from_address ?? imp.platform}
+                        New job imported from{" "}
+                        {imp.parsed_platform_name ??
+                          imp.from_address ??
+                          "import"}
                       </div>
                       <div className="font-inter text-[11px] text-slate-secondary mb-1.5 leading-[1.3] break-words">
-                        {imp.parsed_address ?? "—"} ·{" "}
-                        {imp.parsed_date ? imp.parsed_date : "—"}
-                        {imp.parsed_time ? ` · ${imp.parsed_time}` : ""}
+                        {imp.parsed_address ?? "—"}
+                        {imp.parsed_appointment_time
+                          ? ` · ${new Date(
+                              imp.parsed_appointment_time,
+                            ).toLocaleDateString()} ${new Date(
+                              imp.parsed_appointment_time,
+                            ).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}`
+                          : ""}
                         {imp.parsed_fee
-                          ? ` · nets $${imp.net_earnings ?? imp.parsed_fee} after mileage`
+                          ? ` · nets $${Number(imp.parsed_fee).toFixed(2)}`
                           : ""}
                       </div>
                       <div className="flex gap-1.5 flex-wrap mb-2">
                         <span className="chip c-imported">
                           <Check className="w-3 h-3" /> Parsed successfully
                         </span>
-                        {imp.citt_verdict && (
-                          <span
-                            className="chip"
-                            style={{
-                              background: "var(--amber-bg)",
-                              color: "var(--amber)",
-                              border: "1px solid var(--amber-b)",
-                            }}
-                          >
-                            CITT: {imp.citt_verdict}
-                          </span>
-                        )}
                       </div>
                       <div className="flex gap-1.5 flex-wrap">
                         <button
-                          onClick={() => confirmImport.mutate(imp.id)}
-                          disabled={confirmImport.isPending}
+                          onClick={() => openReview(imp)}
                           className="btn-p"
                           style={{
                             width: "auto",
@@ -174,14 +226,11 @@ export default function ImportPage() {
                             padding: "0 12px",
                           }}
                         >
-                          {confirmImport.isPending
-                            ? "Adding..."
-                            : "Add to schedule"}
+                          Review job
                         </button>
                         <button
-                          onClick={() =>
-                            addToast({ type: "info", title: "Declined" })
-                          }
+                          onClick={() => declineImport.mutate(imp.id)}
+                          disabled={declineImport.isPending}
                           className="btn-gh"
                           style={{ width: "auto", height: 32 }}
                         >
@@ -196,7 +245,7 @@ export default function ImportPage() {
               <span className="slbl">How it works</span>
               <div className="card p-3.5">
                 <div className="font-inter text-[12px] text-slate-secondary leading-[1.5]">
-                  1. Forward confirmation email to your unique address
+                  1. Forward confirmation email or upload a screenshot
                   <br />
                   2. AI extracts address, date, time, fee, client name
                   <br />
@@ -209,6 +258,29 @@ export default function ImportPage() {
           )}
         </div>
       </div>
+
+      <ImportReviewModal
+        imp={reviewing ?? ({} as JobImport)}
+        overrides={overrides}
+        isOpen={!!reviewing && modalView === "review"}
+        onClose={() => setReviewing(null)}
+        onEdit={openEdit}
+        onConfirm={(o) =>
+          reviewing && confirmImport.mutate({ id: reviewing.id, overrides: o })
+        }
+        onDecline={() => reviewing && declineImport.mutate(reviewing.id)}
+        isConfirming={confirmImport.isPending}
+      />
+
+      <ImportEditModal
+        key={`${reviewing?.id ?? "none"}-${modalView}-${JSON.stringify(overrides)}`}
+        imp={reviewing ?? ({} as JobImport)}
+        overrides={overrides}
+        isOpen={!!reviewing && modalView === "edit"}
+        onClose={() => setReviewing(null)}
+        onBack={() => setModalView("review")}
+        onSave={handleSaveEdits}
+      />
     </ProGate>
   );
 }

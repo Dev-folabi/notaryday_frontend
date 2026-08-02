@@ -48,6 +48,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
       { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
       { href: ROUTES.APP.ACTIVE, icon: Clock, label: "Active Signing", liveTag: true },
       { href: ROUTES.APP.JOBS, icon: Briefcase, label: "My Jobs" },
+      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true },
       { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true },
     ],
   },
@@ -55,7 +56,6 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Grow and Track",
     items: [
       { href: ROUTES.APP.JOURNAL, icon: BookOpen, label: "Journal" },
-      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Email Import" },
       { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings" },
       { href: ROUTES.APP.INVOICES, icon: FileText, label: "Invoices" },
       { href: ROUTES.APP.REPORTS, icon: BarChart2, label: "Reports" },

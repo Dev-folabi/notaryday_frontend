@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { ImportConfirmOverrides } from "@/types/import";
 
 export const bookingApi = {
   getSlots: (username: string, date: string, serviceType?: string) =>
@@ -21,18 +22,16 @@ export const calendarApi = {
   getFeedToken: () => api.get("/calendar/feed-token"),
 };
 
-export const emailImportApi = {
-  list: () => api.get("/email-import"),
-  get: (id: string) => api.get(`/email-import/${id}`),
-  confirm: (id: string, overrides?: Record<string, unknown>) =>
-    api.post(`/email-import/${id}/confirm`, overrides ?? {}),
-};
-
-export const screenshotApi = {
+export const jobImportApi = {
+  list: () => api.get("/imports"),
+  get: (id: string) => api.get(`/imports/${id}`),
+  confirm: (id: string, overrides?: ImportConfirmOverrides) =>
+    api.post(`/imports/${id}/confirm`, overrides ?? {}),
+  decline: (id: string) => api.post(`/imports/${id}/decline`),
   upload: (file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return api.post("/screenshot-import/upload", form, {
+    return api.post("/imports/upload", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
