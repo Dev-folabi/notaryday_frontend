@@ -1,17 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobImportApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
 import { importEmailFor, unwrap } from "@/lib/utils";
-import { Mail, Upload, Check, Copy, FileImage, Camera } from "lucide-react";
+import { Mail, Upload, Check, Copy, FileImage, Camera, Loader2 } from "lucide-react";
 import ProGate from "@/components/ui/ProGate";
 import { ImportReviewModal } from "@/components/jobs/ImportReviewModal";
 import { ImportEditModal } from "@/components/jobs/ImportEditModal";
 import type { JobImport, ImportConfirmOverrides } from "@/types/import";
+
+const PENDING_STATUSES = ["QUEUED", "PROCESSING"];
+
+function isPending(imp: JobImport | null | undefined): boolean {
+  return !!imp && PENDING_STATUSES.includes(imp.status);
+}
+
+/**
+ * Deep link from the "import ready" email (…/import?review=<id>). Opens the
+ * review modal for that specific import. Kept tiny + wrapped in Suspense so
+ * useSearchParams doesn't force the whole page to suspend.
+ */
+function ReviewDeepLink({
+  onOpen,
+}: {
+  onOpen: (id: string) => void;
+}) {
+  const searchParams = useSearchParams();
+  const reviewId = searchParams.get("review");
+  const handledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (reviewId && handledRef.current !== reviewId) {
+      handledRef.current = reviewId;
+      onOpen(reviewId);
+    }
+  }, [reviewId, onOpen]);
+
+  return null;
+}
 
 export default function ImportPage() {
   const { addToast } = useUIStore();
@@ -27,6 +57,12 @@ export default function ImportPage() {
   const { data: imports = [], isLoading } = useQuery({
     queryKey: ["imports"],
     queryFn: async () => unwrap<JobImport[]>(await jobImportApi.list()),
+    // Poll while any import is still queued/processing so the list reflects
+    // the backend parse finishing without a manual refresh.
+    refetchInterval: (query) => {
+      const data = query.state.data as JobImport[] | undefined;
+      return data?.some(isPending) ? 3000 : false;
+    },
   });
 
   const confirmImport = useMutation({
@@ -80,11 +116,62 @@ export default function ImportPage() {
     addToast({ type: "success", title: "Copied import address" });
   };
 
-  const openReview = (imp: JobImport) => {
+  const openReview = async (imp: JobImport) => {
     setOverrides({});
     setModalView("review");
     setReviewing(imp);
+    try {
+      const fresh = unwrap<JobImport>(await jobImportApi.get(imp.id));
+      setReviewing(fresh);
+    } catch {
+      // keep the row we already had
+    }
   };
+
+  const openReviewById = useCallback(
+    (id: string) => {
+      setOverrides({});
+      setModalView("review");
+      jobImportApi
+        .get(id)
+        .then((res) => {
+          const imp = unwrap<JobImport>(res);
+          setReviewing(imp);
+          qc.invalidateQueries({ queryKey: ["imports"] });
+        })
+        .catch(() => {
+          addToast({ type: "error", title: "Could not load that import" });
+        });
+    },
+    [qc, addToast],
+  );
+
+  const reviewingId = reviewing?.id;
+  const reviewingPending = isPending(reviewing);
+
+  // While the reviewed import is still being parsed, poll the backend until
+  // it finishes (or fails) and live-update the review modal.
+  useEffect(() => {
+    if (!reviewingPending || !reviewingId) return;
+    let stopped = false;
+    const timer = setInterval(async () => {
+      try {
+        const fresh = unwrap<JobImport>(await jobImportApi.get(reviewingId));
+        if (stopped) return;
+        setReviewing(fresh);
+        if (!isPending(fresh)) {
+          clearInterval(timer);
+          qc.invalidateQueries({ queryKey: ["imports"] });
+        }
+      } catch {
+        // transient failure — keep polling
+      }
+    }, 2000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [reviewingId, reviewingPending, qc]);
 
   const openEdit = () => setModalView("edit");
 
@@ -96,6 +183,9 @@ export default function ImportPage() {
 
   return (
     <ProGate feature="Job import">
+      <Suspense fallback={null}>
+        <ReviewDeepLink onOpen={openReviewById} />
+      </Suspense>
       <div className="flex flex-col h-full">
         <div className="ph">
           <div className="ph-title">Job Import</div>
@@ -211,9 +301,21 @@ export default function ImportPage() {
                           : ""}
                       </div>
                       <div className="flex gap-1.5 flex-wrap mb-2">
-                        <span className="chip c-imported">
-                          <Check className="w-3 h-3" /> Parsed successfully
-                        </span>
+                        {imp.status === "COMPLETE" && (
+                          <span className="chip c-imported">
+                            <Check className="w-3 h-3" /> Parsed successfully
+                          </span>
+                        )}
+                        {isPending(imp) && (
+                          <span className="chip" style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
+                            <Loader2 className="w-3 h-3 animate-spin" /> Parsing...
+                          </span>
+                        )}
+                        {imp.status === "FAILED" && (
+                          <span className="chip" style={{ background: "var(--red-bg)", color: "var(--red)" }}>
+                            Failed to parse
+                          </span>
+                        )}
                       </div>
                       <div className="flex gap-1.5 flex-wrap">
                         <button

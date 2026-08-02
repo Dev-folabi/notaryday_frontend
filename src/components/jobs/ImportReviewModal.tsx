@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/components/ui/Modal";
 import { cittApi } from "@/api/citt.api";
 import { formatCurrency, formatDateTime, unwrap } from "@/lib/utils";
-import { Check, Mail, Pencil, Info } from "lucide-react";
+import { Check, Mail, Pencil, Info, Loader2, AlertTriangle, X } from "lucide-react";
 import type { JobImport } from "@/types/import";
 import type { ImportConfirmOverrides } from "@/types/import";
 import type { CITTCheckResponse } from "@/types/citt";
+
+const PENDING_STATUSES = ["QUEUED", "PROCESSING"];
 
 interface ImportReviewModalProps {
   imp: JobImport;
@@ -64,20 +66,17 @@ export function ImportReviewModal({
     staleTime: 60_000,
   });
 
-  const verdictColor =
-    citt?.verdict === "TAKE_IT"
-      ? { bg: "var(--teal-bg)", color: "var(--teal)", border: "1px solid var(--teal-b)" }
-      : citt?.verdict === "RISKY"
-        ? { bg: "var(--amber-bg)", color: "var(--amber)", border: "1px solid var(--amber-b)" }
-        : { bg: "var(--red-bg)", color: "var(--red)", border: "1px solid var(--red-b)" };
+  const net = citt?.net_earnings ?? 0;
+  const netColorCls = net >= 30 ? "text-teal" : net >= 10 ? "text-amber" : "text-red";
+  const netIconBgCls = net >= 30 ? "bg-teal-bg text-teal" : net >= 10 ? "bg-amber-bg text-amber" : "bg-red-bg text-red";
 
-  const verdictLabel = citt
+  const verdict = citt
     ? citt.verdict === "TAKE_IT"
-      ? "CITT: Take it"
+      ? { bg: "bg-teal-bg", border: "border-teal-border", solid: "bg-teal", text: "text-teal", title: "Take it" }
       : citt.verdict === "RISKY"
-        ? "CITT: Risky"
-        : "CITT: Decline"
-    : "CITT: Check";
+        ? { bg: "bg-amber-bg", border: "border-amber-border", solid: "bg-amber", text: "text-amber", title: "Risky" }
+        : { bg: "bg-red-bg", border: "border-red-border", solid: "bg-red", text: "text-red", title: "Decline" }
+    : null;
 
   const fields = [
     ["Address", address || "—"],
@@ -88,6 +87,9 @@ export function ImportReviewModal({
     ["Client name", clientName || "—"],
     ["Platform", platformName || imp.from_address || "—"],
   ] as const;
+
+  const pending = PENDING_STATUSES.includes(imp.status);
+  const failed = imp.status === "FAILED";
 
   return (
     <Modal
@@ -104,6 +106,26 @@ export function ImportReviewModal({
           Auto parsed — AI extracted
         </span>
       </div>
+
+      {pending && (
+        <div className="alert al-blue mb-3 flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 text-blue flex-shrink-0 animate-spin" />
+          <div className="text-[11px] leading-[1.3]">
+            Still parsing this import — fields will appear here automatically
+            once the AI has finished. Keep this window open.
+          </div>
+        </div>
+      )}
+
+      {failed && (
+        <div className="alert al-red mb-3 flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-danger flex-shrink-0" />
+          <div className="text-[11px] leading-[1.3]">
+            This import failed to parse. You can retry by uploading a new
+            screenshot or forwarding the email again.
+          </div>
+        </div>
+      )}
 
       <div className="card p-3.5 mb-3">
         <span className="slbl">Fields extracted by AI</span>
@@ -131,64 +153,209 @@ export function ImportReviewModal({
         </button>
       </div>
 
-      <div
-        className="card p-3.5 mb-3"
-        style={{
-          background: citt ? verdictColor.bg : undefined,
-          borderColor: citt ? undefined : "var(--border)",
-        }}
-      >
-        <div className="flex gap-2 mb-2 items-center">
+      {citt && verdict ? (
+        <div className="card p-0 overflow-hidden mb-3">
+          {/* VERDICT HEADER */}
           <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white"
-            style={{ background: citt ? verdictColor.color : "var(--slate2)" }}
+            className={`px-6 pt-8 pb-6 text-center border-b ${verdict.bg} ${verdict.border}`}
           >
-            <Check className="w-3.5 h-3.5" />
-          </div>
-          <div>
             <div
-              className="text-[12px] font-bold"
-              style={{ color: citt ? verdictColor.color : "var(--slate2)" }}
+              className={`w-[72px] h-[72px] rounded-full flex items-center justify-center mx-auto mb-4 ${verdict.solid}`}
             >
-              {verdictLabel}
+              {citt.verdict === "TAKE_IT" ? (
+                <Check className="w-8 h-8 text-white" strokeWidth={2.5} />
+              ) : citt.verdict === "RISKY" ? (
+                <AlertTriangle className="w-8 h-8 text-white" />
+              ) : (
+                <X className="w-8 h-8 text-white" />
+              )}
             </div>
-            <div className="text-[10px] text-slate-secondary">
-              {citt
-                ? citt.reason
-                : "Run a CITT check to see the net after mileage."}
+            <div
+              className={`font-sora text-[22px] font-bold mb-1.5 ${verdict.text}`}
+            >
+              {verdict.title}
+            </div>
+            <div className="text-[12px] text-slate-secondary leading-snug max-w-[300px] mx-auto">
+              {citt.reason}
+            </div>
+          </div>
+
+          <div className="p-5">
+            {/* EARNINGS BREAKDOWN */}
+            <span className="slbl">Earnings breakdown</span>
+            <div className="grid grid-cols-3 gap-px border border-border rounded-[10px] overflow-hidden bg-border mb-2">
+              <div className="bg-white p-3.5 text-center flex flex-col">
+                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
+                  Offered fee
+                </span>
+                <span className="font-sora text-[18px] font-bold text-slate leading-none">
+                  {formatCurrency(fee)}
+                </span>
+                <span className="text-[10px] text-slate-secondary mt-1.5">
+                  gross
+                </span>
+              </div>
+              <div className="bg-white p-3.5 text-center flex flex-col border-l border-border">
+                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
+                  Mileage cost
+                </span>
+                <span className="font-sora text-[18px] font-bold text-amber leading-none">
+                  -{formatCurrency(citt.mileage_cost)}
+                </span>
+                <span className="text-[10px] text-slate-secondary mt-1.5">
+                  {citt.drive_distance_miles?.toFixed(1) ?? "0"} mi rt
+                </span>
+              </div>
+              <div className="bg-white p-3.5 text-center flex flex-col border-l border-border">
+                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
+                  Net earnings
+                </span>
+                <span
+                  className={`font-sora text-[18px] font-bold leading-none ${netColorCls}`}
+                >
+                  {formatCurrency(net)}
+                </span>
+                <span className="text-[10px] text-slate-secondary mt-1.5">
+                  ${citt.effective_hourly?.toFixed(0) ?? "0"}/hr eff.
+                </span>
+              </div>
+            </div>
+            <div className="text-[12px] text-slate-secondary text-center mb-1">
+              {citt.drive_distance_miles?.toFixed(1) ?? "0"} mi round trip ·{" "}
+              {citt.total_job_mins || 45} min signing ·{" "}
+              {citt.drive_time_mins || 0} min drive · $
+              {citt.effective_hourly?.toFixed(2) ?? "0.00"} effective hourly
+              rate
+            </div>
+
+            <div className="h-[1px] bg-border my-4" />
+
+            {/* WHAT WE CHECKED */}
+            <span className="slbl">What we checked</span>
+            <div className="bg-white border border-border rounded-[12px] p-1 px-4 mb-2">
+              <div className="flex items-start gap-3 py-3 border-b border-border last:border-b-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-[1px] ${
+                    citt.can_make_it
+                      ? "bg-teal-bg text-teal"
+                      : "bg-red-bg text-red"
+                  }`}
+                >
+                  {citt.can_make_it ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold text-navy mb-[2px]">
+                    Schedule fit
+                  </div>
+                  <div className="text-[12px] text-slate-secondary leading-snug">
+                    {citt.can_make_it
+                      ? "Schedule fits with enough time for the appointment and driving."
+                      : citt.reason}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 py-3 border-b border-border last:border-b-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-[1px] ${
+                    citt.scanback_conflict
+                      ? "bg-red-bg text-red"
+                      : "bg-teal-bg text-teal"
+                  }`}
+                >
+                  {!citt.scanback_conflict ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold text-navy mb-[2px]">
+                    Scanback conflicts
+                  </div>
+                  <div className="text-[12px] text-slate-secondary leading-snug">
+                    {!citt.scanback_conflict
+                      ? "No scanback window conflicts."
+                      : citt.scanback_conflict_detail ||
+                        "Conflicts with an existing scanback window."}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 py-3 border-b border-border last:border-b-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-[1px] ${netIconBgCls}`}
+                >
+                  {net >= 30 ? (
+                    <Check className="w-4 h-4" />
+                  ) : net >= 10 ? (
+                    <AlertTriangle className="w-4 h-4" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold text-navy mb-[2px]">
+                    Net earnings
+                  </div>
+                  <div className="text-[12px] text-slate-secondary leading-snug">
+                    {net >= 30
+                      ? "Solid profitability. Good effective hourly rate."
+                      : net >= 10
+                        ? "Marginal profitability. Decide if the time investment is worth it."
+                        : "Extremely low net earnings after mileage. Recommended decline."}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div
-          className="grid grid-cols-3 gap-px border border-border rounded-lg overflow-hidden"
-          style={{ background: "var(--border)" }}
-        >
-          <div className="bg-white p-2 text-center">
-            <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-              Offered fee
+      ) : (
+        <div className="card p-3.5 mb-3">
+          <div className="flex gap-2 mb-2 items-center">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white bg-slate-2">
+              <Check className="w-3.5 h-3.5" />
             </div>
-            <div className="font-sora text-[13px] font-bold" style={{ color: "var(--slate)" }}>
-              {formatCurrency(fee)}
-            </div>
-          </div>
-          <div className="bg-white p-2 text-center border-l border-border">
-            <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-              Mileage cost
-            </div>
-            <div className="font-sora text-[13px] font-bold" style={{ color: "var(--amber)" }}>
-              {citt ? `-${formatCurrency(citt.mileage_cost)}` : "—"}
+            <div>
+              <div className="text-[12px] font-bold text-slate-secondary">
+                CITT: Check
+              </div>
+              <div className="text-[10px] text-slate-secondary">
+                Run a CITT check to see the net after mileage.
+              </div>
             </div>
           </div>
-          <div className="bg-white p-2 text-center border-l border-border">
-            <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-              Net earnings
+          <div
+            className="grid grid-cols-3 gap-px border border-border rounded-lg overflow-hidden"
+            style={{ background: "var(--border)" }}
+          >
+            <div className="bg-white p-2 text-center">
+              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
+                Offered fee
+              </div>
+              <div className="font-sora text-[13px] font-bold text-slate">
+                {formatCurrency(fee)}
+              </div>
             </div>
-            <div className="font-sora text-[13px] font-bold" style={{ color: "var(--teal)" }}>
-              {citt ? formatCurrency(citt.net_earnings) : "—"}
+            <div className="bg-white p-2 text-center border-l border-border">
+              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
+                Mileage cost
+              </div>
+              <div className="font-sora text-[13px] font-bold text-amber">—</div>
+            </div>
+            <div className="bg-white p-2 text-center border-l border-border">
+              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
+                Net earnings
+              </div>
+              <div className="font-sora text-[13px] font-bold text-teal">—</div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="alert al-blue">
         <Info className="w-3.5 h-3.5 text-blue flex-shrink-0" />
@@ -202,10 +369,21 @@ export function ImportReviewModal({
         <button
           className="btn-teal h-10"
           onClick={() => onConfirm(overrides)}
-          disabled={isConfirming}
+          disabled={isConfirming || pending}
         >
-          <Check className="w-4 h-4" />
-          {isConfirming ? "Adding..." : "Add to my schedule"}
+          {pending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Parsing...
+            </>
+          ) : isConfirming ? (
+            <>
+              <Check className="w-4 h-4" /> Adding...
+            </>
+          ) : (
+            <>
+              <Check className="w-4 h-4" /> Add to my schedule
+            </>
+          )}
         </button>
         <button className="btn-gh h-9" onClick={onEdit}>
           <Pencil className="w-3.5 h-3.5" /> Edit fields before adding
