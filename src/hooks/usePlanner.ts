@@ -92,12 +92,24 @@ export interface GapCandidate {
   gap_start: string;
   gap_end: string;
   gap_mins: number;
-  candidates: Array<{
-    id: string;
-    address: string;
-    fee: number;
-    net_earnings: number;
-    signing_type: string;
-    appointment_time: string;
-  }>;
+  prev_job_id: string;
+  next_job_id: string;
+  prev_job_label: string;
+  next_job_label: string;
+  candidates: GapCandidateJob[];
+}
+
+export interface GapCandidateJob {
+  id: string;
+  address: string;
+  fee: number;
+  net_earnings: number;
+  signing_type: string;
+  signing_duration_mins: number;
+  scanback_duration_mins: number;
+  platform_name: string | null;
+  client_name: string | null;
+  appointment_time: string;
+  miles_from: number | null;
+  miles_from_label: string | null;
 }

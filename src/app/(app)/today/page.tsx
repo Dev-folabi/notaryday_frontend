@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/queryClient";
 import { useGaps, useTodayPlan } from "@/hooks/usePlanner";
 import {
   formatCurrency,
+  formatMiles,
   toDateInputValue,
   profitabilityColor,
 } from "@/lib/utils";
@@ -338,6 +339,13 @@ export default function TodayPage() {
                     {bestCandidate.address} ·{" "}
                     {formatCurrency(bestCandidate.fee)} offered ·{" "}
                     {format(parseISO(firstGap.gap_start), "h:mm a")}
+                    {bestCandidate.miles_from != null && (
+                      <>
+                        {" "}
+                        · {formatMiles(bestCandidate.miles_from)} from{" "}
+                        {bestCandidate.miles_from_label}
+                      </>
+                    )}
                   </div>
                 </div>
                 <span

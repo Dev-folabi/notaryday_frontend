@@ -1,13 +1,16 @@
 "use client";
 
-import { useGaps } from "@/hooks/usePlanner";
-import { useTodayPlan } from "@/hooks/usePlanner";
+import { useGaps, useTodayPlan, type TodayPlan } from "@/hooks/usePlanner";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
-import { toDateInputValue, formatCurrency, importEmailFor } from "@/lib/utils";
+import {
+  toDateInputValue,
+  formatCurrency,
+  formatMiles,
+  importEmailFor,
+} from "@/lib/utils";
 import ProGate from "@/components/ui/ProGate";
 import { Sparkles, Info, ChevronLeft, Zap } from "lucide-react";
-import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -19,7 +22,7 @@ export default function GapPage() {
   const date = activeDate || toDateInputValue(new Date());
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
 
-  const { data: gaps = [], isLoading: gapsLoading, refetch } = useGaps(date);
+  const { data: gaps = [], isLoading: gapsLoading } = useGaps(date);
   const { data: plan, isLoading: planLoading } = useTodayPlan(date);
 
   const totalCandidates = gaps.reduce((s, g) => s + g.candidates.length, 0);
@@ -74,13 +77,8 @@ export default function GapPage() {
                         Gap - {startLabel} to {endLabel}
                       </div>
                       <div className="text-[11px] text-slate-secondary">
-                        {gap.gap_mins} min free,{" "}
-                        {gapIdx === 0
-                          ? "After Job 4 scanback, Before end of day"
-                          : "Before first signing"}
-                        {hasCandidates
-                          ? ""
-                          : ", No pending jobs fit this window"}
+                        {gap.gap_mins} min free, after {gap.prev_job_label}{" "}
+                        {hasCandidates ? "" : "· no pending jobs fit this window"}
                       </div>
                     </div>
                   </div>
@@ -103,10 +101,7 @@ export default function GapPage() {
                                   {formatSigningType(
                                     candidate.signing_type as string,
                                   )}{" "}
-                                  -{" "}
-                                  {(candidate as any).signing_duration_mins ??
-                                    "?"}{" "}
-                                  min
+                                  - {candidate.signing_duration_mins} min
                                 </span>
                                 <span>
                                   {format(
@@ -115,15 +110,12 @@ export default function GapPage() {
                                   )}{" "}
                                   start
                                 </span>
-                                <span>
-                                  {(candidate as any).miles_from ?? "?"}{" "}
-                                  {(candidate as any).miles_from != null
-                                    ? "mi"
-                                    : ""}
-                                  {(candidate as any).miles_from_of
-                                    ? ` from Job ${(candidate as any).miles_from_of}`
-                                    : ""}
-                                </span>
+                                {candidate.miles_from != null && (
+                                  <span>
+                                    {formatMiles(candidate.miles_from)} from{" "}
+                                    {candidate.miles_from_label}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex gap-1 flex-wrap">
                                 <span
@@ -138,9 +130,9 @@ export default function GapPage() {
                                     candidate.signing_type as string,
                                   )}
                                 </span>
-                                {(candidate as any).platform_name && (
+                                {candidate.platform_name && (
                                   <span className="chip c-plat">
-                                    {(candidate as any).platform_name}
+                                    {candidate.platform_name}
                                   </span>
                                 )}
                               </div>
@@ -188,15 +180,27 @@ export default function GapPage() {
 
             <div className="h-px bg-border my-3.5" />
 
+            {gaps.length === 0 ? (
+              <div className="bg-bg border border-border rounded-[8px] p-3.5 text-center">
+                <div className="text-[12px] font-semibold text-primary-navy mb-1">
+                  No gaps today
+                </div>
+                <div className="text-[11px] text-slate-secondary leading-[1.5]">
+                  Add a second signing or confirm a pending job to unlock free
+                  windows between appointments.
+                </div>
+              </div>
+            ) : null}
+
             <div className="alert al-blue">
               <Info className="w-4 h-4" />
               <div>
                 <div className="text-[11px] font-semibold mb-0.5">
-                  {totalCandidates} pending jobs in inbox
+                  {totalCandidates} pending job
+                  {totalCandidates === 1 ? "" : "s"} matched today&apos;s gaps
                 </div>
                 <div className="text-[11px] leading-[1.4]">
-                  {totalCandidates} matched today&apos;s gaps, forward Snapdocs
-                  emails to{" "}
+                  Don&apos;t see one? Forward Snapdocs confirmations to{" "}
                   <span
                     className="font-mono text-[10px]"
                     style={{
@@ -205,8 +209,9 @@ export default function GapPage() {
                       borderRadius: 3,
                     }}
                   >
-                    importEmailFor(user?.username)
-                  </span>
+                    {importEmailFor(user?.username)}
+                  </span>{" "}
+                  to load it into your inbox.
                 </div>
               </div>
             </div>
@@ -227,7 +232,7 @@ export default function GapPage() {
   return content;
 }
 
-function GapDayStrip({ plan }: { plan: any }) {
+function GapDayStrip({ plan }: { plan: TodayPlan }) {
   const s = plan.summary ?? {};
   const driveMins = s.total_drive_mins ?? 0;
   return (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useTodayPlan, useGaps } from "@/hooks/usePlanner";
 import { useAuth } from "@/hooks/useAuth";
-import { toDateInputValue, formatCurrency } from "@/lib/utils";
+import { toDateInputValue, formatCurrency, formatMiles } from "@/lib/utils";
 import {
   Route,
   Clock,
@@ -324,12 +324,12 @@ export default function DayPage() {
                                 {formatCurrency(bestCandidate.net_earnings)}
                               </strong>
                             </span>
-                            <span>
-                              {(bestCandidate as any).miles_from ?? ""}
-                              {(bestCandidate as any).miles_from
-                                ? " mi from Job"
-                                : ""}
-                            </span>
+                            {bestCandidate.miles_from != null && (
+                              <span>
+                                {formatMiles(bestCandidate.miles_from)} from{" "}
+                                {bestCandidate.miles_from_label}
+                              </span>
+                            )}
                           </div>
                           <button
                             className="btn-sm"
