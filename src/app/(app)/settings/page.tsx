@@ -6,8 +6,9 @@ import { useUIStore } from "@/store/uiStore";
 import { usersApi } from "@/api/users.api";
 import { billingApi } from "@/api/billing.api";
 import { cn } from "@/lib/utils";
-import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X } from "lucide-react";
+import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X, Link2 } from "lucide-react";
 import Link from "next/link";
+import BookingSetupForm from "@/components/booking/BookingSetupForm";
 
 const SERVICES = ["General", "Loan Refi", "Hybrid", "Purchase Closing", "Field Inspection", "Apostille"];
 const NOTIFS = [
@@ -20,37 +21,65 @@ const NOTIFS = [
   ["Payment failed", "A Stripe renewal payment was declined.", "Email + Push", true, true],
 ];
 
+type TabKey = "profile" | "notifications" | "billing" | "booking";
+
+function getInitialTab(): TabKey {
+  if (typeof window === "undefined") return "profile";
+  const t = new URLSearchParams(window.location.search).get("tab");
+  if (t === "profile" || t === "notifications" || t === "billing" || t === "booking") {
+    return t;
+  }
+  return "profile";
+}
+
+type SettingsProfile = {
+  fullName: string;
+  username: string;
+  email: string;
+  phone: string;
+  state: string;
+  bio: string;
+  homeBase: string;
+  scanback: number;
+  types: string[];
+  navPref: string;
+};
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
-  const [tab, setTab] = useState<"profile" | "notifications" | "billing">("profile");
-  const [profile, setProfile] = useState<any>(null);
+  const [tab, setTab] = useState<TabKey>(getInitialTab);
+  const [profile, setProfile] = useState<SettingsProfile | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<boolean[]>(NOTIFS.map(() => true));
 
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
 
-  useEffect(() => {
-    if (user) {
-      setProfile({
-        fullName: user.full_name ?? "",
-        username: user.username ?? "",
-        email: user.email ?? "",
-        phone: user.phone ?? "",
-        state: "California",
-        bio: user.bio ?? "",
-        homeBase: user.settings?.home_base_address ?? "",
-        scanback: (user.settings as any)?.scanback_duration_mins ?? 30,
-        types: user.signing_defaults?.map((s) => s.signing_type) ?? SERVICES,
-        navPref: user.settings?.preferred_nav_app ?? "GOOGLE_MAPS",
-      });
-    }
-  }, [user]);
+  const [profileUserKey, setProfileUserKey] = useState<string | undefined>(undefined);
+
+  // Adjust-on-prop-change (React docs): seed the editable form state once when
+  // the auth user is first available, without a setState-in-effect.
+  if (user && user.email !== profileUserKey) {
+    setProfileUserKey(user.email);
+    setProfile({
+      fullName: user.full_name ?? "",
+      username: user.username ?? "",
+      email: user.email ?? "",
+      phone: user.phone ?? "",
+      state: "California",
+      bio: user.bio ?? "",
+      homeBase: user.settings?.home_base_address ?? "",
+      scanback: (user.settings as { scanback_duration_mins?: number } | null)?.scanback_duration_mins ?? 30,
+      types: user.signing_defaults?.map((s) => s.signing_type) ?? SERVICES,
+      navPref: user.settings?.preferred_nav_app ?? "GOOGLE_MAPS",
+    });
+  }
 
   useEffect(() => {
     billingApi.getStatus().catch(() => {});
   }, []);
 
   const saveProfile = async () => {
+    if (!profile) return;
     try {
       await usersApi.updateProfile({
         fullName: profile.fullName,
@@ -63,12 +92,19 @@ export default function SettingsPage() {
     }
   };
 
-  const sel = (k: keyof typeof profile, v: any) => setProfile((p: any) => ({ ...p, [k]: v }));
+  const sel = <K extends keyof SettingsProfile>(k: K, v: SettingsProfile[K]) =>
+    setProfile((p) => (p ? { ...p, [k]: v } : p));
   const toggleType = (t: string) =>
-    setProfile((p: any) => ({
-      ...p,
-      types: p.types.includes(t) ? p.types.filter((x: string) => x !== t) : [...p.types, t],
-    }));
+    setProfile((p) =>
+      p
+        ? {
+            ...p,
+            types: p.types.includes(t)
+              ? p.types.filter((x: string) => x !== t)
+              : [...p.types, t],
+          }
+        : p,
+    );
 
   if (!profile) {
     return (
@@ -89,6 +125,7 @@ export default function SettingsPage() {
           ["profile", "Profile", User],
           ["notifications", "Notifications", Bell],
           ["billing", "Billing", CreditCard],
+          ["booking", "Booking", Link2],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -134,7 +171,7 @@ export default function SettingsPage() {
               <div className="field">
                 <label className="lbl">Default scanback duration</label>
                 <div className="flex gap-2 items-center flex-wrap">
-                  <input className="inp" style={{ width: 64, textAlign: "center" }} value={profile.scanback} onChange={(e) => sel("scanback", e.target.value)} />
+                  <input className="inp" style={{ width: 64, textAlign: "center" }} value={profile.scanback} onChange={(e) => sel("scanback", Number(e.target.value))} />
                   <span className="font-inter text-[11px] text-slate-secondary">minutes after each Loan Refi, Hybrid, Purchase Closing</span>
                 </div>
                 <span className="hint">Overridable per job. Changes recalculate all future scheduled days.</span>
@@ -286,6 +323,8 @@ export default function SettingsPage() {
             )}
           </>
         )}
+
+        {tab === "booking" && <BookingSetupForm />}
       </div>
     </div>
   );

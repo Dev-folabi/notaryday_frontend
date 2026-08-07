@@ -146,7 +146,7 @@ export default function BookingsPage() {
                 Preview public booking page
               </Link>
               <Link
-                href="/settings/booking"
+                href="/settings?tab=booking"
                 className="btn-gh"
                 style={{ height: 36 }}
               >

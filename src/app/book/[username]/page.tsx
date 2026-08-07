@@ -16,6 +16,8 @@ import {
   Ban,
   SearchX,
   X,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { unwrap, getInitials, errMsg } from "@/lib/utils";
@@ -304,7 +306,7 @@ export default function PublicBookingPage() {
                 Your booking
               </div>
               {[
-                ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Signing Agent`],
+                ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Loan Signing Agent`],
                 ["Service", selectedServiceName],
                 ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
                 ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
@@ -420,7 +422,7 @@ export default function PublicBookingPage() {
                 {notary?.full_name ?? "Notary"}
               </div>
               <div className="font-inter text-[11px] text-slate-secondary">
-                NNA Certified Signing Agent
+                NNA Certified Loan Signing Agent
               </div>
             </div>
           </div>
@@ -683,11 +685,15 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                 !selectedSlot ||
                 submitBooking.isPending
               }
-              className="w-full h-11 bg-primary-navy text-white rounded-8px font-inter font-semibold text-sm disabled:opacity-50"
+              className="w-full h-11 bg-primary-navy text-white rounded-8px font-inter font-semibold text-sm disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
             >
-              {submitBooking.isPending
-                ? "Submitting..."
-                : "Request appointment"}
+              {submitBooking.isPending ? (
+                "Submitting..."
+              ) : (
+                <>
+                  Request appointment <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
             <p className="font-inter text-[10px] text-muted text-center">
               Your request is checked against the notary&apos;s live schedule.
@@ -698,25 +704,31 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
 
       {altOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-[14px] w-full max-w-md">
-            <div className="flex items-center justify-between px-5 pt-5 pb-0">
-              <div className="font-sora font-bold text-[16px] text-primary-navy">
-                Time not available
+          <div className="bg-white rounded-[14px] w-full max-w-md relative">
+            <button
+              onClick={() => setAltOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-bg text-slate-secondary hover:text-primary-navy"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="p-5 pt-8">
+              <div className="text-center mb-4">
+                <div className="w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center mx-auto mb-2.5 text-amber-warning"
+                  style={{ background: "var(--amber-bg)", borderColor: "var(--amber-b)" }}
+                >
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div className="font-sora font-bold text-[16px] text-primary-navy mb-1">
+                  That time is not available
+                </div>
+                <div className="font-inter text-[12px] text-slate-secondary leading-[1.5]">
+                  {notary?.full_name ?? "The notary"} has another commitment at{" "}
+                  {selectedSlotLabel || "that time"} on{" "}
+                  {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}. Here are
+                  the next available slots:
+                </div>
               </div>
-              <button
-                onClick={() => setAltOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-bg text-slate-secondary hover:text-primary-navy"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5">
-              <p className="font-inter text-[12px] text-slate-secondary mb-4">
-                {selectedSlotLabel} on{" "}
-                {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")} was just
-                taken. Here are the next best times:
-              </p>
 
               {altLoading ? (
                 <div className="flex justify-center py-6">
