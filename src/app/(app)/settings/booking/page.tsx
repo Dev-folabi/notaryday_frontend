@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { Copy, Check, Link2 } from "lucide-react";
@@ -31,6 +32,7 @@ interface DayHours {
 
 export default function BookingSettingsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { addToast } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -156,7 +158,7 @@ export default function BookingSettingsPage() {
               <button
                 className="btn-sm"
                 style={{ background: "var(--teal)", color: "#fff", borderColor: "var(--teal)" }}
-                onClick={() => window.open(bookingUrl, "_blank")}
+                onClick={() => router.push("/bookings/preview")}
               >
                 <Link2 className="w-3.5 h-3.5" /> Preview
               </button>

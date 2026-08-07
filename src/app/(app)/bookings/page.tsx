@@ -42,7 +42,7 @@ export default function BookingsPage() {
         <div className="ph">
           <div className="ph-title">Bookings</div>
           <Link
-            href="/settings/booking"
+            href="/bookings/preview"
             className="btn-sm"
             style={{
               background: "var(--teal)",
@@ -50,7 +50,7 @@ export default function BookingsPage() {
               borderColor: "var(--teal)",
             }}
           >
-            <Link2 className="w-3.5 h-3.5" /> Setup page
+            <Link2 className="w-3.5 h-3.5" /> Preview public page
           </Link>
         </div>
 
@@ -137,7 +137,14 @@ export default function BookingsPage() {
                 <Copy className="w-3.5 h-3.5" /> Copy
               </button>
             </div>
-            <div className="mt-2.5">
+            <div className="flex gap-2 flex-wrap">
+              <Link
+                href="/bookings/preview"
+                className="btn-gh"
+                style={{ height: 36 }}
+              >
+                Preview public booking page
+              </Link>
               <Link
                 href="/settings/booking"
                 className="btn-gh"

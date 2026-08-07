@@ -468,8 +468,8 @@ export default function PublicBookingPage() {
             Request a signing
           </h1>
           <p className="font-inter text-xs text-slate-secondary mb-5">
-            Fill in your details and {notary?.full_name ?? "the notary"} will
-            confirm your appointment.
+Fill in your details and {notary?.full_name ?? "the notary"} will
+          confirm your appointment automatically.
           </p>
 
           <div className="flex flex-col gap-3 max-w-md">
@@ -547,79 +547,63 @@ export default function PublicBookingPage() {
                 <label className="font-inter text-xs font-medium text-slate-body">
                   Preferred date <span className="text-red-danger">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    setSelectedSlot(null);
-                  }}
-                  min={format(new Date(), "yyyy-MM-dd")}
-                  className="w-full h-11 border border-border rounded-8px px-3 font-inter text-sm"
-                />
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary pointer-events-none" />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      setSelectedSlot(null);
+                    }}
+                    min={format(new Date(), "yyyy-MM-dd")}
+                    className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="font-inter text-xs font-medium text-slate-body">
                   Preferred time <span className="text-red-danger">*</span>
                 </label>
-                <div className="flex items-center h-11">
-                  {isLoading ? (
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-11">
                     <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
-                  ) : timeGrid.length === 0 ? (
+                  </div>
+                ) : timeGrid.length === 0 ? (
+                  <div className="flex items-center h-11">
                     <span className="font-inter text-xs text-slate-secondary">
                       No available times
                     </span>
-                  ) : (
-                    <span className="font-inter text-sm font-semibold text-primary-navy">
-                      {selectedSlot
-                        ? format(new Date(selectedSlot), "h:mm a")
-                        : "Pick a time"}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {timeGrid.map((t) => (
+                      <button
+                        key={t.time}
+                        disabled={!t.available}
+                        onClick={() => setSelectedSlot(t.iso)}
+                        className={`h-9 rounded-8px text-[11px] font-semibold border transition-colors ${
+                          t.available
+                            ? selectedSlot === t.iso
+                              ? "border-primary-navy bg-primary-navy text-white"
+                              : "border-border bg-white text-primary-navy hover:border-slate-secondary cursor-pointer"
+                            : "bg-background text-muted cursor-default"
+                        }`}
+                      >
+                        {t.available ? t.label : "Unavail"}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div>
-              {isLoading ? (
-                <div className="flex justify-center py-6">
-                  <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
-                </div>
-              ) : timeGrid.length === 0 ? (
-                <div className="bg-white border border-border rounded-12px p-4 text-center">
-                  <p className="font-inter text-xs text-slate-secondary">
-                    No available times for this date. Try another day.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {timeGrid.map((t) => (
-                    <button
-                      key={t.time}
-                      disabled={!t.available}
-                      onClick={() => setSelectedSlot(t.iso)}
-                      className={`h-10 rounded-8px text-xs font-semibold border transition-colors ${
-                        t.available
-                          ? selectedSlot === t.iso
-                            ? "border-primary-navy bg-primary-navy text-white"
-                            : "border-border bg-white text-primary-navy hover:border-slate-secondary cursor-pointer"
-                          : "bg-background text-muted cursor-default"
-                      }`}
-                    >
-                      {t.available ? t.label : "Unavail"}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {timeGrid.length > 0 &&
-                selectedSlot &&
-                minNotice > 0 && (
-                  <p className="font-inter text-[10px] text-muted mt-2">
-                    Requested slot is {minNotice} hour
-                    {minNotice > 1 ? "s" : ""} from now or later.
-                  </p>
-                )}
-            </div>
+            {timeGrid.length > 0 && selectedSlot && minNotice > 0 && (
+              <p className="font-inter text-[10px] text-muted">
+                Requested slot is {minNotice} hour
+                {minNotice > 1 ? "s" : ""} from now or later.
+              </p>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="font-inter text-xs font-medium text-slate-body">
