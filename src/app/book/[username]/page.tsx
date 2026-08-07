@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
 import {
   MapPin,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { unwrap, getInitials, errMsg } from "@/lib/utils";
-import { BOOKING_SERVICE_LIST, normalizeBookingServices } from "@/lib/booking";
+import { BOOKING_SERVICE_LIST, normalizeBookingServices, from24h } from "@/lib/booking";
 
 type NotaryInfo = {
   full_name?: string | null;
@@ -30,7 +30,8 @@ type NotaryInfo = {
   min_notice_hours?: number | null;
 };
 
-type SlotData = { slots: string[]; notary: NotaryInfo | null };
+type Slot = { time: string; iso: string };
+type SlotData = { slots: Slot[]; notary: NotaryInfo | null };
 
 type PhotonFeature = {
   properties: {
@@ -151,6 +152,7 @@ export default function PublicBookingPage() {
       unwrap<SlotData>(await bookingApi.getSlots(username, date, serviceType)),
     enabled: !!username && !!date,
     retry: false,
+    placeholderData: keepPreviousData,
   });
 
   const submitBooking = useMutation({
@@ -191,27 +193,27 @@ export default function PublicBookingPage() {
     if (!activeHours?.start || !activeHours?.end) return [];
     const [sh, sm] = activeHours.start.split(":").map(Number);
     const [eh, em] = activeHours.end.split(":").map(Number);
-    const base = new Date(`${date}T00:00:00`);
-    const start = new Date(base);
-    start.setHours(sh, sm, 0, 0);
-    const end = new Date(base);
-    end.setHours(eh, em, 0, 0);
-    const available = new Set(slotsData?.slots ?? []);
-    const out: { iso: string; label: string; available: boolean }[] = [];
-    for (
-      let t = start.getTime();
-      t + 30 * 60_000 <= end.getTime();
-      t += 30 * 60_000
-    ) {
-      const d = new Date(t);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    const service = services.find((s) => s.signing_type === serviceType);
+    const totalBlock = (service?.duration_mins ?? 30) + (service?.scanback_mins ?? 0);
+    const availMap = new Map((slotsData?.slots ?? []).map((s) => [s.time, s]));
+    const out: { time: string; iso: string; label: string; available: boolean }[] =
+      [];
+    for (let m = startMin; m + totalBlock <= endMin; m += 30) {
+      const time = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(
+        m % 60,
+      ).padStart(2, "0")}`;
+      const matched = availMap.get(time);
       out.push({
-        iso: d.toISOString(),
-        label: format(d, "h:mm a"),
-        available: available.has(d.toISOString()),
+        time,
+        iso: matched?.iso ?? "",
+        label: from24h(time),
+        available: !!matched,
       });
     }
     return out;
-  }, [activeHours, date, slotsData]);
+  }, [activeHours, services, serviceType, slotsData]);
 
   const errorStatus = (error as { statusCode?: number } | undefined)
     ?.statusCode;
@@ -472,7 +474,7 @@ export default function PublicBookingPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {timeGrid.map((t) => (
                     <button
-                      key={t.iso}
+                      key={t.time}
                       disabled={!t.available}
                       onClick={() => setSelectedSlot(t.iso)}
                       className={`h-10 rounded-8px text-xs font-semibold border transition-colors ${
