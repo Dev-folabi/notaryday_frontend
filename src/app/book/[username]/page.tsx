@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
 import {
   MapPin,
@@ -15,6 +15,7 @@ import {
   Info,
   Ban,
   SearchX,
+  X,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { unwrap, getInitials, errMsg } from "@/lib/utils";
@@ -28,10 +29,19 @@ type NotaryInfo = {
   services?: unknown;
   active_hours?: Record<string, { start?: string; end?: string }> | null;
   min_notice_hours?: number | null;
+  timezone?: string | null;
+  timezone_abbr?: string | null;
 };
 
 type Slot = { time: string; iso: string };
 type SlotData = { slots: Slot[]; notary: NotaryInfo | null };
+
+type AlternativeSlot = {
+  time: string;
+  iso: string;
+  duration_mins: number;
+  note: string;
+};
 
 type PhotonFeature = {
   properties: {
@@ -73,6 +83,7 @@ function StateView({
 
 export default function PublicBookingPage() {
   const { username } = useParams<{ username: string }>();
+  const queryClient = useQueryClient();
   const [date, setDate] = useState(
     format(addDays(new Date(), 1), "yyyy-MM-dd"),
   );
@@ -80,6 +91,10 @@ export default function PublicBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [bookingRef, setBookingRef] = useState<string | null>(null);
+  const [altOpen, setAltOpen] = useState(false);
+  const [altLoading, setAltLoading] = useState(false);
+  const [alts, setAlts] = useState<AlternativeSlot[]>([]);
   const [form, setForm] = useState({
     client_name: "",
     client_email: "",
@@ -153,22 +168,44 @@ export default function PublicBookingPage() {
     enabled: !!username && !!date,
     retry: false,
     placeholderData: keepPreviousData,
+    // Slots are live (they change the moment someone books), so never serve a
+    // cached date without refetching — switching back to a date must be fresh.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const submitBooking = useMutation({
-    mutationFn: async () => {
-      await bookingApi.create(username, {
+    mutationFn: async (slotOverride?: string) => {
+      const booking = await bookingApi.create(username, {
         ...form,
         service_type: serviceType,
-        requested_time: selectedSlot,
+        requested_time: slotOverride ?? selectedSlot,
       });
+      return unwrap<{ ref?: string | null }>(booking);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setBookingRef(data.ref ?? null);
+      setAltOpen(false);
       setSubmitted(true);
       setSubmitError(null);
+      queryClient.invalidateQueries({ queryKey: ["booking-page", username] });
     },
-    onError: (e) => setSubmitError(errMsg(e, "Could not submit your request")),
+    onError: (e) => {
+      const code = (e as { code?: string })?.code;
+      if (code === "SLOT_CONFLICT") {
+        setSubmitError(null);
+        void loadAlternatives();
+      } else {
+        setSubmitError(errMsg(e, "Could not submit your request"));
+      }
+    },
   });
+
+  const resetForm = () => {
+    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "" });
+    setSelectedSlot(null);
+    setBookingRef(null);
+  };
 
   const notary = slotsData?.notary ?? null;
 
@@ -215,16 +252,100 @@ export default function PublicBookingPage() {
     return out;
   }, [activeHours, services, serviceType, slotsData]);
 
+  async function loadAlternatives() {
+    setAltOpen(true);
+    setAltLoading(true);
+    const sel = timeGrid.find((t) => t.iso === selectedSlot);
+    try {
+      const res = await bookingApi.alternatives(
+        username,
+        date,
+        sel?.time ?? "",
+        serviceType,
+      );
+      setAlts(unwrap<{ slots: AlternativeSlot[] }>(res).slots);
+    } catch {
+      setAlts([]);
+    } finally {
+      setAltLoading(false);
+    }
+  }
+
+  const selectedSlotLabel =
+    timeGrid.find((t) => t.iso === selectedSlot)?.label ?? "";
+
+  const selectedServiceName =
+    services.find((s) => s.signing_type === serviceType)?.name ?? "";
+
   const errorStatus = (error as { statusCode?: number } | undefined)
     ?.statusCode;
 
   if (submitted) {
     return (
-      <StateView
-        icon={<CheckCircle2 className="w-8 h-8 text-teal-success" />}
-        title="Appointment requested"
-        body={`${notary?.full_name ?? "Your notary"} will review your request and confirm shortly. A confirmation email will be sent to ${form.client_email}.`}
-      />
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <div className="bg-white rounded-[14px] border border-border shadow-lg w-full max-w-md">
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-teal-success/10 text-teal-success flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-sora font-bold text-[15px] text-primary-navy">
+                  Appointment requested
+                </div>
+                <div className="font-inter text-[11px] text-slate-secondary">
+                  {notary?.full_name ?? "Your notary"} will confirm your appointment shortly.
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-[10px] p-3 mb-3">
+              <div className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide mb-1.5">
+                Your booking
+              </div>
+              {[
+                ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Signing Agent`],
+                ["Service", selectedServiceName],
+                ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
+                ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
+                ["Address", form.address],
+                ["Client", form.client_name],
+                ["Booking ref", bookingRef ?? "—"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex gap-2.5 py-1.5 border-b border-border last:border-b-0"
+                >
+                  <span className="font-inter text-[11px] text-slate-secondary font-medium w-20 flex-shrink-0">
+                    {label}
+                  </span>
+                  <span className="font-inter text-[11px] text-primary-navy font-semibold flex-1 break-words">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-background rounded-[8px] px-3 py-2.5 text-center mb-3">
+              <p className="font-inter text-[11px] text-slate-secondary leading-[1.5]">
+                The notary will review your request and confirm by email. You can
+                track it with booking ref{" "}
+                <span className="font-semibold text-primary-navy">{bookingRef ?? "—"}</span>.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setSubmitted(false);
+                resetForm();
+              }}
+              className="btn-p w-full"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -570,7 +691,7 @@ export default function PublicBookingPage() {
             )}
 
             <button
-              onClick={() => submitBooking.mutate()}
+              onClick={() => submitBooking.mutate(undefined)}
               disabled={
                 !form.client_name ||
                 !form.client_email ||
@@ -590,6 +711,78 @@ export default function PublicBookingPage() {
           </div>
         </div>
       </div>
+
+      {altOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-[14px] w-full max-w-md">
+            <div className="flex items-center justify-between px-5 pt-5 pb-0">
+              <div className="font-sora font-bold text-[16px] text-primary-navy">
+                Time not available
+              </div>
+              <button
+                onClick={() => setAltOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-bg text-slate-secondary hover:text-primary-navy"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="font-inter text-[12px] text-slate-secondary mb-4">
+                {selectedSlotLabel} on{" "}
+                {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")} was just
+                taken. Here are the next best times:
+              </p>
+
+              {altLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+                </div>
+              ) : alts.length === 0 ? (
+                <div className="text-center py-5 font-inter text-[12px] text-muted">
+                  No alternatives right now. Please try another day.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {alts.map((a) => (
+                    <div
+                      key={a.iso}
+                      className="bg-white border-[1.5px] border-border rounded-[10px] p-3 flex justify-between gap-2 items-center flex-wrap"
+                    >
+                      <div>
+                        <div className="font-inter text-[12px] font-semibold text-primary-navy">
+                          {format(new Date(a.iso), "EEEE, MMMM d")} ·{" "}
+                          {from24h(a.time)}
+                        </div>
+                        <div className="font-inter text-[11px] text-slate-secondary">
+                          ~{a.duration_mins} min · {a.note}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => submitBooking.mutate(a.iso)}
+                        disabled={submitBooking.isPending}
+                        className="h-9 px-3.5 rounded-[7px] bg-primary-navy text-white font-inter text-[11px] font-semibold disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {submitBooking.isPending ? "Booking..." : "Book this"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setAltOpen(false)}
+                  className="btn-gh"
+                  style={{ height: 36 }}
+                >
+                  Cancel, I will contact the notary directly
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

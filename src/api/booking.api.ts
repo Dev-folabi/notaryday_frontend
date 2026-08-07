@@ -6,6 +6,15 @@ export const bookingApi = {
     api.get(`/book/${username}/slots`, {
       params: { date, service_type: serviceType },
     }),
+  alternatives: (
+    username: string,
+    date: string,
+    time: string,
+    serviceType?: string,
+  ) =>
+    api.get(`/book/${username}/alternatives`, {
+      params: { date, time, service_type: serviceType },
+    }),
   create: (username: string, data: Record<string, unknown>) =>
     api.post(`/book/${username}`, data),
   list: (status?: string) =>
