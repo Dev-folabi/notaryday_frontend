@@ -49,29 +49,37 @@ export default function SettingsPage() {
 
   const [profileUserKey, setProfileUserKey] = useState<string | undefined>(undefined);
 
-  const tabParam =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("tab")
-      : null;
-  if (tabParam && TAB_KEYS.includes(tabParam as TabKey)) {
-    setTab((prev) => (prev === tabParam ? prev : (tabParam as TabKey)));
-  }
+  // Sync the tab from the URL query param on mount and when location changes.
+  // Must live in useEffect — never call setState during render.
+  useEffect(() => {
+    const tabParam =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("tab")
+        : null;
+    if (tabParam && TAB_KEYS.includes(tabParam as TabKey)) {
+      setTab(tabParam as TabKey);
+    }
+  }, []);
 
-  if (user && user.email !== profileUserKey) {
-    setProfileUserKey(user.email);
-    setProfile({
-      fullName: user.full_name ?? "",
-      username: user.username ?? "",
-      email: user.email ?? "",
-      phone: user.phone ?? "",
-      state: "California",
-      bio: user.bio ?? "",
-      homeBase: user.settings?.home_base_address ?? "",
-      scanback: (user.settings as { scanback_duration_mins?: number } | null)?.scanback_duration_mins ?? 30,
-      types: user.signing_defaults?.map((s) => s.signing_type) ?? SERVICES,
-      navPref: user.settings?.preferred_nav_app ?? "GOOGLE_MAPS",
-    });
-  }
+  // Populate the profile form once the authenticated user is loaded.
+  // Guarded by profileUserKey so it only runs when the user identity changes.
+  useEffect(() => {
+    if (user && user.email !== profileUserKey) {
+      setProfileUserKey(user.email);
+      setProfile({
+        fullName: user.full_name ?? "",
+        username: user.username ?? "",
+        email: user.email ?? "",
+        phone: user.phone ?? "",
+        state: "California",
+        bio: user.bio ?? "",
+        homeBase: user.settings?.home_base_address ?? "",
+        scanback: (user.settings as { scanback_duration_mins?: number } | null)?.scanback_duration_mins ?? 30,
+        types: user.signing_defaults?.map((s) => s.signing_type) ?? SERVICES,
+        navPref: user.settings?.preferred_nav_app ?? "GOOGLE_MAPS",
+      });
+    }
+  }, [user, profileUserKey]);
 
   useEffect(() => {
     billingApi.getStatus().catch(() => {});

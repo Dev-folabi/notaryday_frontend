@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
+import { cittApi } from "@/api/citt.api";
 import { useUIStore } from "@/store/uiStore";
 import { formatCurrency, unwrap, errMsg } from "@/lib/utils";
 import { queryKeys } from "@/lib/queryClient";
@@ -18,8 +19,11 @@ import {
   AlertTriangle,
   Plus,
   Trash2,
+  Sparkles,
+  X,
 } from "lucide-react";
 import ProGate from "@/components/ui/ProGate";
+import type { CITCResult } from "@/hooks/useCITT";
 
 type BookingAnalysis = {
   booking: Booking;
@@ -74,6 +78,26 @@ export default function BookingDetailPage() {
       enabled: !!id && booking?.status === BookingStatus.PENDING_REVIEW,
     },
   );
+
+  // Run CITT for pending-review bookings so the notary gets a full
+  // profitability + schedule verdict alongside the booking details.
+  const { data: cittResult, isLoading: cittLoading } = useQuery<CITCResult>({
+    queryKey: [...queryKeys.bookings.detail(id), "citt"],
+    queryFn: async () => {
+      const b = booking!;
+      const fee = Number(b.base_fee) + Number(b.travel_fee_estimate ?? 0);
+      const res = await cittApi.check({
+        address: b.address,
+        appointment_time: new Date(b.requested_time).toISOString(),
+        signing_type: b.service_type,
+        fee,
+        platform_fee: 0,
+      });
+      return unwrap<CITCResult>(res);
+    },
+    enabled: !!id && !!booking && booking.status === BookingStatus.PENDING_REVIEW,
+    retry: false,
+  });
 
   const approve = useMutation({
     mutationFn: () => bookingApi.approve(id),
@@ -339,6 +363,23 @@ export default function BookingDetailPage() {
                 </>
               ) : null}
 
+              {/* ── CITT Verdict ── */}
+              <span className="slbl">CITT check</span>
+              {cittLoading ? (
+                <div className="flex justify-center py-6 mb-3.5">
+                  <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+                </div>
+              ) : cittResult ? (
+                <CITTVerdictInline result={cittResult} />
+              ) : (
+                <div className="alert al-blue mb-3.5">
+                  <Sparkles className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
+                  <div className="font-inter text-[11px] leading-[1.4]">
+                    CITT could not run — home base may not be configured or address could not be geocoded.
+                  </div>
+                </div>
+              )}
+
               {booking.status === BookingStatus.PENDING_REVIEW && (
                 <div className="alert al-blue mb-4">
                   <AlertTriangle className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
@@ -458,5 +499,156 @@ export default function BookingDetailPage() {
         </div>
       </div>
     </ProGate>
+  );
+}
+
+// ── Inline CITT verdict card (read-only, no "add to my day" actions) ────────
+
+function CITTVerdictInline({ result }: { result: CITCResult }) {
+  const {
+    verdict,
+    reason,
+    net_earnings = 0,
+    mileage_cost = 0,
+    drive_distance_miles = 0,
+    drive_time_mins = 0,
+    effective_hourly = 0,
+    can_make_it = true,
+    scanback_conflict = false,
+    scanback_conflict_detail = "",
+    prev_job = null,
+    next_job = null,
+    gap_before,
+    gap_after,
+  } = result as CITCResult & { gap_before?: number | null; gap_after?: number | null };
+
+  const isTakeIt = verdict === "TAKE_IT";
+  const isRisky  = verdict === "RISKY";
+  const isDecline = verdict === "DECLINE";
+
+  const verdictColor = isTakeIt
+    ? "text-teal-success"
+    : isRisky
+    ? "text-amber-warning"
+    : "text-red-danger";
+
+  const alertCls = isTakeIt ? "al-teal" : isRisky ? "al-amber" : "al-red";
+
+  const VerdictIcon = isTakeIt ? Check : isRisky ? AlertTriangle : X;
+
+  return (
+    <div className="card p-3 mb-3.5">
+      {/* Verdict header */}
+      <div className={`alert ${alertCls} mb-3`}>
+        <VerdictIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${verdictColor}`} />
+        <div>
+          <div className={`font-inter text-[12px] font-semibold mb-0.5 ${verdictColor}`}>
+            {isTakeIt ? "TAKE IT" : isRisky ? "RISKY" : "DECLINE"}
+          </div>
+          <div className="font-inter text-[11px] text-slate-secondary leading-[1.4]">
+            {reason}
+          </div>
+        </div>
+      </div>
+
+      {/* Earnings row */}
+      <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-[8px] overflow-hidden mb-3">
+        <div className="bg-white text-center p-2">
+          <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Mileage cost</div>
+          <div className="font-sora text-[15px] font-bold text-amber-warning">
+            -{formatCurrency(mileage_cost)}
+          </div>
+          <div className="font-inter text-[9px] text-slate-secondary">
+            ~{(drive_distance_miles ?? 0).toFixed(1)} mi rt
+          </div>
+        </div>
+        <div className="bg-white text-center p-2 border-l border-border">
+          <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Net earnings</div>
+          <div className={`font-sora text-[15px] font-bold ${verdictColor}`}>
+            {formatCurrency(net_earnings)}
+          </div>
+        </div>
+        <div className="bg-white text-center p-2 border-l border-border">
+          <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Effective $/hr</div>
+          <div className="font-sora text-[15px] font-bold text-navy">
+            {formatCurrency(effective_hourly)}/hr
+          </div>
+          <div className="font-inter text-[9px] text-slate-secondary">
+            {drive_time_mins} min drive
+          </div>
+        </div>
+      </div>
+
+      {/* Checks */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${can_make_it ? "bg-teal-bg text-teal-success" : "bg-red-50 text-red-danger"}`}>
+            {can_make_it ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+          </span>
+          <span className="font-inter text-[11px] text-slate">
+            Schedule fit {can_make_it ? "— no hard conflict" : "— hard conflict detected"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${!scanback_conflict ? "bg-teal-bg text-teal-success" : "bg-red-50 text-red-danger"}`}>
+            {!scanback_conflict ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+          </span>
+          <span className="font-inter text-[11px] text-slate">
+            {!scanback_conflict
+              ? "No scanback window conflicts"
+              : scanback_conflict_detail || "Scanback conflict detected"}
+          </span>
+        </div>
+        {(gap_before != null || gap_after != null) && (
+          <div className="flex items-center gap-2">
+            <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${(gap_before == null || gap_before >= 0) && (gap_after == null || gap_after >= 0) ? "bg-teal-bg text-teal-success" : "bg-red-50 text-red-danger"}`}>
+              {((gap_before == null || gap_before >= 0) && (gap_after == null || gap_after >= 0))
+                ? <Check className="w-2.5 h-2.5" />
+                : <X className="w-2.5 h-2.5" />}
+            </span>
+            <span className="font-inter text-[11px] text-slate">
+              {gap_before != null && `Gap before: ${gap_before} min`}
+              {gap_before != null && gap_after != null && " · "}
+              {gap_after != null && `Gap after: ${gap_after} min`}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Surrounding jobs context */}
+      {(prev_job || next_job) && (
+        <div className="mt-3 pt-2.5 border-t border-border">
+          <div className="font-inter text-[11px] font-semibold text-navy mb-1.5">Schedule context</div>
+          {prev_job && (
+            <div className="flex gap-2 py-1 border-b border-border">
+              <span className="font-inter text-[10px] text-muted w-[60px]">
+                {format(new Date(prev_job.time), "h:mm a")}
+              </span>
+              <span className="font-inter text-[11px] text-slate">
+                {prev_job.type.replace(/_/g, " ")} · {prev_job.duration} min
+              </span>
+            </div>
+          )}
+          <div className="flex gap-2 py-1 border-b border-border">
+            <span className={`font-inter text-[10px] font-semibold w-[60px] ${verdictColor}`}>
+              → This
+            </span>
+            <span className={`font-inter text-[11px] font-semibold ${verdictColor}`}>
+              Proposed booking
+            </span>
+          </div>
+          {next_job && (
+            <div className="flex gap-2 py-1">
+              <span className="font-inter text-[10px] text-muted w-[60px]">
+                {format(new Date(next_job.time), "h:mm a")}
+              </span>
+              <span className="font-inter text-[11px] text-slate">
+                {next_job.type.replace(/_/g, " ")} · next
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
