@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { usersApi } from "@/api/users.api";
 import { billingApi } from "@/api/billing.api";
 import { cn } from "@/lib/utils";
 import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X, Link2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import BookingSetupForm from "@/components/booking/BookingSetupForm";
 
@@ -40,17 +39,8 @@ type SettingsProfile = {
 };
 
 export default function SettingsPage() {
-  return (
-    <Suspense fallback={null}>
-      <SettingsContent />
-    </Suspense>
-  );
-}
-
-function SettingsContent() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
-  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("profile");
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<boolean[]>(NOTIFS.map(() => true));
@@ -59,7 +49,10 @@ function SettingsContent() {
 
   const [profileUserKey, setProfileUserKey] = useState<string | undefined>(undefined);
 
-  const tabParam = searchParams.get("tab");
+  const tabParam =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("tab")
+      : null;
   if (tabParam && TAB_KEYS.includes(tabParam as TabKey)) {
     setTab((prev) => (prev === tabParam ? prev : (tabParam as TabKey)));
   }
@@ -136,7 +129,10 @@ function SettingsContent() {
           <button
             key={key}
             className={cn("tab", tab === key && "on")}
-            onClick={() => setTab(key)}
+            onClick={() => {
+              setTab(key);
+              window.history.replaceState(null, "", `?tab=${key}`);
+            }}
           >
             {label}
           </button>

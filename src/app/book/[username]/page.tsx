@@ -233,7 +233,6 @@ export default function PublicBookingPage() {
 
   const resetForm = () => {
     setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "", base_fee: "" });
-    feeTouchedRef.current = false;
     setSelectedSlot(null);
     setBookingRef(null);
   };
@@ -244,16 +243,6 @@ export default function PublicBookingPage() {
     const normalized = normalizeBookingServices(notary?.services);
     return normalized.length > 0 ? normalized : BOOKING_SERVICE_LIST;
   }, [notary?.services]);
-
-  const suggestedFee = useMemo(
-    () => services.find((s) => s.signing_type === serviceType)?.base_fee ?? 0,
-    [services, serviceType],
-  );
-  const feeTouchedRef = useRef(false);
-  useEffect(() => {
-    if (feeTouchedRef.current || suggestedFee <= 0) return;
-    setForm((f) => ({ ...f, base_fee: String(suggestedFee) }));
-  }, [suggestedFee]);
 
   const feeValue = Number(form.base_fee);
   const feeValid = Number.isFinite(feeValue) && feeValue > 0;
@@ -593,10 +582,7 @@ export default function PublicBookingPage() {
                   inputMode="decimal"
                   placeholder="0.00"
                   value={form.base_fee}
-                  onChange={(e) => {
-                    feeTouchedRef.current = true;
-                    setForm({ ...form, base_fee: e.target.value });
-                  }}
+                  onChange={(e) => setForm({ ...form, base_fee: e.target.value })}
                   className="inp has-icon"
                 />
               </div>
@@ -617,7 +603,9 @@ export default function PublicBookingPage() {
                   type="date"
                   value={date}
                   onChange={(e) => {
-                    setDate(e.target.value);
+                    const next = e.target.value;
+                    const today = format(new Date(), "yyyy-MM-dd");
+                    setDate(next && next < today ? today : next);
                     setSelectedSlot(null);
                   }}
                   min={format(new Date(), "yyyy-MM-dd")}
