@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
 import { useUIStore } from "@/store/uiStore";
-import { formatCurrency, cn, unwrap } from "@/lib/utils";
+import { formatCurrency, cn, unwrap, errMsg } from "@/lib/utils";
 
 type FilterTab = "all" | "sent" | "paid" | "overdue" | "draft";
 
@@ -162,6 +162,25 @@ export default function InvoicesPage() {
     onError: () => addToast({ title: "Failed to send invoice", type: "error" }),
   });
 
+  const download = useMutation({
+    mutationFn: (id: string) =>
+      invoicesApi.get(id).then((res) => unwrap<InvoiceRow>(res)),
+    onSuccess: (fresh) => {
+      const url = fresh?.pdf_url;
+      if (!url) {
+        addToast({
+          title: "PDF not ready yet — check back in a minute",
+          type: "error",
+        });
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+      addToast({ title: "Downloading invoice PDF…", type: "info" });
+    },
+    onError: (err) =>
+      addToast({ title: "Failed to fetch invoice PDF", message: errMsg(err), type: "error" }),
+  });
+
   const filtered = useMemo(
     () =>
       tab === "all"
@@ -260,8 +279,8 @@ export default function InvoicesPage() {
               No invoices yet
             </p>
             <p className="font-inter text-xs text-slate-secondary max-w-[300px] mx-auto leading-relaxed">
-              Invoices are generated when you complete a job. Mark a job as
-              complete from My Jobs to generate an invoice instantly.
+              Invoices are auto-generated as drafts when you complete a job.
+              Review and send them once they&apos;re ready.
             </p>
           </div>
         ) : (
@@ -336,8 +355,8 @@ export default function InvoicesPage() {
         {/* Bottom card */}
         <div className="card p-3 flex gap-2 flex-wrap justify-between items-center">
           <div className="font-inter text-[11px] text-slate-secondary">
-            Need to invoice a completed job? Mark a job as complete from My Jobs
-            to generate an invoice instantly.
+            Completed jobs get a draft invoice automatically — review it and
+            send to your client.
           </div>
           <Link href="/jobs" className="btn-sm">
             Go to My Jobs
@@ -353,16 +372,8 @@ export default function InvoicesPage() {
           onMarkPaid={() => markPaid.mutate(selected.id)}
           onResend={(email) => resend.mutate({ id: selected.id, email })}
           isMarking={markPaid.isPending}
-          onDownload={() => {
-            if (!selected.pdf_url) {
-              addToast({
-                title: "PDF not ready yet — check back in a minute",
-                type: "error",
-              });
-              return;
-            }
-            window.open(selected.pdf_url, "_blank", "noopener,noreferrer");
-          }}
+          onDownload={() => download.mutate(selected.id)}
+          isDownloading={download.isPending}
         />
       )}
     </div>
@@ -377,6 +388,7 @@ function InvoiceModal({
   onResend,
   onDownload,
   isMarking,
+  isDownloading,
 }: {
   invoice: InvoiceRow;
   status: Exclude<FilterTab, "all">;
@@ -385,6 +397,7 @@ function InvoiceModal({
   onResend: (email?: string) => void;
   onDownload: () => void;
   isMarking: boolean;
+  isDownloading: boolean;
 }) {
   const [resendEmail, setResendEmail] = useState(
     invoice.recipient_email ?? "",
@@ -568,8 +581,9 @@ function InvoiceModal({
               </button>
             </div>
           )}
-          <button className="btn-p" onClick={onDownload}>
-            <Download className="w-4 h-4" /> Download PDF
+          <button className="btn-p" onClick={onDownload} disabled={isDownloading}>
+            <Download className="w-4 h-4" />
+            {isDownloading ? "Preparing PDF…" : "Download PDF"}
           </button>
           <button className="btn-gh" onClick={onClose}>
             Close

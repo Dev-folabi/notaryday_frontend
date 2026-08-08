@@ -140,7 +140,7 @@ export default function ActiveSigningPage() {
         });
       }
       if (next === "COMPLETE") {
-        addToast({ title: "Signing complete — generate invoice", type: "success" });
+        addToast({ title: "Signing complete — draft invoice created", type: "success" });
         router.push(`/invoices/new?jobId=${activeJob.id}`);
       }
     } catch {
@@ -175,7 +175,7 @@ export default function ActiveSigningPage() {
       dashed: true,
       disabled: !needsScanback,
     },
-    { label: "Complete - Invoice sent", dashed: true, disabled: true },
+    { label: "Complete - Draft invoice", dashed: true, disabled: true },
   ];
 
   return (
@@ -363,14 +363,14 @@ export default function ActiveSigningPage() {
               Signing complete
             </div>
             <div className="text-[12px] text-slate-secondary mt-1">
-              Invoice auto generated and sent. Mileage logged. ETA sent to next
+              Invoice draft auto generated. Mileage logged. ETA sent to next
               client.
             </div>
             <button
               className="btn-p mt-3"
-              onClick={() => router.push("/invoices")}
+              onClick={() => router.push("/invoices/new")}
             >
-              View invoice
+              Review invoice
             </button>
           </div>
         )}
