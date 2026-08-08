@@ -41,8 +41,10 @@ export default function BookingsPage() {
       <div className="flex flex-col h-full">
         <div className="ph">
           <div className="ph-title">Bookings</div>
-          <Link
-            href="/bookings/preview"
+          <a
+            href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-sm"
             style={{
               background: "var(--teal)",
@@ -51,7 +53,7 @@ export default function BookingsPage() {
             }}
           >
             <Link2 className="w-3.5 h-3.5" /> Preview public page
-          </Link>
+          </a>
         </div>
 
         <div className="con">
@@ -138,13 +140,15 @@ export default function BookingsPage() {
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Link
-                href="/bookings/preview"
+              <a
+                href={bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-gh"
                 style={{ height: 36 }}
               >
                 Preview public booking page
-              </Link>
+              </a>
               <Link
                 href="/settings?tab=booking"
                 className="btn-gh"

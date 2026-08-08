@@ -498,6 +498,125 @@ textarea {
   @apply flex items-center justify-center absolute top-3 right-3 text-white text-[10px] font-bold;
 }
 
+/* Public booking page */
+.time-slot {
+  padding: 10px 6px;
+  border: 1.5px solid theme("colors.border");
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: theme("colors.slate");
+  background: theme("colors.white");
+  text-align: center;
+  transition: all 0.12s;
+}
+.time-slot:hover {
+  border-color: theme("colors.navy");
+  color: theme("colors.navy");
+}
+.time-slot.on {
+  border-color: theme("colors.navy");
+  background: theme("colors.blue-bg");
+  color: theme("colors.navy");
+  font-weight: 600;
+}
+.time-slot.unavail {
+  background: theme("colors.background");
+  color: theme("colors.muted");
+  cursor: default;
+  border-color: theme("colors.border");
+}
+.bp-notary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.bp-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: theme("colors.navy");
+  color: theme("colors.white");
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Sora", sans-serif;
+  flex-shrink: 0;
+}
+.bp-types {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bp-type {
+  background: theme("colors.background");
+  border: 1px solid theme("colors.border");
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  color: theme("colors.slate");
+}
+.tp {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+/* Working hours rows (S-29 / account booking tab) */
+.wh-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid theme("colors.border");
+}
+.wh-row:last-child {
+  border-bottom: none;
+}
+.wh-day {
+  font-size: 13px;
+  font-weight: 500;
+  color: theme("colors.navy");
+  width: 56px;
+  flex-shrink: 0;
+}
+.wh-tog {
+  width: 38px;
+  height: 21px;
+  border-radius: 11px;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wh-tog.on {
+  background: theme("colors.navy");
+}
+.wh-tog.off {
+  background: theme("colors.border");
+}
+.wh-knob {
+  width: 17px;
+  height: 17px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.15s, right 0.15s;
+}
+.wh-knob.on {
+  right: 2px;
+}
+.wh-knob.off {
+  left: 2px;
+}
+
 /* Earnings matrix grid */
 .em {
   @apply grid grid-cols-3 gap-px bg-border border border-border rounded-[10px] overflow-hidden;

@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import { bookingApi } from "@/api/booking.api";
 import {
   MapPin,
-  CheckCircle2,
+  Check,
   User,
   Mail,
   Phone,
@@ -56,6 +56,28 @@ type PhotonFeature = {
 };
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const DAY_LABELS: Record<string, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
+
+function PublicHeader() {
+  return (
+    <div className="bg-white border-b border-border px-4 py-3 md:px-7 md:py-3.5 flex items-center justify-between flex-shrink-0">
+      <div className="font-sora font-bold text-[15px] text-primary-navy">
+        Notary Day
+      </div>
+      <span className="text-xs text-slate-secondary">
+        Scheduling powered by Notary Day
+      </span>
+    </div>
+  );
+}
 
 function StateView({
   icon,
@@ -67,17 +89,20 @@ function StateView({
   body: string;
 }) {
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
-      <div className="bg-white rounded-14px border border-border p-8 text-center max-w-md w-full">
-        <div className="w-16 h-16 rounded-full bg-bg border-2 border-border flex items-center justify-center mx-auto mb-4 text-slate-secondary">
-          {icon}
+    <div className="min-h-screen bg-bg flex flex-col">
+      <PublicHeader />
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="bg-white rounded-[14px] border border-border p-8 text-center max-w-md w-full">
+          <div className="w-16 h-16 rounded-full bg-bg border-2 border-border flex items-center justify-center mx-auto mb-4 text-slate-secondary">
+            {icon}
+          </div>
+          <h1 className="font-sora font-bold text-xl text-primary-navy mb-2">
+            {title}
+          </h1>
+          <p className="font-inter text-sm text-slate-secondary leading-[1.5]">
+            {body}
+          </p>
         </div>
-        <h1 className="font-sora font-bold text-xl text-primary-navy mb-2">
-          {title}
-        </h1>
-        <p className="font-inter text-sm text-slate-secondary leading-[1.5]">
-          {body}
-        </p>
       </div>
     </div>
   );
@@ -216,53 +241,40 @@ export default function PublicBookingPage() {
     return normalized.length > 0 ? normalized : BOOKING_SERVICE_LIST;
   }, [notary?.services]);
 
-  const dayKey = useMemo(() => {
-    const d = new Date(`${date}T00:00:00`);
-    return DAY_KEYS[d.getDay()];
-  }, [date]);
+  const slots = useMemo(() => slotsData?.slots ?? [], [slotsData]);
 
-  const activeHours = useMemo(() => {
+  const selectedSlotLabel = useMemo(() => {
+    const s = slots.find((t) => t.iso === selectedSlot);
+    return s ? from24h(s.time) : "";
+  }, [slots, selectedSlot]);
+
+  const selectedSlotTime = useMemo(() => {
+    const s = slots.find((t) => t.iso === selectedSlot);
+    return s?.time ?? "";
+  }, [slots, selectedSlot]);
+
+  const weekSummary = useMemo(() => {
     const hours = notary?.active_hours ?? {};
     const lower: Record<string, { start?: string; end?: string }> = {};
     for (const [k, v] of Object.entries(hours)) lower[k.toLowerCase()] = v;
-    return lower[dayKey];
-  }, [notary?.active_hours, dayKey]);
-
-  const timeGrid = useMemo(() => {
-    if (!activeHours?.start || !activeHours?.end) return [];
-    const [sh, sm] = activeHours.start.split(":").map(Number);
-    const [eh, em] = activeHours.end.split(":").map(Number);
-    const startMin = sh * 60 + sm;
-    const endMin = eh * 60 + em;
-    const service = services.find((s) => s.signing_type === serviceType);
-    const totalBlock = (service?.duration_mins ?? 30) + (service?.scanback_mins ?? 0);
-    const availMap = new Map((slotsData?.slots ?? []).map((s) => [s.time, s]));
-    const out: { time: string; iso: string; label: string; available: boolean }[] =
-      [];
-    for (let m = startMin; m + totalBlock <= endMin; m += 30) {
-      const time = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(
-        m % 60,
-      ).padStart(2, "0")}`;
-      const matched = availMap.get(time);
-      out.push({
-        time,
-        iso: matched?.iso ?? "",
-        label: from24h(time),
-        available: !!matched,
-      });
+    const out: { day: string; start: string; end: string }[] = [];
+    for (const k of DAY_KEYS) {
+      const h = lower[k];
+      if (h?.start && h?.end) {
+        out.push({ day: DAY_LABELS[k], start: h.start, end: h.end });
+      }
     }
     return out;
-  }, [activeHours, services, serviceType, slotsData]);
+  }, [notary?.active_hours]);
 
   async function loadAlternatives() {
     setAltOpen(true);
     setAltLoading(true);
-    const sel = timeGrid.find((t) => t.iso === selectedSlot);
     try {
       const res = await bookingApi.alternatives(
         username,
         date,
-        sel?.time ?? "",
+        selectedSlotTime,
         serviceType,
       );
       setAlts(unwrap<{ slots: AlternativeSlot[] }>(res).slots);
@@ -273,67 +285,69 @@ export default function PublicBookingPage() {
     }
   }
 
-  const selectedSlotLabel =
-    timeGrid.find((t) => t.iso === selectedSlot)?.label ?? "";
-
   const selectedServiceName =
     services.find((s) => s.signing_type === serviceType)?.name ?? "";
 
   const errorStatus = (error as { statusCode?: number } | undefined)
     ?.statusCode;
 
+  const minNotice = notary?.min_notice_hours ?? 0;
+
   if (submitted) {
+    const rows: [string, string][] = [
+      ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Loan Signing Agent`],
+      ["Service", selectedServiceName],
+      ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
+      ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
+      ["Address", form.address],
+      ["Client", form.client_name],
+      ["Booking ref", bookingRef ?? "—"],
+    ];
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
-        <div className="bg-white rounded-[14px] border border-border shadow-lg w-full max-w-md">
-          <div className="p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-teal-success/10 text-teal-success flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
+      <div className="min-h-screen bg-bg flex flex-col">
+        <PublicHeader />
+        <div className="flex-1 flex flex-col items-center px-6 py-10">
+          <div className="w-full max-w-[560px]">
+            <div className="text-center mb-8">
+              <div className="w-[72px] h-[72px] rounded-full bg-teal flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
-              <div>
-                <div className="font-sora font-bold text-[15px] text-primary-navy">
-                  Appointment requested
-                </div>
-                <div className="font-inter text-[11px] text-slate-secondary">
-                  {notary?.full_name ?? "Your notary"} will confirm your appointment shortly.
-                </div>
+              <div className="font-sora font-bold text-2xl text-primary-navy mb-2">
+                Appointment requested
+              </div>
+              <div className="font-inter text-sm text-slate-secondary">
+                {notary?.full_name ?? "Your notary"} will confirm your
+                appointment shortly. We&apos;ve sent your details to{" "}
+                {form.client_email || "your email"}.
               </div>
             </div>
 
-            <div className="border border-border rounded-[10px] p-3 mb-3">
-              <div className="font-inter text-[10px] font-semibold text-slate-secondary uppercase tracking-wide mb-1.5">
+            <div className="card p-5 mb-6">
+              <div className="font-inter text-[11px] font-semibold text-slate-secondary uppercase tracking-[0.5px] mb-3">
                 Your booking
               </div>
-              {[
-                ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Loan Signing Agent`],
-                ["Service", selectedServiceName],
-                ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
-                ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
-                ["Address", form.address],
-                ["Client", form.client_name],
-                ["Booking ref", bookingRef ?? "—"],
-              ].map(([label, value]) => (
+              {rows.map(([label, value]) => (
                 <div
                   key={label}
-                  className="flex gap-2.5 py-1.5 border-b border-border last:border-b-0"
+                  className="flex items-start gap-3 py-2.5 border-b border-border last:border-b-0"
                 >
-                  <span className="font-inter text-[11px] text-slate-secondary font-medium w-20 flex-shrink-0">
+                  <span className="font-inter text-xs text-slate-secondary w-[90px] flex-shrink-0 pt-px">
                     {label}
                   </span>
-                  <span className="font-inter text-[11px] text-primary-navy font-semibold flex-1 break-words">
+                  <span className="font-inter text-[13px] text-primary-navy font-medium flex-1 break-words">
                     {value}
                   </span>
                 </div>
               ))}
-            </div>
-
-            <div className="bg-background rounded-[8px] px-3 py-2.5 text-center mb-3">
-              <p className="font-inter text-[11px] text-slate-secondary leading-[1.5]">
-                The notary will review your request and confirm by email. You can
-                track it with booking ref{" "}
-                <span className="font-semibold text-primary-navy">{bookingRef ?? "—"}</span>.
-              </p>
+              <div className="pt-3.5 font-inter text-xs text-slate-secondary leading-[1.5]">
+                You&apos;ll receive a confirmation email once{" "}
+                {notary?.full_name ?? "the notary"} approves your request. Track
+                it with booking ref{" "}
+                <span className="font-semibold text-primary-navy">
+                  {bookingRef ?? "—"}
+                </span>
+                .
+              </div>
             </div>
 
             <button
@@ -341,7 +355,7 @@ export default function PublicBookingPage() {
                 setSubmitted(false);
                 resetForm();
               }}
-              className="btn-p w-full"
+              className="btn-p"
             >
               Done
             </button>
@@ -353,8 +367,11 @@ export default function PublicBookingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
-        <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+      <div className="min-h-screen bg-bg flex flex-col">
+        <PublicHeader />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
@@ -397,87 +414,87 @@ export default function PublicBookingPage() {
     );
   }
 
-  const minNotice = notary?.min_notice_hours ?? 0;
-
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="border-b border-border bg-white px-4 py-3 flex justify-between items-center">
-        <div className="font-sora font-bold text-sm text-primary-navy">
-          Notary Day
-        </div>
-        <span className="text-[11px] text-slate-secondary">
-          Scheduling powered by Notary Day
-        </span>
-      </div>
+    <div className="min-h-screen bg-bg flex flex-col">
+      <PublicHeader />
 
-      <div className="max-w-4xl mx-auto md:flex md:min-h-screen">
+      <div className="mx-auto w-full max-w-[1080px] md:flex md:flex-1">
         {/* Notary profile sidebar */}
-        <div className="md:w-[320px] md:flex-shrink-0 md:border-r md:border-border bg-white px-5 py-6 md:min-h-screen">
-          <div className="flex gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-navy text-white text-lg font-bold flex items-center justify-center font-sora flex-shrink-0">
+        <div className="md:w-[320px] md:flex-shrink-0 md:border-r md:border-border bg-white px-5 py-6 md:px-6 md:py-7">
+          <div className="bp-notary-card">
+            <div className="bp-avatar">
               {getInitials(notary?.full_name ?? notary?.username)}
             </div>
             <div>
-              <div className="font-sora font-bold text-[15px] text-primary-navy">
+              <div className="font-sora font-bold text-[16px] text-primary-navy">
                 {notary?.full_name ?? "Notary"}
               </div>
-              <div className="font-inter text-[11px] text-slate-secondary">
+              <div className="font-inter text-xs text-slate-secondary mt-0.5">
                 NNA Certified Loan Signing Agent
               </div>
             </div>
           </div>
+
           {notary?.bio && (
-            <p className="font-inter text-xs text-slate leading-[1.5] mb-4">
+            <p className="font-inter text-[13px] text-slate leading-[1.6] mb-4">
               {notary.bio}
             </p>
           )}
 
-          <div className="h-px bg-border my-4" />
-          <div className="font-inter text-[11px] font-semibold text-slate-secondary uppercase tracking-wide mb-2">
-            Services offered
-          </div>
-          <div className="flex gap-1.5 flex-wrap mb-4">
+          <div className="dvdr" />
+
+          <span className="slbl">Services offered</span>
+          <div className="bp-types">
             {services.map((s) => (
-              <span
-                key={s.signing_type}
-                className="bg-bg border border-border rounded-[6px] px-2 py-1 text-[11px] font-medium text-slate"
-              >
+              <span key={s.signing_type} className="bp-type">
                 {s.name}
               </span>
             ))}
           </div>
 
-          <div className="h-px bg-border my-4" />
-          <div className="font-inter text-[11px] text-slate-secondary leading-[1.6] space-y-1.5">
-            <div className="flex gap-1.5 items-center">
-              <Clock className="w-3.5 h-3.5 text-slate-secondary" />
-              {activeHours?.start && activeHours?.end
-                ? `${format(new Date(`${date}T${activeHours.start}`), "h:mm a")} – ${format(new Date(`${date}T${activeHours.end}`), "h:mm a")}`
-                : "Hours vary by day"}
-            </div>
+          <div className="dvdr" />
+
+          <div className="font-inter text-xs text-slate-secondary leading-[1.6]">
+            {weekSummary.length > 0 ? (
+              weekSummary.map((w) => (
+                <div key={w.day} className="flex gap-1.5 items-center mb-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-secondary" />
+                  <span>
+                    {w.day} {from24h(w.start)} – {from24h(w.end)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="flex gap-1.5 items-center mb-1">
+                <Clock className="w-3.5 h-3.5 text-slate-secondary" />
+                <span>Hours vary by day</span>
+              </div>
+            )}
             {minNotice > 0 && (
               <div className="flex gap-1.5 items-center">
-                <CalendarDays className="w-3.5 h-3.5 text-slate-secondary" />
-                Minimum {minNotice} hour{minNotice > 1 ? "s" : ""} notice
+                <Info className="w-3.5 h-3.5 text-slate-secondary" />
+                <span>
+                  Minimum {minNotice} hour{minNotice > 1 ? "s" : ""} notice
+                </span>
               </div>
             )}
           </div>
         </div>
 
         {/* Booking form */}
-        <div className="flex-1 px-5 py-6 md:py-10">
-          <h1 className="font-sora font-bold text-lg text-primary-navy mb-1">
+        <div className="flex-1 px-5 py-6 md:py-9 md:px-8">
+          <h1 className="font-sora font-bold text-[20px] text-primary-navy mb-1">
             Request a signing
           </h1>
-          <p className="font-inter text-xs text-slate-secondary mb-5">
-Fill in your details and {notary?.full_name ?? "the notary"} will
-          confirm your appointment automatically.
+          <p className="font-inter text-[13px] text-slate-secondary mb-6">
+            Fill in your details and {notary?.full_name ?? "the notary"} will
+            confirm your appointment automatically.
           </p>
 
-          <div className="flex flex-col gap-3 max-w-md">
+          <div className="flex flex-col gap-4 max-w-[460px]">
             <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Type of signing <span className="text-red-danger">*</span>
+              <label className="lbl">
+                Type of signing <span className="req">*</span>
               </label>
               <select
                 value={serviceType}
@@ -485,7 +502,7 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                   setServiceType(e.target.value);
                   setSelectedSlot(null);
                 }}
-                className="w-full h-11 border border-border rounded-8px px-3 font-inter text-sm bg-white"
+                className="sel"
               >
                 {services.map((s) => (
                   <option key={s.signing_type} value={s.signing_type}>
@@ -496,11 +513,13 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Signing address <span className="text-red-danger">*</span>
+              <label className="lbl">
+                Signing address <span className="req">*</span>
               </label>
-              <div className="relative" ref={addrWrapRef}>
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
+              <div className="icw" ref={addrWrapRef}>
+                <span className="ico">
+                  <MapPin className="w-4 h-4" />
+                </span>
                 <input
                   placeholder="Enter the signing location address"
                   autoComplete="off"
@@ -510,12 +529,12 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                     setForm({ ...form, address: e.target.value });
                     setShowSuggestions(true);
                   }}
-                  className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                  className="inp has-icon"
                 />
                 {showSuggestions &&
                   (suggestions.length > 0 || isSearching) && (
                     <ul
-                      className="absolute left-0 right-0 z-20 bg-white border border-border rounded-8px shadow-lg max-h-60 overflow-y-auto"
+                      className="absolute left-0 right-0 z-20 bg-white border border-border rounded-[8px] max-h-60 overflow-y-auto"
                       style={{ marginTop: 4, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}
                     >
                       {isSearching && suggestions.length === 0 && (
@@ -544,13 +563,15 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="g2">
               <div className="flex flex-col gap-1.5">
-                <label className="font-inter text-xs font-medium text-slate-body">
-                  Preferred date <span className="text-red-danger">*</span>
+                <label className="lbl">
+                  Preferred date <span className="req">*</span>
                 </label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary pointer-events-none" />
+                <div className="icw">
+                  <span className="ico">
+                    <CalendarDays className="w-4 h-4" />
+                  </span>
                   <input
                     type="date"
                     value={date}
@@ -559,40 +580,34 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                       setSelectedSlot(null);
                     }}
                     min={format(new Date(), "yyyy-MM-dd")}
-                    className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                    className="inp has-icon"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-inter text-xs font-medium text-slate-body">
-                  Preferred time <span className="text-red-danger">*</span>
+                <label className="lbl">
+                  Preferred time <span className="req">*</span>
                 </label>
                 {isLoading ? (
-                  <div className="flex items-center justify-center h-11">
+                  <div className="flex items-center justify-center h-[42px]">
                     <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
                   </div>
-                ) : timeGrid.length === 0 ? (
-                  <div className="flex items-center h-11">
+                ) : slots.length === 0 ? (
+                  <div className="flex items-center h-[42px]">
                     <span className="font-inter text-xs text-slate-secondary">
-                      No available times
+                      No available times on this date
                     </span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-1.5">
-                    {timeGrid.map((t) => (
+                    {slots.map((s) => (
                       <button
-                        key={t.time}
-                        disabled={!t.available}
-                        onClick={() => setSelectedSlot(t.iso)}
-                        className={`h-9 rounded-8px text-[11px] font-semibold border transition-colors ${
-                          t.available
-                            ? selectedSlot === t.iso
-                              ? "border-primary-navy bg-primary-navy text-white"
-                              : "border-border bg-white text-primary-navy hover:border-slate-secondary cursor-pointer"
-                            : "bg-background text-muted cursor-default"
-                        }`}
+                        key={s.iso}
+                        type="button"
+                        onClick={() => setSelectedSlot(s.iso)}
+                        className={`time-slot ${selectedSlot === s.iso ? "on" : ""}`}
                       >
-                        {t.available ? t.label : "Unavail"}
+                        {from24h(s.time)}
                       </button>
                     ))}
                   </div>
@@ -600,37 +615,41 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
               </div>
             </div>
 
-            {timeGrid.length > 0 && selectedSlot && minNotice > 0 && (
-              <p className="font-inter text-[10px] text-muted">
+            {slots.length > 0 && selectedSlot && minNotice > 0 && (
+              <p className="font-inter text-[11px] text-muted -mt-1">
                 Requested slot is {minNotice} hour
                 {minNotice > 1 ? "s" : ""} from now or later.
               </p>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Your name <span className="text-red-danger">*</span>
+              <label className="lbl">
+                Your name <span className="req">*</span>
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
+              <div className="icw">
+                <span className="ico">
+                  <User className="w-4 h-4" />
+                </span>
                 <input
                   placeholder="Full name"
                   value={form.client_name}
                   onChange={(e) =>
                     setForm({ ...form, client_name: e.target.value })
                   }
-                  className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                  className="inp has-icon"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="g2">
               <div className="flex flex-col gap-1.5">
-                <label className="font-inter text-xs font-medium text-slate-body">
-                  Email address <span className="text-red-danger">*</span>
+                <label className="lbl">
+                  Email address <span className="req">*</span>
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
+                <div className="icw">
+                  <span className="ico">
+                    <Mail className="w-4 h-4" />
+                  </span>
                   <input
                     placeholder="you@example.com"
                     type="email"
@@ -638,42 +657,40 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                     onChange={(e) =>
                       setForm({ ...form, client_email: e.target.value })
                     }
-                    className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                    className="inp has-icon"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-inter text-xs font-medium text-slate-body">
-                  Phone number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-secondary" />
+                <label className="lbl">Phone number</label>
+                <div className="icw">
+                  <span className="ico">
+                    <Phone className="w-4 h-4" />
+                  </span>
                   <input
                     placeholder="Optional"
                     value={form.client_phone}
                     onChange={(e) =>
                       setForm({ ...form, client_phone: e.target.value })
                     }
-                    className="w-full h-11 border border-border rounded-8px pl-9 pr-3 font-inter text-sm"
+                    className="inp has-icon"
                   />
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="font-inter text-xs font-medium text-slate-body">
-                Special notes
-              </label>
+              <label className="lbl">Special notes</label>
               <textarea
-                placeholder="Gate codes, accessibility needs"
+                placeholder="Gate codes, accessibility needs, special instructions…"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full min-h-[70px] border border-border rounded-8px p-3 font-inter text-sm resize-none"
+                className="ta"
               />
             </div>
 
             {submitError && (
-              <p className="font-inter text-xs text-red-danger">{submitError}</p>
+              <p className="font-inter text-xs text-red">{submitError}</p>
             )}
 
             <button
@@ -685,17 +702,18 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                 !selectedSlot ||
                 submitBooking.isPending
               }
-              className="w-full h-11 bg-primary-navy text-white rounded-8px font-inter font-semibold text-sm disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+              className="btn-p"
             >
               {submitBooking.isPending ? (
                 "Submitting..."
               ) : (
                 <>
-                  Request appointment <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Request appointment</span>
                 </>
               )}
             </button>
-            <p className="font-inter text-[10px] text-muted text-center">
+            <p className="font-inter text-[11px] text-muted text-center">
               Your request is checked against the notary&apos;s live schedule.
             </p>
           </div>
@@ -704,7 +722,7 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
 
       {altOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-[14px] w-full max-w-md relative">
+          <div className="bg-white rounded-[14px] w-full max-w-[520px] relative">
             <button
               onClick={() => setAltOpen(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-bg text-slate-secondary hover:text-primary-navy"
@@ -712,21 +730,19 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="p-5 pt-8">
-              <div className="text-center mb-4">
-                <div className="w-[52px] h-[52px] rounded-full border-2 flex items-center justify-center mx-auto mb-2.5 text-amber-warning"
-                  style={{ background: "var(--amber-bg)", borderColor: "var(--amber-b)" }}
-                >
-                  <AlertTriangle className="w-6 h-6" />
+            <div className="p-6 pt-8">
+              <div className="text-center mb-5">
+                <div className="w-[64px] h-[64px] rounded-full bg-amber-bg border-2 border-amber-border flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-7 h-7 text-amber" />
                 </div>
-                <div className="font-sora font-bold text-[16px] text-primary-navy mb-1">
-                  That time is not available
+                <div className="font-sora font-bold text-xl text-primary-navy mb-2">
+                  That time isn&apos;t available
                 </div>
-                <div className="font-inter text-[12px] text-slate-secondary leading-[1.5]">
+                <div className="font-inter text-sm text-slate-secondary leading-[1.5]">
                   {notary?.full_name ?? "The notary"} has another commitment at{" "}
                   {selectedSlotLabel || "that time"} on{" "}
-                  {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}. Here are
-                  the next available slots:
+                  {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}. Here
+                  are the next available slots:
                 </div>
               </div>
 
@@ -735,29 +751,29 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                   <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
                 </div>
               ) : alts.length === 0 ? (
-                <div className="text-center py-5 font-inter text-[12px] text-muted">
+                <div className="text-center py-5 font-inter text-xs text-muted">
                   No alternatives right now. Please try another day.
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5 mb-5">
                   {alts.map((a) => (
                     <div
                       key={a.iso}
-                      className="bg-white border-[1.5px] border-border rounded-[10px] p-3 flex justify-between gap-2 items-center flex-wrap"
+                      className="bg-white border-[1.5px] border-border rounded-[10px] p-3.5 flex items-center justify-between gap-3 flex-wrap"
                     >
                       <div>
-                        <div className="font-inter text-[12px] font-semibold text-primary-navy">
+                        <div className="font-inter text-[13px] font-semibold text-primary-navy mb-0.5">
                           {format(new Date(a.iso), "EEEE, MMMM d")} ·{" "}
                           {from24h(a.time)}
                         </div>
-                        <div className="font-inter text-[11px] text-slate-secondary">
+                        <div className="font-inter text-xs text-slate-secondary">
                           ~{a.duration_mins} min · {a.note}
                         </div>
                       </div>
                       <button
                         onClick={() => submitBooking.mutate(a.iso)}
                         disabled={submitBooking.isPending}
-                        className="h-9 px-3.5 rounded-[7px] bg-primary-navy text-white font-inter text-[11px] font-semibold disabled:opacity-50 whitespace-nowrap"
+                        className="h-9 px-3.5 rounded-[7px] bg-primary-navy text-white font-inter text-xs font-semibold disabled:opacity-50 whitespace-nowrap"
                       >
                         {submitBooking.isPending ? "Booking..." : "Book this"}
                       </button>
@@ -766,15 +782,13 @@ Fill in your details and {notary?.full_name ?? "the notary"} will
                 </div>
               )}
 
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => setAltOpen(false)}
-                  className="btn-gh"
-                  style={{ height: 36 }}
-                >
-                  Cancel, I will contact the notary directly
-                </button>
-              </div>
+              <button onClick={() => setAltOpen(false)} className="btn-gh">
+                <X className="w-4 h-4" />
+                <span>
+                  Cancel — I&apos;ll contact{" "}
+                  {notary?.full_name ?? "the notary"} directly
+                </span>
+              </button>
             </div>
           </div>
         </div>

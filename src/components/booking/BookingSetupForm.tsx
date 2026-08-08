@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { Copy, Check, Link2 } from "lucide-react";
@@ -32,7 +31,6 @@ interface DayHours {
 
 export default function BookingSetupForm() {
   const { user } = useAuth();
-  const router = useRouter();
   const { addToast } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -131,14 +129,25 @@ export default function BookingSetupForm() {
 
   return (
     <div className="card p-4 mb-4">
-      <div className="flex justify-between gap-2 flex-wrap mb-3">
-        <div className="flex-1 min-w-[200px]">
-          <div className={cn("flex items-center gap-1.5 mb-1.5", enabled ? "font-semibold text-teal-success" : "font-semibold text-muted")}>
-            {enabled ? <Check className="w-3.5 h-3.5" /> : <span className="w-3.5 h-3.5" />} {enabled ? "Your booking page is live" : "Booking page is off"}
+      <div
+        className={cn(
+          "rounded-[10px] p-4 mb-5 flex items-center justify-between gap-3 flex-wrap",
+          enabled ? "bg-teal-bg border border-teal-border" : "bg-background border border-border",
+        )}
+      >
+        <div className="min-w-[200px] flex-1">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 mb-1 font-inter text-xs font-semibold",
+              enabled ? "text-teal" : "text-muted",
+            )}
+          >
+            {enabled ? <Check className="w-3.5 h-3.5" /> : <span className="w-3.5 h-3.5" />}
+            {enabled ? "Your booking page is live" : "Booking page is off"}
           </div>
-          <div className="font-mono text-[12px] text-navy break-words">{bookingUrl}</div>
+          <div className="font-mono text-[13px] text-navy break-words">{bookingUrl}</div>
         </div>
-        <div className="flex gap-1.5 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0">
           <button
             className="btn-sm"
             style={{ borderColor: "var(--teal-b)", color: "var(--teal)" }}
@@ -148,39 +157,49 @@ export default function BookingSetupForm() {
               setTimeout(() => setCopied(false), 2000);
             }}
           >
-            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {copied ? "Copied" : "Copy"}
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}{" "}
+            {copied ? "Copied" : "Copy link"}
           </button>
           <button
             className="btn-sm"
             style={{ background: "var(--teal)", color: "#fff", borderColor: "var(--teal)" }}
-            onClick={() => router.push("/bookings/preview")}
+            onClick={() => window.open(bookingUrl, "_blank", "noopener,noreferrer")}
           >
             <Link2 className="w-3.5 h-3.5" /> Preview
           </button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-2.5 rounded-[8px] border border-border mb-3">
-        <div>
-          <div className="font-inter text-[12px] font-semibold text-navy">Accept bookings</div>
-          <div className="font-inter text-[11px] text-slate-secondary">
-            Turn your public page on or off. Turning it off hides all booking times.
-          </div>
-        </div>
-        <div
-          className="w-[38px] h-[20px] rounded-full relative flex-shrink-0 cursor-pointer"
-          style={{ background: enabled ? "var(--navy)" : "var(--border)" }}
-          onClick={() => setEnabled((e) => !e)}
-        >
-          <div
-            className="w-4 h-4 bg-white rounded-full absolute top-0.5"
-            style={{ left: enabled ? 20 : 2, boxShadow: "0 1px 3px rgba(0,0,0,.25)" }}
-          />
-        </div>
+      <span className="slbl">Your profile</span>
+      <div className="field">
+        <label className="lbl">Display name</label>
+        <input
+          className="inp"
+          readOnly
+          value={`${user?.full_name ?? "Your name"}, NNA Certified Loan Signing Agent`}
+        />
+      </div>
+      <div className="field mb-5">
+        <label className="lbl">
+          Bio{" "}
+          <span className="font-inter text-[11px] text-muted font-normal">
+            · optional, max 200 chars
+          </span>
+        </label>
+        <textarea
+          value={bio}
+          maxLength={200}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="NNA Certified Signing Agent serving your area. 5+ years experience."
+          className="ta"
+        />
+        <span className="hint" style={{ textAlign: "right" }}>
+          {bio.length} / 200 characters
+        </span>
       </div>
 
       <span className="slbl">Services you accept</span>
-      <div className="flex gap-1.5 flex-wrap mb-3.5">
+      <div className="tp mb-5">
         {BOOKING_SERVICE_LIST.map((s) => (
           <div
             key={s.signing_type}
@@ -196,22 +215,13 @@ export default function BookingSetupForm() {
         ))}
       </div>
 
-      <span className="slbl">Short bio</span>
-      <textarea
-        value={bio}
-        onChange={(e) => setBio(e.target.value)}
-        placeholder="NNA Certified Signing Agent serving your area. 5+ years experience."
-        className="w-full min-h-[64px] border border-border rounded-[8px] p-2.5 font-inter text-[12px] text-slate resize-none mb-3.5"
-      />
-
       <span className="slbl">Working hours</span>
-      <div className="border border-border rounded-[10px] overflow-hidden mb-3.5">
+      <div className="card px-4 mb-5">
         {DAYS.map((day) => (
-          <div key={day} className="flex items-center gap-2 p-2 border-b border-border flex-wrap">
-            <span className="font-inter text-[11px] font-medium text-navy w-9 flex-shrink-0">{day}</span>
+          <div key={day} className="wh-row">
+            <span className="wh-day">{day}</span>
             <div
-              className="w-[34px] h-[18px] rounded-full relative flex-shrink-0 cursor-pointer"
-              style={{ background: hours[day].enabled ? "var(--navy)" : "var(--border)" }}
+              className={`wh-tog ${hours[day].enabled ? "on" : "off"}`}
               onClick={() =>
                 setHours((h) => ({
                   ...h,
@@ -219,15 +229,12 @@ export default function BookingSetupForm() {
                 }))
               }
             >
-              <div
-                className="w-3.5 h-3.5 bg-white rounded-full absolute top-0.5"
-                style={{ left: hours[day].enabled ? 18 : 2, boxShadow: "0 1px 3px rgba(0,0,0,.2)" }}
-              />
+              <div className={`wh-knob ${hours[day].enabled ? "on" : "off"}`} />
             </div>
             {hours[day].enabled ? (
-              <div className="flex items-center gap-1.5 flex-1 flex-wrap">
+              <div className="flex items-center gap-2 flex-1 flex-wrap">
                 <select
-                  className="h-8 border border-border rounded-[6px] px-1.5 font-inter text-[11px] text-navy flex-1 min-w-[80px]"
+                  className="h-9 border border-border rounded-[6px] px-2 font-inter text-[13px] text-navy flex-1 min-w-[80px]"
                   value={hours[day].start}
                   onChange={(e) =>
                     setHours((h) => ({ ...h, [day]: { ...h[day], start: e.target.value } }))
@@ -237,9 +244,9 @@ export default function BookingSetupForm() {
                     <option key={o}>{o}</option>
                   ))}
                 </select>
-                <span className="font-inter text-[10px] text-slate-secondary">to</span>
+                <span className="font-inter text-xs text-slate-secondary">to</span>
                 <select
-                  className="h-8 border border-border rounded-[6px] px-1.5 font-inter text-[11px] text-navy flex-1 min-w-[80px]"
+                  className="h-9 border border-border rounded-[6px] px-2 font-inter text-[13px] text-navy flex-1 min-w-[80px]"
                   value={hours[day].end}
                   onChange={(e) =>
                     setHours((h) => ({ ...h, [day]: { ...h[day], end: e.target.value } }))
@@ -251,14 +258,14 @@ export default function BookingSetupForm() {
                 </select>
               </div>
             ) : (
-              <span className="font-inter text-[11px] text-muted flex-1">Unavailable</span>
+              <span className="font-inter text-[13px] text-muted flex-1">Unavailable</span>
             )}
           </div>
         ))}
       </div>
 
       <span className="slbl">Booking rules</span>
-      <div className="g2 mb-3.5">
+      <div className="g2 mb-5">
         <div className="field">
           <label className="lbl">Minimum notice</label>
           <div className="flex gap-1.5 items-center">
@@ -273,7 +280,7 @@ export default function BookingSetupForm() {
           <span className="hint">Clients cannot book within this window</span>
         </div>
         <div className="field">
-          <label className="lbl">Advance limit</label>
+          <label className="lbl">Advance booking limit</label>
           <div className="flex gap-1.5 items-center">
             <input
               className="inp"
@@ -284,30 +291,6 @@ export default function BookingSetupForm() {
             <span className="font-inter text-[11px] text-slate-secondary">days</span>
           </div>
           <span className="hint">Clients can book up to this many days ahead</span>
-        </div>
-        <div className="field">
-          <label className="lbl">Buffer between bookings</label>
-          <div className="flex gap-1.5 items-center">
-            <input
-              className="inp"
-              style={{ width: 56, textAlign: "center" }}
-              value={bufferMins}
-              onChange={(e) => setBufferMins(Number(e.target.value))}
-            />
-            <span className="font-inter text-[11px] text-slate-secondary">min</span>
-          </div>
-        </div>
-        <div className="field">
-          <label className="lbl">Service area</label>
-          <div className="flex gap-1.5 items-center">
-            <input
-              className="inp"
-              style={{ width: 56, textAlign: "center" }}
-              value={serviceAreaMiles}
-              onChange={(e) => setServiceAreaMiles(Number(e.target.value))}
-            />
-            <span className="font-inter text-[11px] text-slate-secondary">miles</span>
-          </div>
         </div>
       </div>
 
