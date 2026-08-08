@@ -132,14 +132,64 @@ export default function BookingDetailPage() {
     onError: (e) => addToast({ type: "error", title: errMsg(e, "Could not cancel") }),
   });
 
-  // Fallback profitability when analysis hasn't loaded yet
-  const fallbackProfit = useMemo(() => {
-    if (!booking) return null;
-    const fee = Number(booking.base_fee) + Number(booking.travel_fee_estimate ?? 0);
-    return { fee, mileage_cost: null, net_earnings: fee, effective_hourly: 0, total_time_mins: 0, buffer_mins: 0 };
-  }, [booking]);
+  // Merged numbers: CITT is the primary source of truth for earnings/drive
+  // figures it provides; analysis fills the rest; booking fee is last resort.
+  const merged = useMemo(() => {
+    const fee =
+      Number(booking?.base_fee ?? 0) + Number(booking?.travel_fee_estimate ?? 0);
 
-  const profitability = analysis?.profitability ?? fallbackProfit;
+    const mileage_cost =
+      cittResult?.mileage_cost != null
+        ? cittResult.mileage_cost
+        : analysis?.profitability.mileage_cost ?? null;
+
+    const net_earnings =
+      cittResult?.net_earnings != null
+        ? cittResult.net_earnings
+        : analysis?.profitability.net_earnings ?? fee;
+
+    const effective_hourly =
+      cittResult?.effective_hourly != null
+        ? cittResult.effective_hourly
+        : analysis?.profitability.effective_hourly ?? 0;
+
+    const drive_distance_miles =
+      cittResult?.drive_distance_miles != null
+        ? cittResult.drive_distance_miles
+        : analysis?.drive.drive_distance_miles ?? null;
+
+    const drive_time_mins =
+      cittResult?.drive_time_mins != null
+        ? cittResult.drive_time_mins
+        : analysis?.drive.drive_time_mins ?? null;
+
+    const total_time_mins =
+      (cittResult as (CITCResult & { total_job_mins?: number }) | undefined)
+        ?.total_job_mins ?? analysis?.profitability.total_time_mins ?? 0;
+
+    const buffer_mins = analysis?.profitability.buffer_mins ?? 0;
+
+    const verdictClass =
+      cittResult?.verdict === "TAKE_IT"
+        ? "text-teal-success"
+        : cittResult?.verdict === "RISKY"
+        ? "text-amber-warning"
+        : cittResult?.verdict === "DECLINE"
+        ? "text-red-danger"
+        : "text-teal-success";
+
+    return {
+      fee,
+      mileage_cost,
+      net_earnings,
+      effective_hourly,
+      drive_distance_miles,
+      drive_time_mins,
+      total_time_mins,
+      buffer_mins,
+      verdictClass,
+    };
+  }, [booking, cittResult, analysis]);
 
   const conflicting = useMemo(() => {
     if (!analysis) return [];
@@ -256,70 +306,62 @@ export default function BookingDetailPage() {
                       <div className="bg-white text-center p-2.5">
                         <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Fee</div>
                         <div className="font-sora text-[16px] font-bold text-navy">
-                          {profitability ? formatCurrency(profitability.fee) : "—"}
+                          {formatCurrency(merged.fee)}
                         </div>
                       </div>
                       <div className="bg-white text-center p-2.5 border-l border-border">
                         <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Mileage cost</div>
                         <div className="font-sora text-[16px] font-bold text-amber-warning">
-                          {profitability?.mileage_cost != null
-                            ? `-${formatCurrency(profitability.mileage_cost)}`
-                            : cittReady
-                            ? `-${formatCurrency(cittResult!.mileage_cost)}`
+                          {merged.mileage_cost != null
+                            ? `-${formatCurrency(merged.mileage_cost)}`
                             : "—"}
                         </div>
-                        {(analysis?.drive.drive_distance_miles ?? (cittResult?.drive_distance_miles ?? null)) != null && (
+                        {merged.drive_distance_miles != null && (
                           <div className="font-inter text-[9px] text-slate-secondary">
-                            ~{((analysis?.drive.drive_distance_miles ?? cittResult?.drive_distance_miles) ?? 0).toFixed(1)} mi
+                            ~{(merged.drive_distance_miles ?? 0).toFixed(1)} mi
                           </div>
                         )}
                       </div>
                       <div className="bg-white text-center p-2.5 border-l border-border">
                         <div className="font-inter text-[10px] text-slate-secondary mb-0.5">Net earnings</div>
-                        <div
-                          className={`font-sora text-[16px] font-bold ${
-                            cittReady
-                              ? cittResult!.verdict === "TAKE_IT"
-                                ? "text-teal-success"
-                                : cittResult!.verdict === "RISKY"
-                                ? "text-amber-warning"
-                                : "text-red-danger"
-                              : "text-teal-success"
-                          }`}
-                        >
-                          {profitability ? formatCurrency(profitability.net_earnings) : "—"}
+                        <div className={`font-sora text-[16px] font-bold ${merged.verdictClass}`}>
+                          {formatCurrency(merged.net_earnings)}
                         </div>
                       </div>
                     </div>
 
                     {/* ── Detail rows ── */}
-                    {analysisReady && (
+                    {(analysisReady || cittReady) && (
                       <div className="flex flex-col gap-1.5 mb-3 pb-3 border-b border-border">
-                        <DetailRow
-                          label="Drive time"
-                          value={analysis!.drive.drive_time_mins != null ? `${analysis!.drive.drive_time_mins} min` : "—"}
-                        />
-                        <DetailRow
-                          label="Effective hourly"
-                          value={profitability!.effective_hourly > 0 ? `${formatCurrency(profitability!.effective_hourly)}/hr` : "—"}
-                          valueClass="text-teal-success"
-                        />
-                        <DetailRow
-                          label="Total time"
-                          value={
-                            profitability!.total_time_mins > 0
-                              ? `${Math.floor(profitability!.total_time_mins / 60)}h ${profitability!.total_time_mins % 60}m`
-                              : "—"
-                          }
-                        />
-                        <DetailRow
-                          label="Signing duration"
-                          value={`${analysis!.service.duration_mins} min${analysis!.service.scanback_mins > 0 ? ` + ${analysis!.service.scanback_mins} min scanback` : ""}`}
-                        />
-                        {analysis!.buffer_mins > 0 && (
+                        {merged.drive_time_mins != null && (
+                          <DetailRow
+                            label="Drive time"
+                            value={`${merged.drive_time_mins} min`}
+                          />
+                        )}
+                        {merged.effective_hourly > 0 && (
+                          <DetailRow
+                            label="Effective hourly"
+                            value={`${formatCurrency(merged.effective_hourly)}/hr`}
+                            valueClass={merged.verdictClass}
+                          />
+                        )}
+                        {merged.total_time_mins > 0 && (
+                          <DetailRow
+                            label="Total time"
+                            value={`${Math.floor(merged.total_time_mins / 60)}h ${merged.total_time_mins % 60}m`}
+                          />
+                        )}
+                        {analysisReady && (
+                          <DetailRow
+                            label="Signing duration"
+                            value={`${analysis!.service.duration_mins} min${analysis!.service.scanback_mins > 0 ? ` + ${analysis!.service.scanback_mins} min scanback` : ""}`}
+                          />
+                        )}
+                        {merged.buffer_mins > 0 && (
                           <DetailRow
                             label="Buffer"
-                            value={`${analysis!.buffer_mins} min`}
+                            value={`${merged.buffer_mins} min`}
                             valueClass="text-teal-success"
                           />
                         )}
@@ -529,7 +571,7 @@ export default function BookingDetailPage() {
                   className="flex-1 btn-teal"
                   style={{ background: "var(--red)", borderColor: "var(--red)" }}
                 >
-                  {decline.isPending ? "Declining..." : "Confirm decline"}
+                  {decline.isPending ? "Declining..." : "Decline"}
                 </button>
                 <button onClick={() => setDeclineOpen(false)} className="btn-gh">
                   Cancel
