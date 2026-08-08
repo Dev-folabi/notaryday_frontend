@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,12 +30,19 @@ const FILTERS: { key: FilterKey; label: string; status: BookingStatus | BookingS
 export default function BookingsPage() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
+  const qc = useQueryClient();
   const [filter, setFilter] = useState<FilterKey>("pending");
   const [copied, setCopied] = useState(false);
 
   const { data: bookings = [], isLoading } = useQuery<Booking[]>({
     queryKey: queryKeys.bookings.all(),
     queryFn: async () => unwrap<Booking[]>(await bookingApi.list()),
+    select: (data) => {
+      data.forEach((b) => {
+        qc.setQueryData(queryKeys.bookings.detail(b.id), b);
+      });
+      return data;
+    },
   });
 
   const bookingUrl = getBookingUrl(user?.username);
