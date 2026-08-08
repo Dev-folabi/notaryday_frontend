@@ -129,6 +129,7 @@ export default function PublicBookingPage() {
     client_phone: "",
     address: "",
     notes: "",
+    document_type: "",
     base_fee: "",
   });
 
@@ -232,7 +233,7 @@ export default function PublicBookingPage() {
   });
 
   const resetForm = () => {
-    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "", base_fee: "" });
+    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "", document_type: "", base_fee: "" });
     setSelectedSlot(null);
     setBookingRef(null);
   };
@@ -307,6 +308,7 @@ export default function PublicBookingPage() {
       ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
       ["Signing fee", feeValid ? `$${feeValue.toFixed(2)}` : "—"],
       ["Address", form.address],
+      ...(form.document_type ? [["Document type", form.document_type] as [string, string]] : []),
       ["Client", form.client_name],
       ["Booking ref", bookingRef ?? "—"],
     ];
@@ -724,6 +726,22 @@ export default function PublicBookingPage() {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 className="ta"
               />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="lbl">
+                Document type{" "}
+                <span className="font-inter text-[11px] text-muted font-normal">· optional</span>
+              </label>
+              <input
+                placeholder="e.g. Deed of Trust, Loan Package, Power of Attorney…"
+                value={form.document_type}
+                onChange={(e) => setForm({ ...form, document_type: e.target.value })}
+                className="inp"
+              />
+              <span className="hint">
+                Helps the notary prepare the right documents for your signing.
+              </span>
             </div>
 
             {submitError && (
