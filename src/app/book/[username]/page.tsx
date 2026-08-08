@@ -18,6 +18,7 @@ import {
   X,
   AlertTriangle,
   ArrowRight,
+  DollarSign,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { unwrap, getInitials, errMsg } from "@/lib/utils";
@@ -128,6 +129,7 @@ export default function PublicBookingPage() {
     client_phone: "",
     address: "",
     notes: "",
+    base_fee: "",
   });
 
   // Address autocomplete (Photon) — same pattern as the job/CITT forms
@@ -207,6 +209,7 @@ export default function PublicBookingPage() {
         ...form,
         service_type: serviceType,
         requested_time: slotOverride ?? selectedSlot,
+        base_fee: feeValue,
       });
       return unwrap<{ ref?: string | null }>(booking);
     },
@@ -229,7 +232,8 @@ export default function PublicBookingPage() {
   });
 
   const resetForm = () => {
-    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "" });
+    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "", base_fee: "" });
+    feeTouchedRef.current = false;
     setSelectedSlot(null);
     setBookingRef(null);
   };
@@ -240,6 +244,19 @@ export default function PublicBookingPage() {
     const normalized = normalizeBookingServices(notary?.services);
     return normalized.length > 0 ? normalized : BOOKING_SERVICE_LIST;
   }, [notary?.services]);
+
+  const suggestedFee = useMemo(
+    () => services.find((s) => s.signing_type === serviceType)?.base_fee ?? 0,
+    [services, serviceType],
+  );
+  const feeTouchedRef = useRef(false);
+  useEffect(() => {
+    if (feeTouchedRef.current || suggestedFee <= 0) return;
+    setForm((f) => ({ ...f, base_fee: String(suggestedFee) }));
+  }, [suggestedFee]);
+
+  const feeValue = Number(form.base_fee);
+  const feeValid = Number.isFinite(feeValue) && feeValue > 0;
 
   const slots = useMemo(() => slotsData?.slots ?? [], [slotsData]);
 
@@ -299,6 +316,7 @@ export default function PublicBookingPage() {
       ["Service", selectedServiceName],
       ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
       ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
+      ["Signing fee", feeValid ? `$${feeValue.toFixed(2)}` : "—"],
       ["Address", form.address],
       ["Client", form.client_name],
       ["Booking ref", bookingRef ?? "—"],
@@ -563,56 +581,87 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
-            <div className="g2">
-              <div className="flex flex-col gap-1.5">
-                <label className="lbl">
-                  Preferred date <span className="req">*</span>
-                </label>
-                <div className="icw">
-                  <span className="ico">
-                    <CalendarDays className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => {
-                      setDate(e.target.value);
-                      setSelectedSlot(null);
-                    }}
-                    min={format(new Date(), "yyyy-MM-dd")}
-                    className="inp has-icon"
-                  />
+            <div className="flex flex-col gap-1.5">
+              <label className="lbl">
+                Signing fee you&apos;ll pay <span className="req">*</span>
+              </label>
+              <div className="icw">
+                <span className="ico">
+                  <DollarSign className="w-4 h-4" />
+                </span>
+                <input
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={form.base_fee}
+                  onChange={(e) => {
+                    feeTouchedRef.current = true;
+                    setForm({ ...form, base_fee: e.target.value });
+                  }}
+                  className="inp has-icon"
+                />
+              </div>
+              <span className="hint">
+                The amount you agree to pay for this signing, including travel.
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="lbl">
+                Preferred date <span className="req">*</span>
+              </label>
+              <div className="icw">
+                <span className="ico">
+                  <CalendarDays className="w-4 h-4" />
+                </span>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    setSelectedSlot(null);
+                  }}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  className="inp has-icon"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="lbl">
+                Preferred time <span className="req">*</span>
+              </label>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[42px]">
+                  <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
                 </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="lbl">
-                  Preferred time <span className="req">*</span>
-                </label>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-[42px]">
-                    <div className="w-5 h-5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+              ) : slots.length === 0 ? (
+                <div className="rounded-[10px] border border-dashed border-border bg-background px-4 py-5 text-center">
+                  <span className="mx-auto mb-2 w-9 h-9 rounded-full bg-white border border-border text-slate-secondary flex items-center justify-center">
+                    <SearchX className="w-4 h-4" />
+                  </span>
+                  <div className="font-inter text-[13px] font-semibold text-navy">
+                    No times available
                   </div>
-                ) : slots.length === 0 ? (
-                  <div className="flex items-center h-[42px]">
-                    <span className="font-inter text-xs text-slate-secondary">
-                      No available times on this date
-                    </span>
+                  <div className="font-inter text-[11px] text-slate-secondary mt-0.5 leading-[1.4]">
+                    {notary?.full_name ?? "This notary"} has no free slots on{" "}
+                    {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}.
+                    Try another date — or reach out directly.
                   </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {slots.map((s) => (
-                      <button
-                        key={s.iso}
-                        type="button"
-                        onClick={() => setSelectedSlot(s.iso)}
-                        className={`time-slot ${selectedSlot === s.iso ? "on" : ""}`}
-                      >
-                        {from24h(s.time)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {slots.map((s) => (
+                    <button
+                      key={s.iso}
+                      type="button"
+                      onClick={() => setSelectedSlot(s.iso)}
+                      className={`time-slot ${selectedSlot === s.iso ? "on" : ""}`}
+                    >
+                      {from24h(s.time)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {slots.length > 0 && selectedSlot && minNotice > 0 && (
@@ -700,6 +749,7 @@ export default function PublicBookingPage() {
                 !form.client_email ||
                 !form.address ||
                 !selectedSlot ||
+                !feeValid ||
                 submitBooking.isPending
               }
               className="btn-p"

@@ -170,6 +170,28 @@ export default function BookingSetupForm() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between gap-3 py-3 mb-5 border-b border-border">
+        <div className="min-w-[180px] flex-1">
+          <div className="font-inter text-[12px] font-semibold text-navy">
+            Accept bookings
+          </div>
+          <div className="font-inter text-[11px] text-slate-secondary mt-0.5 leading-[1.4]">
+            {enabled
+              ? "Your page is live — clients can request appointments right now."
+              : "Booking page is paused. Clients will be told you aren't taking requests."}
+          </div>
+        </div>
+        <button
+          type="button"
+          aria-pressed={enabled}
+          onClick={() => setEnabled((e) => !e)}
+          className={`wh-tog ${enabled ? "on" : "off"}`}
+          style={{ flexShrink: 0 }}
+        >
+          <div className={`wh-knob ${enabled ? "on" : "off"}`} />
+        </button>
+      </div>
+
       <span className="slbl">Your profile</span>
       <div className="field">
         <label className="lbl">Display name</label>

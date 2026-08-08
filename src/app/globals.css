@@ -3,6 +3,53 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+:root {
+  --navy: #0f2c4e;
+  --navy-2: #1a3d6b;
+  --navy-active: #1a3d6b;
+  --primary-navy: #0f2c4e;
+
+  --blue: #2563eb;
+  --blue-hover: #3b82f6;
+  --blue-bg: #eff6ff;
+  --blue-border: #bfdbfe;
+
+  --teal: #0e7b6c;
+  --teal-b: #0e7b6c;
+  --teal-bg: #ecfdf5;
+  --teal-border: #6ee7b7;
+
+  --amber: #d97706;
+  --amber-2: #fef3c7;
+  --amber-b: #fde68a;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+
+  --red: #c0392b;
+  --red-b: #fecaca;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+
+  --violet: #7c3aed;
+  --violet-bg: #ede9fe;
+  --violet-border: #c4b5fd;
+
+  --slate: #475569;
+  --slate2: #64748b;
+  --slate-secondary: #64748b;
+  --muted: #94a3b8;
+  --light: #cbd5e1;
+
+  --border: #e2e8f0;
+  --bg: #f8fafc;
+  --background: #f8fafc;
+  --surface: #ffffff;
+
+  --scanback: #fef3c7;
+  --gold: #f59e0b;
+  --pro-gold: #f59e0b;
+}
+
 /* ─── BASE RESET ───────────────────────────────────────── */
 * {
   box-sizing: border-box;

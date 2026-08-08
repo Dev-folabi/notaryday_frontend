@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { usersApi } from "@/api/users.api";
 import { billingApi } from "@/api/billing.api";
 import { cn } from "@/lib/utils";
 import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X, Link2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import BookingSetupForm from "@/components/booking/BookingSetupForm";
 
@@ -23,14 +24,7 @@ const NOTIFS = [
 
 type TabKey = "profile" | "notifications" | "billing" | "booking";
 
-function getInitialTab(): TabKey {
-  if (typeof window === "undefined") return "profile";
-  const t = new URLSearchParams(window.location.search).get("tab");
-  if (t === "profile" || t === "notifications" || t === "billing" || t === "booking") {
-    return t;
-  }
-  return "profile";
-}
+const TAB_KEYS: TabKey[] = ["profile", "notifications", "billing", "booking"];
 
 type SettingsProfile = {
   fullName: string;
@@ -46,9 +40,18 @@ type SettingsProfile = {
 };
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
-  const [tab, setTab] = useState<TabKey>(getInitialTab);
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<TabKey>("profile");
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
   const [notifPrefs, setNotifPrefs] = useState<boolean[]>(NOTIFS.map(() => true));
 
@@ -56,8 +59,11 @@ export default function SettingsPage() {
 
   const [profileUserKey, setProfileUserKey] = useState<string | undefined>(undefined);
 
-  // Adjust-on-prop-change (React docs): seed the editable form state once when
-  // the auth user is first available, without a setState-in-effect.
+  const tabParam = searchParams.get("tab");
+  if (tabParam && TAB_KEYS.includes(tabParam as TabKey)) {
+    setTab((prev) => (prev === tabParam ? prev : (tabParam as TabKey)));
+  }
+
   if (user && user.email !== profileUserKey) {
     setProfileUserKey(user.email);
     setProfile({
