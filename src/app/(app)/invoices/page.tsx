@@ -371,6 +371,11 @@ export default function InvoicesPage() {
           onClose={() => setSelected(null)}
           onMarkPaid={() => markPaid.mutate(selected.id)}
           onResend={(email) => resend.mutate({ id: selected.id, email })}
+          onEdit={() => {
+            if (selected.job_id) {
+              router.push(`/invoices/new?jobId=${selected.job_id}`);
+            }
+          }}
           isMarking={markPaid.isPending}
           onDownload={() => download.mutate(selected.id)}
           isDownloading={download.isPending}
@@ -386,6 +391,7 @@ function InvoiceModal({
   onClose,
   onMarkPaid,
   onResend,
+  onEdit,
   onDownload,
   isMarking,
   isDownloading,
@@ -395,6 +401,7 @@ function InvoiceModal({
   onClose: () => void;
   onMarkPaid: () => void;
   onResend: (email?: string) => void;
+  onEdit: () => void;
   onDownload: () => void;
   isMarking: boolean;
   isDownloading: boolean;
@@ -548,6 +555,11 @@ function InvoiceModal({
         </div>
 
         <div className="modal-foot">
+          {status !== "paid" && (
+            <button className="btn-gh" onClick={onEdit}>
+              <Search className="w-4 h-4" /> Edit invoice
+            </button>
+          )}
           {status !== "paid" && (
             <button
               className="btn-teal"

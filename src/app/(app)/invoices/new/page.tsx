@@ -70,6 +70,37 @@ const SIGNING_TYPE_LABELS: Record<string, string> = {
   APOSTILLE: "Apostille",
 };
 
+// Render arbitrary payment_info JSON (user-supplied in Settings) into human-readable lines. Handles a plain string ("Zelle: sarah@email.com"), the canonical object shape, and unknown shapes gracefully.
+function paymentInfoLines(value: unknown): string[] {
+  if (typeof value === "string") return value ? [value] : [];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return [];
+  }
+  const info = value as Record<string, unknown>;
+  const out: string[] = [];
+  if (typeof info.bank_name === "string" && info.bank_name) {
+    const last4 =
+      typeof info.account_last4 === "string" && info.account_last4
+        ? ` ending in ${info.account_last4}`
+        : "";
+    out.push(`${info.bank_name}${last4}`);
+  }
+  const labeled: [string, string][] = [
+    ["zelle", "Zelle"],
+    ["venmo", "Venmo"],
+    ["paypal", "PayPal"],
+  ];
+  for (const [key, label] of labeled) {
+    const v = info[key];
+    if (typeof v === "string" && v) out.push(`${label}: ${v}`);
+  }
+  if (typeof info.routing_last4 === "string" && info.routing_last4) {
+    out.push(`Routing: ••••${info.routing_last4}`);
+  }
+  if (typeof info.other === "string" && info.other) out.push(info.other);
+  return out;
+}
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -81,7 +112,9 @@ export default function NewInvoicePage() {
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs", "complete-for-invoice"],
     queryFn: async () => {
-      const res = await (await import("@/api/jobs.api")).jobsApi.list({
+      const res = await (
+        await import("@/api/jobs.api")
+      ).jobsApi.list({
         status: "COMPLETE",
       });
       return unwrap<JobRow[]>(res) ?? [];
@@ -117,12 +150,7 @@ export default function NewInvoicePage() {
   });
 
   useEffect(() => {
-    if (
-      jobId &&
-      selectedJob &&
-      !existing &&
-      !generateDraft.isPending
-    ) {
+    if (jobId && selectedJob && !existing && !generateDraft.isPending) {
       generateDraft.mutate(jobId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,9 +207,7 @@ export default function NewInvoicePage() {
                       key={j.id}
                       className="jcard"
                       style={{ textAlign: "left", cursor: "pointer" }}
-                      onClick={() =>
-                        router.push(`/invoices/new?jobId=${j.id}`)
-                      }
+                      onClick={() => router.push(`/invoices/new?jobId=${j.id}`)}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
@@ -203,7 +229,10 @@ export default function NewInvoicePage() {
                           {j.client_name || "Client"} ·{" "}
                           {formatCurrency(j.fee ?? 0)}
                           {inv && (
-                            <span className="chip c-draft" style={{ marginLeft: 6 }}>
+                            <span
+                              className="chip c-draft"
+                              style={{ marginLeft: 6 }}
+                            >
                               already invoiced
                             </span>
                           )}
@@ -275,6 +304,9 @@ function InvoiceDraft({
   const travelFee = Number(invoice?.travel_fee ?? 0);
   const total = Number(fee) + travelFee;
 
+  const isPaid = invoice?.is_paid ?? false;
+  const isSent = !isPaid && !!invoice?.sent_at;
+
   const save = useMutation({
     mutationFn: () =>
       invoicesApi.update(invoice?.id ?? "", {
@@ -286,15 +318,22 @@ function InvoiceDraft({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       onSaved();
-      addToast({ title: "Saved as draft", type: "success" });
+      addToast({
+        title: isPaid
+          ? "Details saved"
+          : isSent
+            ? "Saved — PDF will regenerate"
+            : "Saved as draft",
+        type: "success",
+      });
+      router.push("/invoices");
     },
     onError: (err) =>
       addToast({ type: "error", title: "Save failed", message: errMsg(err) }),
   });
 
   const send = useMutation({
-    mutationFn: () =>
-      invoicesApi.send(invoice?.id ?? "", email),
+    mutationFn: () => invoicesApi.send(invoice?.id ?? "", email),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       addToast({ title: "Invoice sent", type: "success" });
@@ -310,7 +349,10 @@ function InvoiceDraft({
       return;
     }
     if (!invoice) {
-      addToast({ title: "Draft still being created — try again in a moment", type: "info" });
+      addToast({
+        title: "Draft still being created — try again in a moment",
+        type: "info",
+      });
       return;
     }
     save.mutate(undefined, {
@@ -324,22 +366,9 @@ function InvoiceDraft({
   const nnaLine = user?.nna_certified ? "NNA Certified" : null;
   const billToPhone = job.client_phone ?? invoice?.job?.client_phone ?? null;
 
-  const paymentInfo = user?.settings?.payment_info;
-  const paymentLines: string[] = [];
-  if (paymentInfo) {
-    if (paymentInfo.zelle) paymentLines.push(`Zelle: ${paymentInfo.zelle}`);
-    if (paymentInfo.venmo) paymentLines.push(`Venmo: ${paymentInfo.venmo}`);
-    if (paymentInfo.paypal) paymentLines.push(`PayPal: ${paymentInfo.paypal}`);
-    if (paymentInfo.bank_name) {
-      const last4 = paymentInfo.account_last4
-        ? ` ending in ${paymentInfo.account_last4}`
-        : "";
-      paymentLines.push(`${paymentInfo.bank_name}${last4}`);
-    }
-    if (paymentInfo.routing_last4)
-      paymentLines.push(`Routing: ••••${paymentInfo.routing_last4}`);
-    if (paymentInfo.other) paymentLines.push(paymentInfo.other);
-  }
+  // Payment details from Settings (payment_info) — shown on the invoice so the
+  // client knows exactly how to pay the notary directly.
+  const paymentLines = paymentInfoLines(user?.settings?.payment_info);
 
   const invoiceDate = invoice?.created_at
     ? format(parseISO(invoice.created_at), "MMMM d, yyyy")
@@ -347,18 +376,50 @@ function InvoiceDraft({
 
   return (
     <div>
-      {/* Auto-generated notice */}
-      <div className="alert al-blue" style={{ marginBottom: 16 }}>
-        <span>
-          <Info className="w-4 h-4" />
-        </span>
-        <div style={{ fontSize: 11, lineHeight: 1.4 }}>
-          This invoice was generated automatically when you marked the signing
-          complete. Review and edit this individual invoice before sending.
-          This is how it will appear to the receiver. Your payment details from
-          Settings will be shown on the invoice PDF.
+      {/* Status-aware notice */}
+      {isPaid ? (
+        <div
+          className="alert"
+          style={{
+            marginBottom: 16,
+            background: "var(--bg)",
+            borderColor: "var(--border)",
+          }}
+        >
+          <span>
+            <Info className="w-4 h-4" />
+          </span>
+          <div style={{ fontSize: 11, lineHeight: 1.4 }}>
+            This invoice was paid and is read-only for the amount. You can still
+            update the client name, email, or note.
+          </div>
         </div>
-      </div>
+      ) : isSent ? (
+        <div className="alert al-amber" style={{ marginBottom: 16 }}>
+          <span>
+            <Info className="w-4 h-4" />
+          </span>
+          <div style={{ fontSize: 11, lineHeight: 1.4 }}>
+            This invoice was already sent
+            {invoice?.sent_at
+              ? ` on ${format(parseISO(invoice.sent_at), "MMMM d, yyyy")}`
+              : ""}
+            . Changes regenerate the PDF — use Resend to send the updated copy.
+          </div>
+        </div>
+      ) : (
+        <div className="alert al-blue" style={{ marginBottom: 16 }}>
+          <span>
+            <Info className="w-4 h-4" />
+          </span>
+          <div style={{ fontSize: 11, lineHeight: 1.4 }}>
+            This invoice was generated automatically when you marked the signing
+            complete. Review and edit this individual invoice before sending.
+            This is how it will appear to the receiver. Your payment details
+            from Settings will be shown on the invoice PDF.
+          </div>
+        </div>
+      )}
 
       {/* Invoice preview */}
       <div
@@ -400,7 +461,13 @@ function InvoiceDraft({
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,.5)", marginBottom: 1 }}>
+            <div
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,.5)",
+                marginBottom: 1,
+              }}
+            >
               Invoice date
             </div>
             <div style={{ fontSize: 12, color: "#fff", fontWeight: 500 }}>
@@ -438,7 +505,13 @@ function InvoiceDraft({
               >
                 {fromName}
               </div>
-              <div style={{ fontSize: 11, color: "var(--slate2)", lineHeight: 1.5 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--slate2)",
+                  lineHeight: 1.5,
+                }}
+              >
                 {fromEmail}
                 <br />
                 {fromLine2}
@@ -498,7 +571,9 @@ function InvoiceDraft({
             </div>
           </div>
 
-          <div style={{ height: 1, background: "var(--border)", marginBottom: 12 }} />
+          <div
+            style={{ height: 1, background: "var(--border)", marginBottom: 12 }}
+          />
 
           {/* Line items */}
           <div style={{ marginBottom: 12 }}>
@@ -570,7 +645,7 @@ function InvoiceDraft({
                   color: "var(--navy)",
                 }}
               >
-                {formatCurrency(fee)}
+                {formatCurrency(total)}
               </div>
             </div>
           </div>
@@ -594,7 +669,7 @@ function InvoiceDraft({
                   textAlign: "right",
                 }}
               >
-                {formatCurrency(fee)}
+                {formatCurrency(total)}
               </span>
             </div>
             <div style={{ display: "flex", gap: 20, fontSize: 11 }}>
@@ -623,7 +698,13 @@ function InvoiceDraft({
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.8)" }}>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "rgba(255,255,255,.8)",
+            }}
+          >
             Total due
           </span>
           <span
@@ -663,18 +744,20 @@ function InvoiceDraft({
                 <>
                   <span>
                     <span style={{ fontWeight: 600 }}>Pay by</span>{" "}
-                    {paymentLines.join(" · ")}. {client || job.client_name || "Your client"}{" "}
-                    pays you directly - Notary Day is not involved in the
-                    transaction. This is the exact preview as the receiver will
-                    see it in email.
+                    {paymentLines.join(" · ")}.{" "}
+                    {client || job.client_name || "Your client"} pays you
+                    directly - Notary Day is not involved in the transaction.
+                    This is the exact preview as the receiver will see it in
+                    email.
                   </span>
                 </>
               ) : (
                 <span>
-                  Your payment details (Zelle, Venmo, or bank info from Settings)
-                  will appear on the invoice PDF. {client || job.client_name || "Your client"}{" "}
-                  pays you directly - Notary Day is not involved in the transaction.
-                  This is the exact preview as the receiver will see it in email.
+                  Your payment details (Zelle, Venmo, or bank info from
+                  Settings) will appear on the invoice PDF.{" "}
+                  {client || job.client_name || "Your client"} pays you directly
+                  - Notary Day is not involved in the transaction. This is the
+                  exact preview as the receiver will see it in email.
                 </span>
               )}
             </span>
@@ -683,7 +766,13 @@ function InvoiceDraft({
       </div>
 
       {/* Before you send */}
-      <span className="slbl">Before you send - Edit this individual invoice</span>
+      <span className="slbl">
+        {isPaid
+          ? "Invoice details"
+          : isSent
+            ? "Edit this invoice"
+            : "Before you send - Edit this individual invoice"}
+      </span>
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="field">
@@ -723,12 +812,14 @@ function InvoiceDraft({
                   className="inp has-icon"
                   type="number"
                   value={fee}
+                  disabled={isPaid}
                   onChange={(e) => setFee(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <span className="hint">
-                Edit if final amount differs from agreed fee. Updates total
-                automatically.
+                {isPaid
+                  ? "Paid invoices can't change the amount."
+                  : "Edit if final amount differs from agreed fee. Updates total automatically."}
               </span>
             </div>
             <div className="field">
@@ -744,33 +835,52 @@ function InvoiceDraft({
             <label className="lbl">Note to client (optional)</label>
             <textarea
               className="ta"
-              placeholder="Thank you for choosing Sarah Mitchell, NNA Certified LSA... Example: Thank you for your business. Payment via Zelle to sarah@zelle or Venmo @sarah-notary."
+              placeholder="Thank you for your business. This note appears on the invoice below the total."
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
-            <span className="hint">This note appears on the invoice below the total.</span>
+            <span className="hint">
+              This note appears on the invoice below the total.
+            </span>
           </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          marginBottom: 20,
+        }}
+      >
+        {!isPaid && (
+          <button
+            className="btn-p"
+            disabled={send.isPending || save.isPending || !invoice}
+            onClick={handleSend}
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            {!invoice
+              ? "Creating draft…"
+              : send.isPending
+                ? "Sending…"
+                : isSent
+                  ? "Resend invoice to " +
+                    (client || job.client_name || "client")
+                  : `Send invoice to ${client || job.client_name || "client"}`}
+          </button>
+        )}
         <button
-          className="btn-p"
-          disabled={send.isPending || save.isPending || !invoice}
-          onClick={handleSend}
+          className="btn-gh"
+          disabled={save.isPending || !invoice}
+          onClick={() => save.mutate()}
         >
-          <ArrowUpRight className="w-4 h-4" />
-          {!invoice
-            ? "Creating draft…"
-            : send.isPending
-              ? "Sending…"
-              : `Send invoice to ${client || job.client_name || "client"}`}
-        </button>
-        <button className="btn-gh" disabled={save.isPending || !invoice} onClick={() => save.mutate()}>
-          Save as draft - edit later
-        </button>
-        <button className="btn-gh" onClick={() => router.push("/invoices")}>
-          Back to all invoices - do not send
+          {isPaid
+            ? "Save details"
+            : isSent
+              ? "Save & regenerate PDF"
+              : "Save as draft - edit later"}
         </button>
       </div>
     </div>

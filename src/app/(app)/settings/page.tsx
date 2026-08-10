@@ -6,7 +6,7 @@ import { useUIStore } from "@/store/uiStore";
 import { usersApi } from "@/api/users.api";
 import { billingApi } from "@/api/billing.api";
 import { cn } from "@/lib/utils";
-import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X, Link2 } from "lucide-react";
+import { User, Bell, CreditCard, Check, Lock, Mail, Sparkles, Trash2, X, Link2, DollarSign } from "lucide-react";
 import Link from "next/link";
 import BookingSetupForm from "@/components/booking/BookingSetupForm";
 
@@ -36,6 +36,15 @@ type SettingsProfile = {
   scanback: number;
   types: string[];
   navPref: string;
+  payment: {
+    zelle: string;
+    venmo: string;
+    paypal: string;
+    bank_name: string;
+    account_last4: string;
+    routing_last4: string;
+    other: string;
+  };
 };
 
 export default function SettingsPage() {
@@ -77,6 +86,20 @@ export default function SettingsPage() {
         scanback: (user.settings as { scanback_duration_mins?: number } | null)?.scanback_duration_mins ?? 30,
         types: user.signing_defaults?.map((s) => s.signing_type) ?? SERVICES,
         navPref: user.settings?.preferred_nav_app ?? "GOOGLE_MAPS",
+        payment: {
+          zelle: "",
+          venmo: "",
+          paypal: "",
+          bank_name: "",
+          account_last4: "",
+          routing_last4: "",
+          other: "",
+          ...(typeof user.settings?.payment_info === "object" &&
+          user.settings.payment_info !== null &&
+          !Array.isArray(user.settings.payment_info)
+            ? (user.settings.payment_info as Record<string, unknown>)
+            : {}),
+        },
       });
     }
   }, [user, profileUserKey]);
@@ -112,6 +135,16 @@ export default function SettingsPage() {
           }
         : p,
     );
+
+  const savePayment = async () => {
+    if (!profile) return;
+    try {
+      await usersApi.updateSettings({ paymentInfo: profile.payment });
+      addToast({ type: "success", title: "Payment details saved" });
+    } catch {
+      addToast({ type: "error", title: "Could not save payment details" });
+    }
+  };
 
   if (!profile) {
     return (
@@ -219,6 +252,25 @@ export default function SettingsPage() {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="card p-4 mb-4">
+              <div className="font-inter text-[12px] font-semibold text-navy mb-1.5 flex gap-1.5 items-center"><DollarSign className="w-4 h-4" /> Payment details</div>
+              <p className="font-inter text-[11px] text-slate-secondary mb-2.5 leading-[1.4]">Shown on invoice PDFs so clients can pay you directly. Notary Day is never involved in the transaction.</p>
+              <div className="g2">
+                <div className="field"><label className="lbl">Zelle</label><input className="inp" placeholder="email or phone" value={profile.payment.zelle} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, zelle: e.target.value } } : p))} /></div>
+                <div className="field"><label className="lbl">Venmo</label><input className="inp" placeholder="@username" value={profile.payment.venmo} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, venmo: e.target.value } } : p))} /></div>
+              </div>
+              <div className="g2">
+                <div className="field"><label className="lbl">PayPal</label><input className="inp" placeholder="email or PayPal.me link" value={profile.payment.paypal} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, paypal: e.target.value } } : p))} /></div>
+                <div className="field"><label className="lbl">Bank name</label><input className="inp" placeholder="e.g. Chase" value={profile.payment.bank_name} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, bank_name: e.target.value } } : p))} /></div>
+              </div>
+              <div className="g2">
+                <div className="field"><label className="lbl">Account (last 4)</label><input className="inp" maxLength={4} placeholder="1234" value={profile.payment.account_last4} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, account_last4: e.target.value } } : p))} /></div>
+                <div className="field"><label className="lbl">Routing (last 4)</label><input className="inp" maxLength={4} placeholder="5678" value={profile.payment.routing_last4} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, routing_last4: e.target.value } } : p))} /></div>
+              </div>
+              <div className="field"><label className="lbl">Other payment info</label><input className="inp" placeholder="e.g. Cash, Check payable to…" value={profile.payment.other} onChange={(e) => setProfile((p) => (p ? { ...p, payment: { ...p.payment, other: e.target.value } } : p))} /></div>
+              <div className="flex justify-end mt-2"><button onClick={savePayment} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}><Check className="w-4 h-4" /> Save payment details</button></div>
             </div>
 
             <div className="card p-4 mb-4 border" style={{ borderColor: "var(--red-b)" }}>

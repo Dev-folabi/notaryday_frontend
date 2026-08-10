@@ -20,7 +20,7 @@ export interface UserSettings {
     { start: string; end: string }
   > | null;
   booking_page_services: BookingPageService[] | null;
-  payment_info: PaymentInfo | null;
+  payment_info: unknown;
   invoice_notes: string | null;
   invoice_due_days: number;
   reminders_enabled: boolean;
@@ -37,16 +37,6 @@ export interface BookingPageService {
   scanback_mins: number;
   base_fee: number;
   description: string;
-}
-
-export interface PaymentInfo {
-  zelle?: string;
-  venmo?: string;
-  paypal?: string;
-  bank_name?: string;
-  account_last4?: string;
-  routing_last4?: string;
-  other?: string;
 }
 
 export interface SigningTypeDefault {
