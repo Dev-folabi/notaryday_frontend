@@ -61,7 +61,8 @@ export default function ActiveSigningPage() {
 
   const activeJob =
     jobs.find((j) => j.status === "IN_PROGRESS") ||
-    jobs.find((j) => j.status === "SCANNING");
+    jobs.find((j) => j.status === "SCANNING") ||
+    jobs.find((j) => j.status === "COMPLETE");
 
   const progress =
     manualOverride ?? progressFromStatus(activeJob?.status ?? "CONFIRMED");
@@ -140,8 +141,7 @@ export default function ActiveSigningPage() {
         });
       }
       if (next === "COMPLETE") {
-        addToast({ title: "Signing complete — draft invoice created", type: "success" });
-        router.push(`/invoices/new?jobId=${activeJob.id}`);
+        addToast({ title: "Signing complete — invoice draft ready", type: "success" });
       }
     } catch {
       addToast({ title: "Failed to update status", type: "error" });
@@ -368,9 +368,9 @@ export default function ActiveSigningPage() {
             </div>
             <button
               className="btn-p mt-3"
-              onClick={() => router.push("/invoices/new")}
+              onClick={() => router.push(`/invoices/new?jobId=${activeJob.id}`)}
             >
-              Review invoice
+              View invoice
             </button>
           </div>
         )}

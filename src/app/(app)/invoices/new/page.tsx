@@ -1,22 +1,23 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
-  ArrowLeft,
   Plus,
-  FileText,
   Mail,
   Download,
-  RefreshCw,
-  Send,
-  Check,
-  AlertTriangle,
+  Info,
+  DollarSign,
+  ArrowUpRight,
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
+import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
-import { formatCurrency, unwrap, errMsg, cn } from "@/lib/utils";
+import { formatCurrency, unwrap, errMsg } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import type { User } from "@/types/user";
 
 interface InvoiceRow {
   id: string;
@@ -29,6 +30,7 @@ interface InvoiceRow {
   travel_fee?: number;
   is_paid: boolean;
   sent_at?: string | null;
+  created_at?: string;
   pdf_url?: string | null;
   pdf_pending?: boolean;
   job_id?: string;
@@ -42,6 +44,8 @@ interface InvoiceRow {
     mileage_cost?: number;
     client_name?: string;
     client_email?: string;
+    client_phone?: string | null;
+    signing_duration_mins?: number;
   };
 }
 
@@ -50,27 +54,29 @@ interface JobRow {
   address?: string;
   client_name?: string | null;
   client_email?: string | null;
+  client_phone?: string | null;
   fee?: number;
   status?: string;
+  signing_type?: string;
+  appointment_time?: string;
 }
 
-function useFreshInvoice(invoiceId: string | null) {
-  return useQuery({
-    queryKey: ["invoices", "get", invoiceId],
-    queryFn: async () => {
-      const res = await invoicesApi.get(invoiceId!);
-      return unwrap<InvoiceRow>(res) ?? null;
-    },
-    enabled: !!invoiceId,
-    staleTime: 15 * 1000,
-  });
-}
+const SIGNING_TYPE_LABELS: Record<string, string> = {
+  GENERAL: "General",
+  LOAN_REFI: "Loan Refi",
+  HYBRID: "Hybrid",
+  PURCHASE_CLOSING: "Purchase Closing",
+  FIELD_INSPECTION: "Field Inspection",
+  APOSTILLE: "Apostille",
+};
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const params = useSearchParams();
   const jobId = params.get("jobId");
   const qc = useQueryClient();
   const { addToast } = useUIStore();
+  const { user } = useAuth();
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs", "complete-for-invoice"],
@@ -98,128 +104,55 @@ export default function NewInvoicePage() {
     [invoices, jobId],
   );
 
-  const {
-    data: fresh,
-    isLoading: loadingFresh,
-    refetch: refreshInvoice,
-    isRefetching,
-  } = useFreshInvoice(existing?.id ?? null);
-
-  const invoice = fresh ?? existing;
-
-  // Local editable fields, kept in sync when a (different) invoice loads.
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [note, setNote] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const lastInvoiceId = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (invoice && invoice.id !== lastInvoiceId.current) {
-      lastInvoiceId.current = invoice.id;
-      setRecipientEmail(invoice.recipient_email ?? "");
-      setNote(invoice.note_to_client ?? "");
-      setDirty(false);
-    }
-  }, [invoice]);
-
-  // Job fee is the invoice's source of truth until the notary edits it.
-  const fee = Number(invoice?.total ?? selectedJob?.fee ?? 0);
-
+  // Auto-generate the draft for older completed jobs that predate automatic
+  // generation (prototype: the draft always exists once a job is complete).
   const generateDraft = useMutation({
     mutationFn: (jid: string) => invoicesApi.generate(jid),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
-      addToast({ title: "Draft invoice created", type: "success" });
     },
-    onError: (err) =>
-      addToast({
-        type: "error",
-        title: "Couldn't create invoice",
-        message: errMsg(err),
-      }),
+    onError: () => {
+      addToast({ title: "Couldn't create invoice draft", type: "error" });
+    },
   });
 
-  const save = useMutation({
-    mutationFn: (data: { recipient_email: string; note_to_client: string }) =>
-      invoicesApi.update(invoice!.id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices"] });
-      setDirty(false);
-      addToast({ title: "Invoice updated", type: "success" });
-    },
-    onError: (err) =>
-      addToast({ type: "error", title: "Save failed", message: errMsg(err) }),
-  });
-
-  const sendInvoice = useMutation({
-    mutationFn: ({ id, email }: { id: string; email: string }) =>
-      invoicesApi.send(id, email),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices"] });
-      addToast({ title: "Invoice sent to client", type: "success" });
-      router.push("/invoices");
-    },
-    onError: (err) =>
-      addToast({ type: "error", title: "Couldn't send", message: errMsg(err) }),
-  });
-
-  const download = useMutation({
-    mutationFn: (id: string) =>
-      invoicesApi.get(id).then((res) => unwrap<InvoiceRow>(res)),
-    onSuccess: (freshInv) => {
-      const url = freshInv?.pdf_url;
-      if (!url) {
-        addToast({
-          title: "PDF not ready yet — check back in a minute",
-          type: "error",
-        });
-        return;
-      }
-      window.open(url, "_blank", "noopener,noreferrer");
-    },
-    onError: (err) =>
-      addToast({ type: "error", title: "Failed to get PDF", message: errMsg(err) }),
-  });
-
-  const handleSend = () => {
-    if (!invoice) return;
-    if (save.isPending) {
-      addToast({ title: "Saving changes first…", type: "info" });
-      return;
+  useEffect(() => {
+    if (
+      jobId &&
+      selectedJob &&
+      !existing &&
+      !generateDraft.isPending
+    ) {
+      generateDraft.mutate(jobId);
     }
-    if (dirty) {
-      addToast({
-        title: "You have unsaved changes",
-        message: "Save before sending so the email and PDF match.",
-        type: "info",
-      });
-      return;
-    }
-    sendInvoice.mutate({ id: invoice.id, email: recipientEmail.trim() });
-  };
-
-  const handleDownload = () => {
-    if (!invoice) return;
-    if (invoice.pdf_pending || !invoice.pdf_url) {
-      addToast({
-        title: "PDF still generating — try again in a moment",
-        type: "info",
-      });
-      return;
-    }
-    download.mutate(invoice.id);
-  };
-
-  const completeJobs = jobs.filter((j) => j.status === "COMPLETE");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, selectedJob?.id, existing?.id]);
 
   return (
     <div className="flex flex-col h-full">
       <div className="ph">
-        <button className="ph-back" onClick={() => router.back()}>
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-        <div className="ph-title">New invoice</div>
-        <div style={{ minWidth: 44 }} />
+        <div className="flex items-center gap-2.5">
+          <Link href="/jobs" className="ph-back">
+            Back to My Jobs
+          </Link>
+          <div className="ph-title">Invoices</div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            className="btn-sm"
+            onClick={() =>
+              addToast({ title: "Exporting all invoices CSV", type: "info" })
+            }
+          >
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+          <button
+            className="btn-sm"
+            onClick={() => router.push("/invoices/new")}
+          >
+            <Plus className="w-3.5 h-3.5" /> Add invoice
+          </button>
+        </div>
       </div>
 
       <div className="con">
@@ -227,7 +160,7 @@ export default function NewInvoicePage() {
           <>
             <span className="slbl">Select a completed job</span>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {completeJobs.length === 0 && (
+              {jobs.filter((j) => j.status === "COMPLETE").length === 0 && (
                 <div className="empty-box">
                   <p className="font-inter text-sm font-semibold text-navy mb-1">
                     No completed jobs
@@ -237,94 +170,60 @@ export default function NewInvoicePage() {
                   </p>
                 </div>
               )}
-              {completeJobs.map((j) => {
-                const inv = invoices.find((i) => i.job_id === j.id);
-                return (
-                  <button
-                    key={j.id}
-                    className="jcard"
-                    style={{ textAlign: "left", cursor: "pointer" }}
-                    onClick={() =>
-                      router.push(`/invoices/new?jobId=${j.id}`)
-                    }
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "#0F2C4E",
-                        }}
-                      >
-                        {j.address}
+              {jobs
+                .filter((j) => j.status === "COMPLETE")
+                .map((j) => {
+                  const inv = invoices.find((i) => i.job_id === j.id);
+                  return (
+                    <button
+                      key={j.id}
+                      className="jcard"
+                      style={{ textAlign: "left", cursor: "pointer" }}
+                      onClick={() =>
+                        router.push(`/invoices/new?jobId=${j.id}`)
+                      }
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#0F2C4E",
+                          }}
+                        >
+                          {j.address}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#64748B",
+                            marginTop: 2,
+                          }}
+                        >
+                          {j.client_name || "Client"} ·{" "}
+                          {formatCurrency(j.fee ?? 0)}
+                          {inv && (
+                            <span className="chip c-draft" style={{ marginLeft: 6 }}>
+                              already invoiced
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#64748B",
-                          marginTop: 2,
-                        }}
-                      >
-                        {j.client_name || "Client"} ·{" "}
-                        {formatCurrency(j.fee ?? 0)}
-                        {inv && (
-                          <span
-                            className={cn(
-                              "chip",
-                              inv.is_paid
-                                ? "c-paid"
-                                : inv.sent_at
-                                  ? "c-sent"
-                                  : "c-draft",
-                            )}
-                            style={{ marginLeft: 6 }}
-                          >
-                            {inv.is_paid
-                              ? "paid"
-                              : inv.sent_at
-                                ? "sent"
-                                : "draft"}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Plus className="w-4 h-4 text-slate-secondary" />
-                  </button>
-                );
-              })}
+                      <Plus className="w-4 h-4 text-slate-secondary" />
+                    </button>
+                  );
+                })}
             </div>
           </>
         )}
 
         {jobId && selectedJob && (
-          <InvoiceEditor
+          <InvoiceDraft
+            key={existing?.id ?? "creating"}
             job={selectedJob}
-            invoice={invoice}
-            loading={loadingFresh}
-            recipientEmail={recipientEmail}
-            setRecipientEmail={(v) => {
-              setRecipientEmail(v);
-              setDirty(true);
-            }}
-            note={note}
-            setNote={(v) => {
-              setNote(v);
-              setDirty(true);
-            }}
-            fee={fee}
-            onSave={() => save.mutate({ recipient_email: recipientEmail, note_to_client: note })}
-            saving={save.isPending}
-            onSend={handleSend}
-            sending={sendInvoice.isPending}
-            onDownload={handleDownload}
-            downloading={download.isPending}
-            onGenerate={() => generateDraft.mutate(jobId)}
-            generating={generateDraft.isPending}
-            onRefresh={() => {
-              refreshInvoice();
-              addToast({ title: "Refreshing invoice…", type: "info" });
-            }}
-            refreshing={isRefetching}
+            invoice={existing}
+            user={user}
+            onSaved={() => qc.invalidateQueries({ queryKey: ["invoices"] })}
           />
         )}
 
@@ -346,261 +245,497 @@ export default function NewInvoicePage() {
   );
 }
 
-function InvoiceEditor({
+function InvoiceDraft({
   job,
   invoice,
-  loading,
-  recipientEmail,
-  setRecipientEmail,
-  note,
-  setNote,
-  fee,
-  onSave,
-  saving,
-  onSend,
-  sending,
-  onDownload,
-  downloading,
-  onGenerate,
-  generating,
-  onRefresh,
-  refreshing,
+  user,
+  onSaved,
 }: {
   job: JobRow;
   invoice: InvoiceRow | null;
-  loading: boolean;
-  recipientEmail: string;
-  setRecipientEmail: (v: string) => void;
-  note: string;
-  setNote: (v: string) => void;
-  fee: number;
-  onSave: () => void;
-  saving: boolean;
-  onSend: () => void;
-  sending: boolean;
-  onDownload: () => void;
-  downloading: boolean;
-  onGenerate: () => void;
-  generating: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
+  user: User | null | undefined;
+  onSaved: () => void;
 }) {
-  const hasDraft = !!invoice;
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { addToast } = useUIStore();
+
+  const initialFee = Number(
+    invoice?.subtotal ?? invoice?.total ?? job.fee ?? 0,
+  );
+  const [client, setClient] = useState(
+    invoice?.recipient_name ?? job.client_name ?? "",
+  );
+  const [email, setEmail] = useState(
+    invoice?.recipient_email ?? job.client_email ?? "",
+  );
+  const [fee, setFee] = useState(initialFee);
+  const [note, setNote] = useState(invoice?.note_to_client ?? "");
+
+  const travelFee = Number(invoice?.travel_fee ?? 0);
+  const total = Number(fee) + travelFee;
+
+  const save = useMutation({
+    mutationFn: () =>
+      invoicesApi.update(invoice?.id ?? "", {
+        recipient_name: client,
+        recipient_email: email,
+        final_fee: Number(fee),
+        note_to_client: note,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      onSaved();
+      addToast({ title: "Saved as draft", type: "success" });
+    },
+    onError: (err) =>
+      addToast({ type: "error", title: "Save failed", message: errMsg(err) }),
+  });
+
+  const send = useMutation({
+    mutationFn: () =>
+      invoicesApi.send(invoice?.id ?? "", email),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      addToast({ title: "Invoice sent", type: "success" });
+      router.push("/invoices");
+    },
+    onError: (err) =>
+      addToast({ type: "error", title: "Couldn't send", message: errMsg(err) }),
+  });
+
+  const handleSend = () => {
+    if (!email.trim()) {
+      addToast({ title: "Enter a recipient email first", type: "info" });
+      return;
+    }
+    if (!invoice) {
+      addToast({ title: "Draft still being created — try again in a moment", type: "info" });
+      return;
+    }
+    save.mutate(undefined, {
+      onSuccess: () => send.mutate(),
+    });
+  };
+
+  const fromName = user?.full_name ?? "Your name";
+  const fromEmail = user?.email ?? "";
+  const fromLine2 = user?.settings?.home_base_address || "City, State";
+  const nnaLine = user?.nna_certified ? "NNA Certified" : null;
+  const billToPhone = job.client_phone ?? invoice?.job?.client_phone ?? null;
+
+  const invoiceDate = invoice?.created_at
+    ? format(parseISO(invoice.created_at), "MMMM d, yyyy")
+    : format(new Date(), "MMMM d, yyyy");
 
   return (
-    <div className="flex flex-col gap-3">
-      {!hasDraft && (
-        <div className="empty-box">
-          <p className="font-inter text-sm font-semibold text-navy mb-1">
-            Invoice draft not created yet
-          </p>
-          <p className="font-inter text-xs text-slate-secondary max-w-[280px] mx-auto leading-relaxed">
-            This job completed before drafts were automatic — create one now, then
-            review it before sending.
-          </p>
-        </div>
-      )}
-
-      {/* Job summary card */}
-      <div className="bg-white border border-border rounded-[12px] p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <FileText className="w-4 h-4 text-navy" />
-          <span className="font-sora text-[15px] font-bold text-navy">
-            Invoice draft
-          </span>
-          {invoice && (
-            <span
-              className={cn(
-                "chip ml-auto",
-                invoice.is_paid ? "c-paid" : invoice.sent_at ? "c-sent" : "c-draft",
-              )}
-            >
-              {invoice.is_paid
-                ? "PAID"
-                : invoice.sent_at
-                  ? "SENT"
-                  : "DRAFT"}
-            </span>
-          )}
-        </div>
-        <div className="text-[12px] text-slate-secondary">{job.address}</div>
-        <div className="text-[12px] text-slate-secondary mt-0.5">
-          {job.client_name || "Client"}
-        </div>
-        <div className="mt-3 flex justify-between border-t border-border pt-3">
-          <span className="text-[12px] text-slate-secondary">Total due</span>
-          <span className="font-sora text-[18px] font-bold text-navy">
-            {formatCurrency(fee)}
-          </span>
+    <div>
+      {/* Auto-generated notice */}
+      <div className="alert al-blue" style={{ marginBottom: 16 }}>
+        <span>
+          <Info className="w-4 h-4" />
+        </span>
+        <div style={{ fontSize: 11, lineHeight: 1.4 }}>
+          This invoice was generated automatically when you marked the signing
+          complete. Review and edit this individual invoice before sending.
+          This is how it will appear to the receiver. Your payment details from
+          Settings will be shown on the invoice PDF.
         </div>
       </div>
 
-      {/* Before you send — editable fields */}
-      <div className="bg-white border border-border rounded-[12px] p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Mail className="w-4 h-4 text-navy" />
-          <span className="font-sora text-[14px] font-bold text-navy">
-            Before you send
-          </span>
-          <button
-            className="ml-auto flex items-center gap-1 text-[11px] text-slate-secondary hover:text-navy"
-            onClick={onRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw className={cn("w-3 h-3", refreshing && "animate-spin")} />
-            Refresh
-          </button>
-        </div>
-
-        <label className="font-inter font-medium text-xs text-slate-body block mb-1.5">
-          Send invoice to
-        </label>
-        <input
-          className="bg-white border border-border rounded-input h-10 px-3 text-sm w-full outline-none focus:border-interactive-blue focus:ring-2 focus:ring-blue-100"
-          type="email"
-          placeholder="client@example.com"
-          value={recipientEmail}
-          onChange={(e) => setRecipientEmail(e.target.value)}
-          disabled={loading}
-        />
-
-        <label className="font-inter font-medium text-xs text-slate-body block mt-4 mb-1.5">
-          Note to client (optional)
-        </label>
-        <textarea
-          className="bg-white border border-border rounded-input px-3 py-2 text-sm w-full outline-none focus:border-interactive-blue focus:ring-2 focus:ring-blue-100"
-          rows={3}
-          placeholder="e.g. Thank you for your business —"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          disabled={loading}
-        />
-
-        <div className="mt-3 flex gap-2">
-          <button
-            className="btn-sm flex-1"
-            onClick={onSave}
-            disabled={!hasDraft || saving || loading}
-          >
-            <Check className="w-3.5 h-3.5" /> {saving ? "Saving…" : "Save changes"}
-          </button>
-          {!hasDraft && (
-            <button
-              className="btn-sm flex-1"
-              onClick={onGenerate}
-              disabled={generating || loading}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              {generating ? "Creating…" : "Create draft"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Preview */}
-      <div className="bg-white border border-border rounded-[12px] overflow-hidden">
-        <div className="bg-navy px-[18px] py-4 flex justify-between gap-2">
+      {/* Invoice preview */}
+      <div
+        style={{
+          background: "var(--white)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(0,0,0,.06)",
+          marginBottom: 16,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            background: "var(--navy)",
+            padding: "18px 20px",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
-            <div className="font-sora text-[16px] font-bold text-white">
+            <div
+              style={{
+                fontFamily: "'Sora',sans-serif",
+                fontSize: 18,
+                fontWeight: 700,
+                color: "#fff",
+                marginBottom: 2,
+              }}
+            >
               Notary Day
             </div>
-            <div className="text-[11px] text-white/60">
-              {invoice?.invoice_number ?? "Draft"}
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)" }}>
+              Invoice {invoice?.invoice_number ?? "DRAFT"} - DRAFT - Preview as
+              receiver sees it
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] text-white/50">Total due</div>
-            <div className="font-sora text-[18px] font-bold text-white">
-              {formatCurrency(fee)}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.5)", marginBottom: 1 }}>
+              Invoice date
             </div>
-          </div>
-        </div>
-        <div className="p-4 grid grid-cols-2 gap-3 text-[12px]">
-          <div className="text-slate-secondary">
-            <div className="text-[9px] font-semibold uppercase text-slate-secondary mb-1">
-              Service
+            <div style={{ fontSize: 12, color: "#fff", fontWeight: 500 }}>
+              {invoiceDate}
             </div>
-            <div className="text-navy font-semibold">
-              {job.address}
-              <br />
-              <span className="font-normal text-slate-secondary">
-                {(invoice?.job?.signing_type ?? "")
-                  .replace("_", " ")
-                  .replace(/\b\w/g, (c) => c.toUpperCase())}
-              </span>
-            </div>
-          </div>
-          <div className="text-slate-secondary">
-            <div className="text-[9px] font-semibold uppercase text-slate-secondary mb-1">
-              Client
-            </div>
-            <div className="text-navy font-semibold">
-              {invoice?.recipient_name ?? job.client_name ?? "Client"}
-              <br />
-              <span className="font-normal text-slate-secondary">
-                {recipientEmail || "email to be added"}
-              </span>
+            <div style={{ marginTop: 6 }}>
+              <span className="chip c-draft">DRAFT</span>
             </div>
           </div>
         </div>
-        {note && (
-          <div className="mx-4 mb-4 px-3 py-2 bg-blue-bg border border-blue-border rounded-[8px] text-[11px] text-blue">
-            {note}
+
+        {/* From / Bill to */}
+        <div style={{ padding: "18px 20px" }}>
+          <div className="g2" style={{ marginBottom: 16 }}>
+            <div>
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: "var(--slate2)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".5px",
+                  marginBottom: 4,
+                }}
+              >
+                From
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--navy)",
+                  marginBottom: 1,
+                }}
+              >
+                {fromName}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--slate2)", lineHeight: 1.5 }}>
+                {fromEmail}
+                <br />
+                {fromLine2}
+                {nnaLine && (
+                  <>
+                    <br />
+                    {nnaLine}
+                  </>
+                )}
+              </div>
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: "var(--slate2)",
+                  textTransform: "uppercase",
+                  letterSpacing: ".5px",
+                  marginBottom: 4,
+                }}
+              >
+                Bill to
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--navy)",
+                  marginBottom: 1,
+                }}
+              >
+                {client || job.client_name || "Client"}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--slate2)",
+                  lineHeight: 1.5,
+                  wordBreak: "break-word",
+                }}
+              >
+                {job.address}
+                {billToPhone && (
+                  <>
+                    <br />
+                    {billToPhone}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-        <div className="bg-navy px-[18px] py-3">
-          <div className="flex justify-between mb-1">
-            <span className="text-[11px] text-white/70">Service fee</span>
-            <span className="text-[11px] text-white">
-              {formatCurrency(fee)}
+
+          <div style={{ height: 1, background: "var(--border)", marginBottom: 12 }} />
+
+          {/* Line items */}
+          <div style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 10,
+                fontWeight: 600,
+                color: "var(--slate2)",
+                textTransform: "uppercase",
+                letterSpacing: ".3px",
+                paddingBottom: 6,
+                borderBottom: "1px solid var(--border)",
+              }}
+            >
+              <span style={{ flex: 1 }}>Description</span>
+              <span style={{ width: 50, textAlign: "right" }}>Qty</span>
+              <span style={{ width: 80, textAlign: "right" }}>Amount</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "8px 0",
+                borderBottom: "1px solid var(--border)",
+                gap: 8,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--navy)",
+                    marginBottom: 1,
+                  }}
+                >
+                  {SIGNING_TYPE_LABELS[job.signing_type ?? ""] ??
+                    job.signing_type ??
+                    "Signing"}{" "}
+                  - {job.address}
+                </div>
+                <div style={{ fontSize: 10, color: "var(--slate2)" }}>
+                  {job.appointment_time
+                    ? format(parseISO(job.appointment_time), "h:mm a")
+                    : ""}{" "}
+                  - {invoice?.job?.signing_duration_mins ?? 60} min -{" "}
+                  {SIGNING_TYPE_LABELS[job.signing_type ?? ""] ??
+                    job.signing_type ??
+                    "Signing"}
+                </div>
+              </div>
+              <div
+                style={{
+                  width: 50,
+                  textAlign: "right",
+                  fontSize: 12,
+                  color: "var(--slate)",
+                }}
+              >
+                1
+              </div>
+              <div
+                style={{
+                  width: 80,
+                  textAlign: "right",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--navy)",
+                }}
+              >
+                {formatCurrency(fee)}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 4,
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ display: "flex", gap: 20, fontSize: 11 }}>
+              <span style={{ color: "var(--slate2)" }}>Subtotal</span>
+              <span
+                style={{
+                  color: "var(--navy)",
+                  fontWeight: 600,
+                  width: 70,
+                  textAlign: "right",
+                }}
+              >
+                {formatCurrency(fee)}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 20, fontSize: 11 }}>
+              <span style={{ color: "var(--slate2)" }}>Tax (0%)</span>
+              <span
+                style={{
+                  color: "var(--navy)",
+                  fontWeight: 600,
+                  width: 70,
+                  textAlign: "right",
+                }}
+              >
+                $0.00
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total */}
+        <div
+          style={{
+            background: "var(--navy)",
+            padding: "12px 20px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.8)" }}>
+            Total due
+          </span>
+          <span
+            style={{
+              fontFamily: "'Sora',sans-serif",
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#fff",
+            }}
+          >
+            {formatCurrency(total)}
+          </span>
+        </div>
+
+        {/* Payment note strip */}
+        <div
+          style={{
+            padding: "10px 18px",
+            background: "var(--bg)",
+            borderTop: "1px solid var(--border)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--slate2)",
+              display: "flex",
+              gap: 6,
+              lineHeight: 1.4,
+            }}
+          >
+            <span>
+              <Info className="w-3 h-3 flex-shrink-0" />
             </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[11px] text-white/70">Status</span>
-            <span className="text-[11px] text-white">
-              {invoice?.sent_at ? "Sent" : "Draft"}
+            <span>
+              Your payment details (Zelle, Venmo, or bank info from Settings)
+              will appear on the invoice PDF. {client || job.client_name || "Your client"}{" "}
+              pays you directly - Notary Day is not involved in the transaction.
+              This is the exact preview as the receiver will see it in email.
             </span>
           </div>
         </div>
       </div>
 
-      {invoice && (
-        <div
-          className="flex gap-2 items-start p-3 rounded-[8px]"
-          style={{ background: "#FEF3C7", border: "1px solid #FDE68A" }}
-        >
-          <AlertTriangle className="w-4 h-4 text-amber flex-shrink-0 mt-0.5" />
-          <div className="text-[11px] text-amber leading-relaxed">
-            The PDF reflects the latest saved details. If you edit fields above,
-            save before sending so the client sees the updated version.
+      {/* Before you send */}
+      <span className="slbl">Before you send - Edit this individual invoice</span>
+      <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="field">
+            <label className="lbl">Billable client (editable)</label>
+            <input
+              className="inp"
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="lbl">Send to email *</label>
+            <div className="icw">
+              <span className="ico">
+                <Mail className="w-3.5 h-3.5" />
+              </span>
+              <input
+                className="inp has-icon"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <span className="hint">
+              Invoice will be sent to this email with PDF attached and payment
+              link if Stripe enabled.
+            </span>
+          </div>
+          <div className="g2">
+            <div className="field">
+              <label className="lbl">Final fee amount *</label>
+              <div className="icw">
+                <span className="ico">
+                  <DollarSign className="w-3.5 h-3.5" />
+                </span>
+                <input
+                  className="inp has-icon"
+                  type="number"
+                  value={fee}
+                  onChange={(e) => setFee(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <span className="hint">
+                Edit if final amount differs from agreed fee. Updates total
+                automatically.
+              </span>
+            </div>
+            <div className="field">
+              <label className="lbl">Invoice number</label>
+              <input
+                className="inp"
+                value={invoice?.invoice_number ?? "Auto on send"}
+                readOnly
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label className="lbl">Note to client (optional)</label>
+            <textarea
+              className="ta"
+              placeholder="Thank you for choosing Sarah Mitchell, NNA Certified LSA... Example: Thank you for your business. Payment via Zelle to sarah@zelle or Venmo @sarah-notary."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+            <span className="hint">This note appears on the invoice below the total.</span>
           </div>
         </div>
-      )}
+      </div>
 
-      {!invoice?.is_paid && (
-        <>
-          <button
-            className="btn-p w-full"
-            disabled={sending || !hasDraft || loading}
-            onClick={onSend}
-          >
-            <Send className="w-4 h-4" />
-            {sending ? "Sending…" : "Send invoice"}
-          </button>
-          <button
-            className="btn-s w-full"
-            disabled={downloading || !invoice?.pdf_url}
-            onClick={onDownload}
-          >
-            <Download className="w-4 h-4" />
-            {downloading
-              ? "Preparing…"
-              : invoice?.pdf_pending || !invoice?.pdf_url
-                ? "PDF generating…"
-                : "Download PDF draft"}
-          </button>
-        </>
-      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+        <button
+          className="btn-p"
+          disabled={send.isPending || save.isPending || !invoice}
+          onClick={handleSend}
+        >
+          <ArrowUpRight className="w-4 h-4" />
+          {!invoice
+            ? "Creating draft…"
+            : send.isPending
+              ? "Sending…"
+              : `Send invoice to ${client || job.client_name || "client"}`}
+        </button>
+        <button className="btn-gh" disabled={save.isPending || !invoice} onClick={() => save.mutate()}>
+          Save as draft - edit later
+        </button>
+        <button className="btn-gh" onClick={() => router.push("/invoices")}>
+          Back to all invoices - do not send
+        </button>
+      </div>
     </div>
   );
 }
