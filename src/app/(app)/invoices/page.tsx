@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
 import { useUIStore } from "@/store/uiStore";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, cn, unwrap, errMsg } from "@/lib/utils";
 
 type FilterTab = "all" | "sent" | "paid" | "overdue" | "draft";
@@ -82,6 +83,52 @@ function fmtLongDate(iso?: string | null) {
   });
 }
 
+function exportCsv(rows: InvoiceRow[]) {
+  const escape = (v: string | number | null | undefined) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const header = [
+    "Invoice",
+    "Client",
+    "Email",
+    "Status",
+    "Date",
+    "Amount",
+    "Subtotal",
+    "Travel fee",
+    "Paid",
+  ];
+
+  const lines = rows.map((inv) =>
+    [
+      inv.invoice_number ?? inv.id,
+      inv.recipient_name ?? inv.job?.client_name ?? "",
+      inv.recipient_email ?? "",
+      statusOf(inv),
+      inv.paid_at ?? inv.created_at ?? "",
+      inv.total,
+      inv.subtotal ?? "",
+      inv.travel_fee ?? "",
+      inv.is_paid ? "Yes" : "No",
+    ]
+      .map(escape)
+      .join(","),
+  );
+
+  const csv = [header.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `notaryday-invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 interface InvoiceTotals {
   billed: number;
   paid: number;
@@ -102,7 +149,11 @@ export default function InvoicesPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { addToast, openCITT } = useUIStore();
+  const { user } = useAuth();
+  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const [tab, setTab] = useState<FilterTab>("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [selected, setSelected] = useState<InvoiceRow | null>(null);
   const searchParams = useSearchParams();
   const focusId = searchParams.get("focus");
@@ -181,13 +232,25 @@ export default function InvoicesPage() {
       addToast({ title: "Failed to fetch invoice PDF", message: errMsg(err), type: "error" }),
   });
 
-  const filtered = useMemo(
-    () =>
+  const filtered = useMemo(() => {
+    let rows =
       tab === "all"
         ? invoices
-        : invoices.filter((inv) => statusOf(inv) === tab),
-    [invoices, tab],
-  );
+        : invoices.filter((inv) => statusOf(inv) === tab);
+
+    if (from || to) {
+      const fromTs = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
+      const toTs = to ? new Date(`${to}T23:59:59`).getTime() : Infinity;
+      rows = rows.filter((inv) => {
+        const ts = new Date(
+          inv.created_at ?? inv.job?.appointment_time ?? "",
+        ).getTime();
+        return Number.isNaN(ts) || (ts >= fromTs && ts <= toTs);
+      });
+    }
+
+    return rows;
+  }, [invoices, tab, from, to]);
 
   const totals: InvoiceTotals =
     stats ?? { billed: 0, paid: 0, outstanding: 0, overdue: 0 };
@@ -205,9 +268,17 @@ export default function InvoicesPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             className="btn-sm"
-            onClick={() =>
-              addToast({ title: "Exporting all invoices CSV", type: "info" })
-            }
+            onClick={() => {
+              if (!isPro) {
+                addToast({
+                  title: "This is a Pro feature",
+                  message: "Upgrade to Pro to export invoices to CSV.",
+                  type: "warning",
+                });
+                return;
+              }
+              exportCsv(filtered);
+            }}
           >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
@@ -221,6 +292,41 @@ export default function InvoicesPage() {
       </div>
 
       <div className="con">
+        {/* Date filter */}
+        <div className="flex gap-2 mb-3 flex-wrap items-center">
+          <span className="font-inter text-[11px] text-slate-secondary">
+            Date
+          </span>
+          <input
+            className="inp !w-auto"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            style={{ height: 32, fontSize: 11 }}
+          />
+          <span className="font-inter text-[11px] text-slate-secondary">
+            to
+          </span>
+          <input
+            className="inp !w-auto"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            style={{ height: 32, fontSize: 11 }}
+          />
+          {(from || to) && (
+            <button
+              className="btn-sm"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {/* Filter pills */}
         <div className="flex gap-1.5 mb-3 flex-wrap overflow-x-auto pb-0.5">
           {FILTERS.map((f) => (
@@ -427,9 +533,16 @@ function InvoiceModal({
           <div className="modal-title">
             Invoice {invoice.invoice_number ?? invoice.id}
           </div>
-          <button className="modal-close" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {status !== "paid" && (
+              <button className="btn-sm" onClick={onEdit}>
+                <Search className="w-3 h-3" /> Edit
+              </button>
+            )}
+            <button className="modal-close" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="modal-body">
@@ -556,11 +669,6 @@ function InvoiceModal({
 
         <div className="modal-foot">
           {status !== "paid" && (
-            <button className="btn-gh" onClick={onEdit}>
-              <Search className="w-4 h-4" /> Edit invoice
-            </button>
-          )}
-          {status !== "paid" && (
             <button
               className="btn-teal"
               disabled={isMarking}
@@ -596,9 +704,6 @@ function InvoiceModal({
           <button className="btn-p" onClick={onDownload} disabled={isDownloading}>
             <Download className="w-4 h-4" />
             {isDownloading ? "Preparing PDF…" : "Download PDF"}
-          </button>
-          <button className="btn-gh" onClick={onClose}>
-            Close
           </button>
         </div>
       </div>

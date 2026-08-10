@@ -10,7 +10,7 @@ import {
   Download,
   Info,
   DollarSign,
-  ArrowUpRight,
+  X,
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -290,7 +290,7 @@ function InvoiceDraft({
   const { addToast } = useUIStore();
 
   const initialFee = Number(
-    invoice?.subtotal ?? invoice?.total ?? job.fee ?? 0,
+    invoice?.total ?? invoice?.subtotal ?? job.fee ?? 0,
   );
   const [client, setClient] = useState(
     invoice?.recipient_name ?? job.client_name ?? "",
@@ -300,9 +300,9 @@ function InvoiceDraft({
   );
   const [fee, setFee] = useState(initialFee);
   const [note, setNote] = useState(invoice?.note_to_client ?? "");
+  const [confirmSend, setConfirmSend] = useState(false);
 
-  const travelFee = Number(invoice?.travel_fee ?? 0);
-  const total = Number(fee) + travelFee;
+  const total = Number(fee);
 
   const isPaid = invoice?.is_paid ?? false;
   const isSent = !isPaid && !!invoice?.sent_at;
@@ -343,16 +343,30 @@ function InvoiceDraft({
       addToast({ type: "error", title: "Couldn't send", message: errMsg(err) }),
   });
 
-  const handleSend = () => {
-    if (!email.trim()) {
-      addToast({ title: "Enter a recipient email first", type: "info" });
-      return;
-    }
+  const handleSaveClick = () => {
     if (!invoice) {
       addToast({
         title: "Draft still being created — try again in a moment",
         type: "info",
       });
+      return;
+    }
+    if (isPaid) {
+      save.mutate();
+      return;
+    }
+    setConfirmSend(true);
+  };
+
+  const handleSaveOnly = () => {
+    setConfirmSend(false);
+    save.mutate();
+  };
+
+  const handleSaveAndSend = () => {
+    setConfirmSend(false);
+    if (!email.trim()) {
+      addToast({ title: "Enter a recipient email first", type: "info" });
       return;
     }
     save.mutate(undefined, {
@@ -854,35 +868,50 @@ function InvoiceDraft({
           marginBottom: 20,
         }}
       >
-        {!isPaid && (
-          <button
-            className="btn-p"
-            disabled={send.isPending || save.isPending || !invoice}
-            onClick={handleSend}
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            {!invoice
-              ? "Creating draft…"
-              : send.isPending
-                ? "Sending…"
-                : isSent
-                  ? "Resend invoice to " +
-                    (client || job.client_name || "client")
-                  : `Send invoice to ${client || job.client_name || "client"}`}
-          </button>
-        )}
         <button
-          className="btn-gh"
+          className="btn-p"
           disabled={save.isPending || !invoice}
-          onClick={() => save.mutate()}
+          onClick={handleSaveClick}
         >
           {isPaid
             ? "Save details"
-            : isSent
-              ? "Save & regenerate PDF"
-              : "Save as draft - edit later"}
+            : save.isPending
+              ? "Saving…"
+              : "Save & regenerate PDF"}
         </button>
       </div>
+
+      {confirmSend && (
+        <div className="modal-overlay" onClick={handleSaveOnly}>
+          <div
+            className="modal"
+            style={{ maxWidth: 400 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-hdr">
+              <div className="modal-title">Send PDF to client?</div>
+              <button className="modal-close" onClick={handleSaveOnly}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="font-inter text-[13px] text-slate-body leading-relaxed">
+                The PDF will be regenerated with your changes. Do you want to
+                send it to{" "}
+                {email.trim() || client || job.client_name || "the client"}?
+              </p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn-p" onClick={handleSaveAndSend}>
+                <Mail className="w-4 h-4" /> Save & send to client
+              </button>
+              <button className="btn-gh" onClick={handleSaveOnly}>
+                Save without sending
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
