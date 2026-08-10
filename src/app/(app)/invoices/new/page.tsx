@@ -324,6 +324,23 @@ function InvoiceDraft({
   const nnaLine = user?.nna_certified ? "NNA Certified" : null;
   const billToPhone = job.client_phone ?? invoice?.job?.client_phone ?? null;
 
+  const paymentInfo = user?.settings?.payment_info;
+  const paymentLines: string[] = [];
+  if (paymentInfo) {
+    if (paymentInfo.zelle) paymentLines.push(`Zelle: ${paymentInfo.zelle}`);
+    if (paymentInfo.venmo) paymentLines.push(`Venmo: ${paymentInfo.venmo}`);
+    if (paymentInfo.paypal) paymentLines.push(`PayPal: ${paymentInfo.paypal}`);
+    if (paymentInfo.bank_name) {
+      const last4 = paymentInfo.account_last4
+        ? ` ending in ${paymentInfo.account_last4}`
+        : "";
+      paymentLines.push(`${paymentInfo.bank_name}${last4}`);
+    }
+    if (paymentInfo.routing_last4)
+      paymentLines.push(`Routing: ••••${paymentInfo.routing_last4}`);
+    if (paymentInfo.other) paymentLines.push(paymentInfo.other);
+  }
+
   const invoiceDate = invoice?.created_at
     ? format(parseISO(invoice.created_at), "MMMM d, yyyy")
     : format(new Date(), "MMMM d, yyyy");
@@ -465,6 +482,12 @@ function InvoiceDraft({
                 }}
               >
                 {job.address}
+                {email && (
+                  <>
+                    <br />
+                    {email}
+                  </>
+                )}
                 {billToPhone && (
                   <>
                     <br />
@@ -635,11 +658,25 @@ function InvoiceDraft({
             <span>
               <Info className="w-3 h-3 flex-shrink-0" />
             </span>
-            <span>
-              Your payment details (Zelle, Venmo, or bank info from Settings)
-              will appear on the invoice PDF. {client || job.client_name || "Your client"}{" "}
-              pays you directly - Notary Day is not involved in the transaction.
-              This is the exact preview as the receiver will see it in email.
+            <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {paymentLines.length > 0 ? (
+                <>
+                  <span>
+                    <span style={{ fontWeight: 600 }}>Pay by</span>{" "}
+                    {paymentLines.join(" · ")}. {client || job.client_name || "Your client"}{" "}
+                    pays you directly - Notary Day is not involved in the
+                    transaction. This is the exact preview as the receiver will
+                    see it in email.
+                  </span>
+                </>
+              ) : (
+                <span>
+                  Your payment details (Zelle, Venmo, or bank info from Settings)
+                  will appear on the invoice PDF. {client || job.client_name || "Your client"}{" "}
+                  pays you directly - Notary Day is not involved in the transaction.
+                  This is the exact preview as the receiver will see it in email.
+                </span>
+              )}
             </span>
           </div>
         </div>
