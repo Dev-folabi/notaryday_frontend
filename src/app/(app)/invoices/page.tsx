@@ -144,6 +144,7 @@ const FILTER_LABELS: Record<FilterTab, string> = {
   overdue: "Overdue",
   draft: "Draft",
 };
+const PAGE_SIZE = 25;
 
 export default function InvoicesPage() {
   const router = useRouter();
@@ -154,6 +155,7 @@ export default function InvoicesPage() {
   const [tab, setTab] = useState<FilterTab>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<InvoiceRow | null>(null);
   const searchParams = useSearchParams();
   const focusId = searchParams.get("focus");
@@ -252,6 +254,13 @@ export default function InvoicesPage() {
     return rows;
   }, [invoices, tab, from, to]);
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visible = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   const totals: InvoiceTotals =
     stats ?? { billed: 0, paid: 0, outstanding: 0, overdue: 0 };
 
@@ -301,7 +310,10 @@ export default function InvoicesPage() {
             className="inp !w-auto"
             type="date"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setPage(1);
+            }}
             style={{ height: 32, fontSize: 11 }}
           />
           <span className="font-inter text-[11px] text-slate-secondary">
@@ -311,7 +323,10 @@ export default function InvoicesPage() {
             className="inp !w-auto"
             type="date"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setPage(1);
+            }}
             style={{ height: 32, fontSize: 11 }}
           />
           {(from || to) && (
@@ -320,6 +335,7 @@ export default function InvoicesPage() {
               onClick={() => {
                 setFrom("");
                 setTo("");
+                setPage(1);
               }}
             >
               Clear
@@ -332,7 +348,10 @@ export default function InvoicesPage() {
           {FILTERS.map((f) => (
             <button
               key={f}
-              onClick={() => setTab(f)}
+              onClick={() => {
+                setTab(f);
+                setPage(1);
+              }}
               className={cn(
                 "px-3 py-1.5 rounded-[8px] font-inter text-[11px] whitespace-nowrap flex-shrink-0 border-[1.5px] transition-colors",
                 tab === f
@@ -390,6 +409,7 @@ export default function InvoicesPage() {
             </p>
           </div>
         ) : (
+          <>
           <div className="table-wrap mb-4">
             <table className="tbl">
               <thead>
@@ -403,7 +423,7 @@ export default function InvoicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((inv) => {
+                {visible.map((inv) => {
                   const s = statusOf(inv);
                   return (
                     <tr
@@ -456,6 +476,33 @@ export default function InvoicesPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {pageCount > 1 && (
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <span className="font-inter text-[11px] text-slate-secondary">
+                {Math.min(filtered.length, (currentPage - 1) * PAGE_SIZE + visible.length)}{" "}
+                of {filtered.length} invoices
+              </span>
+              <div className="flex gap-2">
+                <button
+                  className="btn-sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage(currentPage - 1)}
+                >
+                  Prev
+                </button>
+                <button
+                  className="btn-sm"
+                  disabled={currentPage >= pageCount}
+                  onClick={() => setPage(currentPage + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
 
         {/* Bottom card */}
