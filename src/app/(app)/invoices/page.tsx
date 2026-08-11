@@ -13,6 +13,7 @@ import {
   Mail,
   DollarSign,
   X,
+  Info,
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
 import { useUIStore } from "@/store/uiStore";
@@ -134,6 +135,8 @@ interface InvoiceTotals {
   paid: number;
   outstanding: number;
   overdue: number;
+  earned?: number;
+  travelFees?: number;
 }
 
 const FILTERS: FilterTab[] = ["all", "sent", "paid", "overdue", "draft"];
@@ -385,6 +388,29 @@ export default function InvoicesPage() {
             <span className="mc-l">Overdue</span>
           </div>
         </div>
+
+        {/* Billed vs earned indicator */}
+        {totals.earned != null &&
+          Math.abs((Number(totals.earned) || 0) - (totals.billed || 0)) > 0.005 && (
+            <div className="alert al-blue mb-4">
+              <span>
+                <Info className="w-4 h-4" />
+              </span>
+              <div>
+                <div className="font-inter text-[12px] font-semibold mb-0.5">
+                  Billed differs from current job fees
+                </div>
+                <div className="font-inter text-[11px] text-slate-secondary leading-relaxed">
+                  Invoices are billed at the fee on file when generated, plus a
+                  travel fee. Your combined job fees are currently{" "}
+                  {formatCurrency(totals.earned)} (+{" "}
+                  {formatCurrency(totals.travelFees ?? 0)} travel), which is{" "}
+                  {formatCurrency(totals.billed)} on file — fee edits after
+                  invoicing can create this gap.
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Table header row */}
         <div className="flex justify-between items-center mb-3 flex-wrap gap-2">

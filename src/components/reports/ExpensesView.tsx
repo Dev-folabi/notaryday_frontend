@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { Pencil, Trash2, Info, X, Check } from "lucide-react";
+import { Pencil, Trash2, X, Check } from "lucide-react";
 import { expensesApi } from "@/api/accounting.api";
 import { useUIStore } from "@/store/uiStore";
 import { formatCurrency, cn, unwrap } from "@/lib/utils";
@@ -16,6 +16,7 @@ const CATEGORIES = [
   "Professional dev",
 ];
 const FILTERS = ["All", ...CATEGORIES];
+const PAGE_SIZE = 50;
 
 interface Expense {
   id: string;
@@ -53,6 +54,8 @@ export default function ExpensesView() {
   const qc = useQueryClient();
   const { addToast } = useUIStore();
   const [filter, setFilter] = useState("All");
+  const [year, setYear] = useState<string>(String(new Date().getFullYear()));
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [editing, setEditing] = useState<ReturnType<typeof normalize> | null>(
     null,
   );
@@ -67,7 +70,25 @@ export default function ExpensesView() {
 
   const expenses = useMemo(() => raw.map(normalize), [raw]);
   const filtered =
-    filter === "All" ? expenses : expenses.filter((e) => e.cat === filter);
+    filter === "All"
+      ? expenses
+      : expenses.filter((e) => e.cat === filter);
+  const byYear =
+    year === "all"
+      ? filtered
+      : filtered.filter((e) => {
+          const d = e.date ? new Date(e.date) : null;
+          return d && d.getFullYear() === Number(year);
+        });
+  const visible = byYear.slice(0, visibleCount);
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const e of expenses) {
+      const d = e.date ? new Date(e.date) : null;
+      if (d && !Number.isNaN(d.getFullYear())) years.add(d.getFullYear());
+    }
+    return [...years].sort((a, b) => b - a);
+  }, [expenses]);
 
   const ytd = expenses.reduce((s, e) => s + e.amt, 0);
 
@@ -198,7 +219,10 @@ export default function ExpensesView() {
         {FILTERS.map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setFilter(f);
+              setVisibleCount(PAGE_SIZE);
+            }}
             className={cn(
               "px-2.5 py-[5px] rounded-[7px] font-inter text-[10px] whitespace-nowrap flex-shrink-0 border-[1.5px] transition-colors",
               filter === f
@@ -211,22 +235,41 @@ export default function ExpensesView() {
         ))}
       </div>
 
-      <span className="slbl">{format(new Date(), "MMMM yyyy")}</span>
+      <div className="flex items-center justify-between mb-3">
+        <span className="slbl !mb-0">{format(new Date(), "MMMM yyyy")}</span>
+        {availableYears.length > 0 && (
+          <select
+            className="sel !w-auto !h-[34px] !text-[11px]"
+            value={year}
+            onChange={(e) => {
+              setYear(e.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+          >
+            <option value="all">All years</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* Expense list */}
       {isLoading ? (
         <div className="flex justify-center py-10">
           <div className="w-6 h-6 border-2 border-border border-t-blue rounded-full animate-spin" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : byYear.length === 0 ? (
         <div className="empty-box mb-4">
           <p className="font-inter text-sm text-slate-secondary">
-            No expenses recorded yet.
+            No expenses recorded for {year === "all" ? "this year" : year}.
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5 mb-4">
-          {filtered.map((e) => (
+          {visible.map((e) => (
             <div
               key={e.id}
               className="card p-2.5 flex justify-between gap-2 items-center"
@@ -267,6 +310,17 @@ export default function ExpensesView() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {byYear.length > visible.length && (
+        <div className="flex justify-center mb-4">
+          <button
+            className="btn-gh !w-auto px-4"
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+          >
+            Show more ({byYear.length - visible.length} remaining)
+          </button>
         </div>
       )}
 
@@ -319,15 +373,7 @@ export default function ExpensesView() {
         </div>
         <div className="flex gap-2">
           <button
-            className="bg-background border-[1.5px] border-dashed border-border rounded-[8px] px-3 py-2 font-inter text-[11px] text-slate-secondary flex gap-1 items-center flex-1"
-            onClick={() =>
-              addToast({ title: "Receipt upload coming soon", type: "info" })
-            }
-          >
-            <Info className="w-3.5 h-3.5" /> Upload receipt (photo or PDF)
-          </button>
-          <button
-            className="btn-p !w-auto px-4 !h-[38px]"
+            className="btn-p !w-auto px-4 !h-[38px] flex-1"
             disabled={createExpense.isPending}
             onClick={handleAdd}
           >

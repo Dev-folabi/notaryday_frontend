@@ -37,6 +37,7 @@ import type {
 
 type Tab = "income" | "mileage" | "tax" | "expenses";
 const TABS: Tab[] = ["income", "mileage", "tax", "expenses"];
+const PAGE_SIZE = 50;
 
 const TYPE_CHIP: Record<string, string> = {
   loan_refi: "c-loan",
@@ -142,28 +143,7 @@ export default function ReportsPage() {
           ]),
         ];
         downloadCsv(rows, `notaryday-mileage-${today}.csv`);
-      } else if (tab === "tax") {
-        const res = await reportsApi.tax(
-          `${new Date().getFullYear()}-01-01`,
-          `${new Date().getFullYear()}-12-31`,
-        );
-        const data = unwrap<TaxReport>(res);
-        const income = data.income ?? {};
-        const m = data.mileage ?? {};
-        downloadCsv(
-          [
-            ["Schedule C", ""],
-            ["Total gross income", formatCurrency(income.gross ?? 0)],
-            ["Total mileage expense", formatCurrency(m.totalDeduction ?? 0)],
-            [
-              "Total other expenses",
-              formatCurrency(data.expenses?.total ?? 0),
-            ],
-            ["Net self employment income", formatCurrency(income.net ?? 0)],
-          ],
-          `notaryday-tax-${today}.csv`,
-        );
-      } else {
+      } else if (tab === "expenses") {
         const res = await expensesApi.list();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const list = unwrap<any[]>(res) ?? [];
@@ -188,9 +168,11 @@ export default function ReportsPage() {
     <div className="flex flex-col h-full">
       <div className="ph">
         <div className="ph-title">Reports</div>
-        <button className="btn-sm" onClick={handleExport}>
-          <Download className="w-3.5 h-3.5" /> Export
-        </button>
+        {tab !== "tax" && (
+          <button className="btn-sm" onClick={handleExport}>
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -576,6 +558,7 @@ function MileageTab() {
     miles: "",
     description: "",
   });
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-mileage", year],
@@ -643,6 +626,7 @@ function MileageTab() {
   const totalMiles = data?.totalMiles ?? 0;
   const totalDeduction = data?.totalDeduction ?? 0;
   const irsRate = data?.irsRate ?? 0.72;
+  const visibleEntries = entries.slice(0, visibleCount);
 
   const openEdit = (e: MileageEntry) => {
     setEditing(e);
@@ -705,7 +689,7 @@ function MileageTab() {
         </div>
       ) : (
         <div className="card px-3 py-0 mb-4">
-          {entries.map((r: MileageEntry, i: number) => (
+          {visibleEntries.map((r: MileageEntry, i: number) => (
             <div
               key={r.id ?? i}
               className="flex items-center py-2.5 border-b border-border last:border-b-0 gap-2"
@@ -748,6 +732,17 @@ function MileageTab() {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {entries.length > visibleEntries.length && (
+        <div className="flex justify-center mb-4">
+          <button
+            className="btn-gh !w-auto px-4"
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+          >
+            Show more ({entries.length - visibleEntries.length} remaining)
+          </button>
         </div>
       )}
 
