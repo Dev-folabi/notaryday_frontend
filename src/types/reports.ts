@@ -47,6 +47,7 @@ export interface EarningsReport {
 
 export interface MileageEntry {
   id?: string;
+  jobId?: string;
   date?: string;
   job?: string;
   address?: string;

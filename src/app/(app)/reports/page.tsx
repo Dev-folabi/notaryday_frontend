@@ -609,12 +609,16 @@ function MileageTab() {
   });
 
   const updateEntry = useMutation({
-    mutationFn: () =>
-      reportsApi.updateMileageEntry(editing?.id ?? "", {
+    mutationFn: () => {
+      const payload = {
         miles_date: editForm.miles_date,
         miles: parseFloat(editForm.miles),
         description: editForm.description,
-      }),
+      };
+      return editing?.jobId
+        ? reportsApi.updateJobMileage(editing.jobId, payload)
+        : reportsApi.updateMileageEntry(editing?.id ?? "", payload);
+    },
     onSuccess: () => {
       invalidate();
       setEditing(null);
@@ -736,14 +740,12 @@ function MileageTab() {
                   {formatCurrency(r.deduction ?? r.cost ?? 0)}
                 </div>
               </div>
-              {(r.method ?? "auto") === "manual" && (
-                <button
-                  className="p-1 text-slate-secondary flex-shrink-0 hover:text-navy"
-                  onClick={() => openEdit(r)}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <button
+                className="p-1 text-slate-secondary flex-shrink-0 hover:text-navy"
+                onClick={() => openEdit(r)}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))}
         </div>
@@ -835,27 +837,52 @@ function MileageTab() {
                     }
                   />
                 </div>
+                <div className="g2">
+                  <div className="field">
+                    <label className="lbl">Miles</label>
+                    <input
+                      className="inp"
+                      type="number"
+                      step="0.1"
+                      value={editForm.miles}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, miles: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="lbl">Cost</label>
+                    <input
+                      className="inp"
+                      readOnly
+                      value={formatCurrency(
+                        (parseFloat(editForm.miles) || 0) * irsRate,
+                      )}
+                    />
+                  </div>
+                </div>
                 <div className="field">
-                  <label className="lbl">Miles</label>
-                  <input
-                    className="inp"
-                    type="number"
-                    step="0.1"
-                    value={editForm.miles}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, miles: e.target.value })
-                    }
-                  />
+                  <label className="lbl">Method</label>
+                  <select
+                    className="sel"
+                    disabled
+                    value={(editing?.method ?? "auto") === "auto" ? "auto" : "manual"}
+                  >
+                    <option value="auto">auto</option>
+                    <option value="manual">manual</option>
+                  </select>
                 </div>
               </div>
             </div>
             <div className="modal-foot">
-              <button
-                className="btn-danger-gh"
-                onClick={() => editing.id && deleteEntry.mutate(editing.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {!editing?.jobId && (
+                <button
+                  className="btn-danger-gh"
+                  onClick={() => editing.id && deleteEntry.mutate(editing.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               <button
                 className="btn-p"
                 disabled={updateEntry.isPending}

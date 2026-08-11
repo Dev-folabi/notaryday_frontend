@@ -36,6 +36,14 @@ export const reportsApi = {
       description?: string;
     },
   ) => api.patch(`/reports/mileage/${id}`, data),
+  updateJobMileage: (
+    jobId: string,
+    data: {
+      miles_date?: string;
+      miles?: number;
+      description?: string;
+    },
+  ) => api.patch(`/reports/mileage/job/${jobId}`, data),
   deleteMileageEntry: (id: string) => api.delete(`/reports/mileage/${id}`),
   tax: (from: string, to: string) =>
     api.get("/reports/tax", { params: { from, to } }),
