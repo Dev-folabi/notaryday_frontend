@@ -11,26 +11,36 @@ export const expensesApi = {
   delete: (id: string) => api.delete(`/expenses/${id}`),
 };
 
-export const invoicesApi = {
-  list: (isPaid?: boolean) =>
-    api.get("/invoices", {
-      params: isPaid !== undefined ? { is_paid: isPaid } : undefined,
-    }),
-  get: (id: string) => api.get(`/invoices/${id}`),
-  generate: (jobId: string) => api.post(`/invoices/generate/${jobId}`),
-  markPaid: (id: string, method?: string) =>
-    api.patch(`/invoices/${id}/mark-paid`, { payment_method_used: method }),
-  send: (id: string, email?: string) =>
-    api.post(`/invoices/${id}/send`, { recipient_email: email }),
-};
-
 export const reportsApi = {
-  earnings: (from: string, to: string, groupBy?: string) =>
-    api.get("/reports/earnings", { params: { from, to, group_by: groupBy } }),
+  earnings: (
+    from: string,
+    to: string,
+    groupBy?: string,
+    compare?: boolean,
+  ) =>
+    api.get("/reports/earnings", {
+      params: { from, to, group_by: groupBy, compare },
+    }),
   mileage: (year?: number) =>
     api.get("/reports/mileage", { params: year ? { year } : undefined }),
-  tax: (year?: number) =>
-    api.get("/reports/tax", { params: year ? { year } : undefined }),
+  createMileageEntry: (data: {
+    miles_date: string;
+    miles: number;
+    description: string;
+  }) => api.post("/reports/mileage", data),
+  updateMileageEntry: (
+    id: string,
+    data: {
+      miles_date?: string;
+      miles?: number;
+      description?: string;
+    },
+  ) => api.patch(`/reports/mileage/${id}`, data),
+  deleteMileageEntry: (id: string) => api.delete(`/reports/mileage/${id}`),
+  tax: (from: string, to: string) =>
+    api.get("/reports/tax", { params: { from, to } }),
+  taxPdf: (from: string, to: string) =>
+    api.get("/reports/tax/pdf", { params: { from, to }, responseType: "blob" }),
 };
 
 export const journalApi = {

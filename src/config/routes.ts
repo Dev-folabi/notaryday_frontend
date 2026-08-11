@@ -7,7 +7,6 @@ export const ROUTES = {
     GAP: "/gap",
     BOOKINGS: "/bookings",
     INVOICES: "/invoices",
-    EARNINGS: "/earnings",
     EXPENSES: "/expenses",
     JOURNAL: "/journal",
     REPORTS: "/reports",

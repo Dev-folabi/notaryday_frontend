@@ -69,8 +69,32 @@ export default function ExpensesView() {
   const filtered =
     filter === "All" ? expenses : expenses.filter((e) => e.cat === filter);
 
-  const totalShowing = filtered.reduce((s, e) => s + e.amt, 0);
   const ytd = expenses.reduce((s, e) => s + e.amt, 0);
+
+  const thisMonth = expenses
+    .filter((e) => {
+      const d = e.date ? new Date(e.date) : null;
+      return (
+        d &&
+        d.getMonth() === new Date().getMonth() &&
+        d.getFullYear() === new Date().getFullYear()
+      );
+    })
+    .reduce((s, e) => s + e.amt, 0);
+
+  const thisQuarter = expenses
+    .filter((e) => {
+      const d = e.date ? new Date(e.date) : null;
+      if (!d) return false;
+      const now = new Date();
+      const qStart = Math.floor(now.getMonth() / 3) * 3;
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() >= qStart &&
+        d.getMonth() <= qStart + 2
+      );
+    })
+    .reduce((s, e) => s + e.amt, 0);
 
   const [form, setForm] = useState({
     desc: "",
@@ -145,18 +169,18 @@ export default function ExpensesView() {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2 mb-3.5">
         <div className="mcard text-center">
           <div className="font-inter text-[10px] text-slate-secondary mb-[3px]">
-            Showing
+            This month
           </div>
           <div className="font-sora text-[16px] font-bold text-navy">
-            {formatCurrency(totalShowing)}
+            {formatCurrency(thisMonth)}
           </div>
         </div>
         <div className="mcard text-center">
           <div className="font-inter text-[10px] text-slate-secondary mb-[3px]">
-            Entries
+            This quarter
           </div>
           <div className="font-sora text-[16px] font-bold text-navy">
-            {expenses.length}
+            {formatCurrency(thisQuarter)}
           </div>
         </div>
         <div className="mcard text-center">

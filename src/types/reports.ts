@@ -6,6 +6,9 @@ export interface EarningsSummary {
   platformFees?: number;
   platform?: number;
   effectiveHourly?: number;
+  totalMiles?: number;
+  totalHours?: number;
+  jobCount?: number;
   signings?: number;
 }
 
@@ -15,6 +18,7 @@ export interface PeriodBar {
   net?: number;
   gross?: number;
   jobs?: number;
+  miles?: number;
 }
 
 export interface TypeBreakdown {
@@ -23,6 +27,9 @@ export interface TypeBreakdown {
   count?: number;
   gross?: number;
   total?: number;
+  net?: number;
+  miles?: number;
+  avg?: number;
 }
 
 export interface EarningsReport {
@@ -30,6 +37,12 @@ export interface EarningsReport {
   periods?: PeriodBar[];
   byType?: TypeBreakdown[];
   bySigningType?: TypeBreakdown[];
+  yoy?: {
+    gross?: number;
+    net?: number;
+    grossPct?: number | null;
+    netPct?: number | null;
+  };
 }
 
 export interface MileageEntry {
@@ -47,11 +60,29 @@ export interface MileageReport {
   entries?: MileageEntry[];
   totalMiles?: number;
   totalDeduction?: number;
+  autoMiles?: number;
+  manualMiles?: number;
   irsRate?: number;
 }
 
+export interface MileageDetail {
+  totalMiles?: number;
+  totalDeduction?: number;
+  irsRate?: number;
+  autoMiles?: number;
+  manualMiles?: number;
+  autoPct?: number;
+  manualPct?: number;
+}
+
 export interface TaxReport {
-  income?: { gross?: number; net?: number };
-  mileage?: { totalMiles?: number; totalDeduction?: number; irsRate?: number };
+  year?: number;
+  from?: string;
+  to?: string;
+  income?: { gross?: number; net?: number; signings?: number };
+  byType?: TypeBreakdown[];
+  bySigningType?: TypeBreakdown[];
+  mileage?: MileageDetail;
   expenses?: { total?: number; byCategory?: Record<string, number> };
+  notarialActs?: number;
 }

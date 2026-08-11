@@ -51,7 +51,6 @@ export function proxy(request: NextRequest) {
     "/jobs",
     "/day",
     "/bookings",
-    "/earnings",
     "/expenses",
     "/reports",
     "/journal",
