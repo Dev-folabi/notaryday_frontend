@@ -13,7 +13,7 @@ import {
   Mail,
   DollarSign,
   X,
-  Info,
+  Pencil,
 } from "lucide-react";
 import { invoicesApi } from "@/api/invoices.api";
 import { useUIStore } from "@/store/uiStore";
@@ -152,7 +152,7 @@ const PAGE_SIZE = 25;
 export default function InvoicesPage() {
   const router = useRouter();
   const qc = useQueryClient();
-  const { addToast, openCITT } = useUIStore();
+  const { addToast } = useUIStore();
   const { user } = useAuth();
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const [tab, setTab] = useState<FilterTab>("all");
@@ -188,8 +188,8 @@ export default function InvoicesPage() {
     if (focusId && invoices.length > 0 && !selected && !consumedFocus.current) {
       const match = invoices.find((inv) => inv.id === focusId);
       if (match) {
-        setSelected(match);
         consumedFocus.current = true;
+        setTimeout(() => setSelected(match), 0);
         const params = new URLSearchParams(searchParams.toString());
         params.delete("focus");
         router.replace(`/invoices?${params.toString()}`, { scroll: false });
@@ -389,29 +389,6 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        {/* Billed vs earned indicator */}
-        {totals.earned != null &&
-          Math.abs((Number(totals.earned) || 0) - (totals.billed || 0)) > 0.005 && (
-            <div className="alert al-blue mb-4">
-              <span>
-                <Info className="w-4 h-4" />
-              </span>
-              <div>
-                <div className="font-inter text-[12px] font-semibold mb-0.5">
-                  Billed differs from current job fees
-                </div>
-                <div className="font-inter text-[11px] text-slate-secondary leading-relaxed">
-                  Invoices are billed at the fee on file when generated, plus a
-                  travel fee. Your combined job fees are currently{" "}
-                  {formatCurrency(totals.earned)} (+{" "}
-                  {formatCurrency(totals.travelFees ?? 0)} travel), which is{" "}
-                  {formatCurrency(totals.billed)} on file — fee edits after
-                  invoicing can create this gap.
-                </div>
-              </div>
-            </div>
-          )}
-
         {/* Table header row */}
         <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
           <span className="slbl !mb-0">All invoices</span>
@@ -609,7 +586,7 @@ function InvoiceModal({
           <div className="flex items-center gap-2">
             {status !== "paid" && (
               <button className="btn-sm" onClick={onEdit}>
-                <Search className="w-3 h-3" /> Edit
+                <Pencil className="w-3 h-3" /> Edit
               </button>
             )}
             <button className="modal-close" onClick={onClose}>

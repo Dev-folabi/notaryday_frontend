@@ -70,6 +70,26 @@ const SIGNING_TYPE_LABELS: Record<string, string> = {
   APOSTILLE: "Apostille",
 };
 
+type FilterTab = "all" | "sent" | "paid" | "overdue" | "draft";
+
+function statusOf(inv?: InvoiceRow | null): Exclude<FilterTab, "all"> {
+  if (!inv) return "draft";
+  if (inv.is_paid) return "paid";
+  if (inv.sent_at) {
+    const days = (Date.now() - new Date(inv.sent_at).getTime()) / 86_400_000;
+    if (days > 30) return "overdue";
+    return "sent";
+  }
+  return "draft";
+}
+
+const CHIP: Record<string, string> = {
+  sent: "c-sent",
+  paid: "c-paid",
+  overdue: "c-overdue",
+  draft: "c-draft",
+};
+
 // Render arbitrary payment_info JSON (user-supplied in Settings) into human-readable lines. Handles a plain string ("Zelle: sarah@email.com"), the canonical object shape, and unknown shapes gracefully.
 function paymentInfoLines(value: unknown): string[] {
   if (typeof value === "string") return value ? [value] : [];
@@ -312,7 +332,9 @@ function InvoiceDraft({
       invoicesApi.update(invoice?.id ?? "", {
         recipient_name: client,
         recipient_email: email,
-        final_fee: Number(fee),
+        ...(isPaid
+          ? {}
+          : { final_fee: Number(fee) }),
         note_to_client: note,
       }),
     onSuccess: () => {
@@ -470,8 +492,8 @@ function InvoiceDraft({
               Notary Day
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)" }}>
-              Invoice {invoice?.invoice_number ?? "DRAFT"} - DRAFT - Preview as
-              receiver sees it
+              Invoice {invoice?.invoice_number ?? "DRAFT"} -{" "}
+              {statusOf(invoice).toUpperCase()} - Preview as receiver sees it
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -488,7 +510,9 @@ function InvoiceDraft({
               {invoiceDate}
             </div>
             <div style={{ marginTop: 6 }}>
-              <span className="chip c-draft">DRAFT</span>
+              <span className={cn("chip", CHIP[statusOf(invoice)])}>
+                {statusOf(invoice).toUpperCase()}
+              </span>
             </div>
           </div>
         </div>

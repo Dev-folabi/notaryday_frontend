@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   format,
@@ -18,6 +18,7 @@ import {
   Check,
   X,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { reportsApi, expensesApi } from "@/api/accounting.api";
 import { invoicesApi } from "@/api/invoices.api";
@@ -407,7 +408,7 @@ function IncomeTab() {
         )}
       </div>
 
-      <div className="g2 mb-4">
+      <div className="g2 mb-4 !grid-cols-1 lg:!grid-cols-2">
         <div className="card p-3">
           <div className="font-inter text-[11px] font-semibold text-navy mb-2">
             By signing type
@@ -904,6 +905,8 @@ function TaxTab() {
   const [range, setRange] = useState({ from: `${year}-01-01`, to: `${year}-12-31` });
   const [generated, setGenerated] = useState<TaxReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
 
   const presets = [
     { label: `Q1 ${year}`, from: `${year}-01-01`, to: `${year}-03-31` },
@@ -911,6 +914,47 @@ function TaxTab() {
     { label: `Full year ${year}`, from: `${year}-01-01`, to: `${year}-12-31` },
     { label: `Full year ${year - 1}`, from: `${year - 1}-01-01`, to: `${year - 1}-12-31` },
   ];
+
+  // Persist generated report + PDF across tab/page switches so switching away
+  // and coming back doesn't force a regeneration.
+  const cacheKey = `nd:tax:${range.from}:${range.to}`;
+
+  const saveCache = (report: TaxReport, pdf?: string | null) => {
+    try {
+      sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({ report, pdf: pdf ?? null, at: Date.now() }),
+      );
+    } catch {
+      /* storage full — non-fatal */
+    }
+  };
+
+  const loadCache = () => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as {
+        report: TaxReport;
+        pdf?: string | null;
+      };
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const cached = loadCache();
+    if (cached?.report) {
+      setGenerated(cached.report);
+      setPdfDataUrl(cached.pdf ?? null);
+    } else {
+      setGenerated(null);
+      setPdfDataUrl(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey]);
 
   const generate = async () => {
     if (!range.from || !range.to) {
@@ -920,7 +964,9 @@ function TaxTab() {
     setIsGenerating(true);
     try {
       const res = await reportsApi.tax(range.from, range.to);
-      setGenerated(unwrap<TaxReport>(res));
+      const report = unwrap<TaxReport>(res);
+      setGenerated(report);
+      saveCache(report, pdfDataUrl);
     } catch {
       addToast({ title: "Failed to generate report", type: "error" });
     } finally {
@@ -928,21 +974,67 @@ function TaxTab() {
     }
   };
 
-  const downloadPdf = async () => {
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+  const fetchPdf = async (regenerate: boolean) => {
+    if (!range.from || !range.to) {
+      addToast({ title: "Select a date range", type: "error" });
+      return null;
+    }
+    setIsDownloading(true);
     try {
-      const res = await reportsApi.taxPdf(range.from, range.to);
-      const blob = (res as unknown as { data: Blob }).data ?? (res as unknown as Blob);
-      const url = URL.createObjectURL(blob);
+      const res = await reportsApi.taxPdf(range.from, range.to, regenerate);
+      const blob =
+        (res as unknown as { data: Blob }).data ??
+        (res as unknown as Blob);
+      const dataUrl = await blobToDataUrl(blob);
+      setPdfDataUrl(dataUrl);
+      if (generated) saveCache(generated, dataUrl);
+      return { blob, dataUrl };
+    } catch {
+      addToast({ title: "Failed to generate PDF", type: "error" });
+      return null;
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download reuses the cached PDF when available — it is only (re)built when
+  // the user explicitly taps "Regenerate PDF".
+  const downloadPdf = async () => {
+    if (pdfDataUrl) {
       const a = document.createElement("a");
-      a.href = url;
+      a.href = pdfDataUrl;
       a.download = "schedule-c-tax-report.pdf";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      addToast({ title: "Failed to generate PDF", type: "error" });
+      return;
     }
+    const result = await fetchPdf(false);
+    if (result) triggerDownload(result.blob, "schedule-c-tax-report.pdf");
+  };
+
+  const regeneratePdf = async () => {
+    const result = await fetchPdf(true);
+    if (result) triggerDownload(result.blob, "schedule-c-tax-report.pdf");
   };
 
   const income = generated?.income ?? {};
@@ -1021,8 +1113,13 @@ function TaxTab() {
           onClick={generate}
         >
           <FileText className="w-4 h-4" />{" "}
-          {isGenerating ? "Generating..." : "Generate tax report PDF"}
+          {isGenerating ? "Generating..." : "Generate tax report"}
         </button>
+        {generated && (
+          <span className="font-inter text-[11px] text-slate-secondary">
+            Saved — switch tabs or leave and your report stays ready to download.
+          </span>
+        )}
       </div>
 
       {generated ? (
@@ -1174,12 +1271,23 @@ function TaxTab() {
                 Generated by Notary Day,{" "}
                 {format(new Date(), "MMMM d, yyyy")}
               </span>
-              <button
-                className="bg-navy text-white border-none rounded-[7px] px-3 py-1.5 font-inter text-[11px] font-semibold flex gap-1 items-center"
-                onClick={downloadPdf}
-              >
-                <Download className="w-3.5 h-3.5" /> Download PDF
-              </button>
+              <div className="flex gap-1.5 items-center">
+                <button
+                  className="border border-navy text-navy bg-transparent rounded-[7px] px-3 py-1.5 font-inter text-[11px] font-semibold flex gap-1 items-center"
+                  onClick={regeneratePdf}
+                  disabled={isDownloading}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Regenerate PDF
+                </button>
+                <button
+                  className="bg-navy text-white border-none rounded-[7px] px-3 py-1.5 font-inter text-[11px] font-semibold flex gap-1 items-center"
+                  onClick={downloadPdf}
+                  disabled={isDownloading}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {isDownloading ? "Preparing PDF…" : "Download PDF"}
+                </button>
+              </div>
             </div>
           </div>
 

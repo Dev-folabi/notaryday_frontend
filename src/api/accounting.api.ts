@@ -47,8 +47,11 @@ export const reportsApi = {
   deleteMileageEntry: (id: string) => api.delete(`/reports/mileage/${id}`),
   tax: (from: string, to: string) =>
     api.get("/reports/tax", { params: { from, to } }),
-  taxPdf: (from: string, to: string) =>
-    api.get("/reports/tax/pdf", { params: { from, to }, responseType: "blob" }),
+  taxPdf: (from: string, to: string, regenerate = false) =>
+    api.get("/reports/tax/pdf", {
+      params: { from, to, regenerate },
+      responseType: "blob",
+    }),
 };
 
 export const journalApi = {
