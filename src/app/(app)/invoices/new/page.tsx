@@ -15,7 +15,7 @@ import {
 import { invoicesApi } from "@/api/invoices.api";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
-import { formatCurrency, unwrap, errMsg } from "@/lib/utils";
+import { formatCurrency, unwrap, errMsg, cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import type { User } from "@/types/user";
 
