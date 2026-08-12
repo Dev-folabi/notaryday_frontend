@@ -2,12 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-} from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfYear } from "date-fns";
 import {
   Download,
   BarChart2,
@@ -88,7 +83,9 @@ interface RecentInvoice {
   };
 }
 
-function invoiceStatus(inv: RecentInvoice): "paid" | "sent" | "overdue" | "draft" {
+function invoiceStatus(
+  inv: RecentInvoice,
+): "paid" | "sent" | "overdue" | "draft" {
   if (inv.is_paid) return "paid";
   if (inv.sent_at) {
     const days = (Date.now() - new Date(inv.sent_at).getTime()) / 86_400_000;
@@ -106,7 +103,10 @@ export default function ReportsPage() {
 
   const handleExport = async () => {
     if (!isPro) {
-      addToast({ title: "Exporting reports is a Pro feature", type: "warning" });
+      addToast({
+        title: "Exporting reports is a Pro feature",
+        type: "warning",
+      });
       return;
     }
     const today = new Date().toISOString().slice(0, 10);
@@ -266,8 +266,7 @@ function IncomeTab() {
     (new Date(range.to).getTime() - new Date(range.from).getTime()) /
     86_400_000;
   const weeksInRange = Math.max(daysInRange / 7, 1);
-  const avgSigningsPerWeek =
-    (summary.signings ?? 0) / weeksInRange;
+  const avgSigningsPerWeek = (summary.signings ?? 0) / weeksInRange;
   const bestMonth = useMemo(() => {
     if (periods.length === 0) return null;
     return periods.reduce((best, p) =>
@@ -454,7 +453,11 @@ function IncomeTab() {
             Key metrics
           </div>
           {[
-            ["Avg net per signing", formatCurrency(avgNetPerSigning), "text-navy"],
+            [
+              "Avg net per signing",
+              formatCurrency(avgNetPerSigning),
+              "text-navy",
+            ],
             [
               "Avg signings per week",
               avgSigningsPerWeek.toFixed(1),
@@ -480,7 +483,9 @@ function IncomeTab() {
               <span className="font-inter text-[11px] text-slate-secondary">
                 {label}
               </span>
-              <span className={cn("font-inter text-[11px] font-semibold", color)}>
+              <span
+                className={cn("font-inter text-[11px] font-semibold", color)}
+              >
                 {value}
               </span>
             </div>
@@ -511,13 +516,15 @@ function IncomeTab() {
                   <td>{inv.job?.client_name ?? "—"}</td>
                   <td className="text-slate-secondary">
                     {format(
-                      new Date(inv.created_at ?? inv.job?.appointment_time ?? new Date()),
+                      new Date(
+                        inv.created_at ??
+                          inv.job?.appointment_time ??
+                          new Date(),
+                      ),
                       "MMM d",
                     )}
                   </td>
-                  <td className="font-semibold">
-                    {formatCurrency(inv.total)}
-                  </td>
+                  <td className="font-semibold">{formatCurrency(inv.total)}</td>
                   <td>
                     <span className={cn("chip", `c-${s}`)}>
                       {s.toUpperCase()}
@@ -632,7 +639,9 @@ function MileageTab() {
   const openEdit = (e: MileageEntry) => {
     setEditing(e);
     setEditForm({
-      miles_date: e.date ? e.date.slice(0, 10) : format(new Date(), "yyyy-MM-dd"),
+      miles_date: e.date
+        ? e.date.slice(0, 10)
+        : format(new Date(), "yyyy-MM-dd"),
       miles: String(e.miles ?? 0),
       description: e.job ?? "",
     });
@@ -675,8 +684,8 @@ function MileageTab() {
             Auto tracking is on
           </div>
           <div className="font-inter text-[11px] text-slate-secondary leading-relaxed">
-            Mileage is recorded automatically when you tap Navigate. You can edit
-            any manual entry here.
+            Mileage is recorded automatically when you tap Navigate. You can
+            edit any manual entry here.
           </div>
         </div>
       </div>
@@ -777,9 +786,7 @@ function MileageTab() {
             className="inp"
             placeholder="Job description"
             value={form.description}
-            onChange={(e) =>
-              setForm({ ...form, description: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
         </div>
         <button
@@ -862,7 +869,9 @@ function MileageTab() {
                   <select
                     className="sel"
                     disabled
-                    value={(editing?.method ?? "auto") === "auto" ? "auto" : "manual"}
+                    value={
+                      (editing?.method ?? "auto") === "auto" ? "auto" : "manual"
+                    }
                   >
                     <option value="auto">auto</option>
                     <option value="manual">manual</option>
@@ -902,7 +911,10 @@ function TaxTab() {
   const year = new Date().getFullYear();
   const { addToast } = useUIStore();
   const { user } = useAuth();
-  const [range, setRange] = useState({ from: `${year}-01-01`, to: `${year}-12-31` });
+  const [range, setRange] = useState({
+    from: `${year}-01-01`,
+    to: `${year}-12-31`,
+  });
   const [generated, setGenerated] = useState<TaxReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -912,7 +924,11 @@ function TaxTab() {
     { label: `Q1 ${year}`, from: `${year}-01-01`, to: `${year}-03-31` },
     { label: `Q2 ${year}`, from: `${year}-04-01`, to: `${year}-06-30` },
     { label: `Full year ${year}`, from: `${year}-01-01`, to: `${year}-12-31` },
-    { label: `Full year ${year - 1}`, from: `${year - 1}-01-01`, to: `${year - 1}-12-31` },
+    {
+      label: `Full year ${year - 1}`,
+      from: `${year - 1}-01-01`,
+      to: `${year - 1}-12-31`,
+    },
   ];
 
   // Persist generated report + PDF across tab/page switches so switching away
@@ -1002,8 +1018,7 @@ function TaxTab() {
     try {
       const res = await reportsApi.taxPdf(range.from, range.to, regenerate);
       const blob =
-        (res as unknown as { data: Blob }).data ??
-        (res as unknown as Blob);
+        (res as unknown as { data: Blob }).data ?? (res as unknown as Blob);
       const dataUrl = await blobToDataUrl(blob);
       setPdfDataUrl(dataUrl);
       if (generated) saveCache(generated, dataUrl);
@@ -1099,9 +1114,7 @@ function TaxTab() {
                   ? "border-navy bg-blue-bg text-navy"
                   : "border-border bg-background text-slate-secondary",
               )}
-              onClick={() =>
-                setRange({ from: p.from, to: p.to })
-              }
+              onClick={() => setRange({ from: p.from, to: p.to })}
             >
               {p.label}
             </button>
@@ -1115,11 +1128,6 @@ function TaxTab() {
           <FileText className="w-4 h-4" />{" "}
           {isGenerating ? "Generating..." : "Generate tax report"}
         </button>
-        {generated && (
-          <span className="font-inter text-[11px] text-slate-secondary">
-            Saved — switch tabs or leave and your report stays ready to download.
-          </span>
-        )}
       </div>
 
       {generated ? (
@@ -1172,7 +1180,9 @@ function TaxTab() {
                   <span className="font-inter text-[11px] text-slate">
                     {label}
                   </span>
-                  <span className={cn("font-inter text-[12px] font-bold", color)}>
+                  <span
+                    className={cn("font-inter text-[12px] font-bold", color)}
+                  >
                     {value}
                   </span>
                 </div>
@@ -1207,7 +1217,9 @@ function TaxTab() {
                       byType.map((t, i) => (
                         <tr key={i}>
                           <td className="font-medium">
-                            {TYPE_LABEL[(t.signing_type ?? t.type ?? "").toLowerCase()] ??
+                            {TYPE_LABEL[
+                              (t.signing_type ?? t.type ?? "").toLowerCase()
+                            ] ??
                               t.type ??
                               "Other"}
                           </td>
@@ -1235,7 +1247,10 @@ function TaxTab() {
                 Mileage deduction detail
               </div>
               {[
-                ["Total business miles driven", `${Number(mileage.totalMiles ?? 0).toFixed(0)} mi`],
+                [
+                  "Total business miles driven",
+                  `${Number(mileage.totalMiles ?? 0).toFixed(0)} mi`,
+                ],
                 [
                   `IRS standard mileage rate ${generated?.year ?? year}`,
                   `$${mileage.irsRate ?? 0.72}/mile`,
@@ -1268,8 +1283,7 @@ function TaxTab() {
             </div>
             <div className="px-[18px] py-2.5 bg-background border-t border-border flex justify-between items-center gap-2 flex-wrap">
               <span className="font-inter text-[11px] text-slate-secondary">
-                Generated by Notary Day,{" "}
-                {format(new Date(), "MMMM d, yyyy")}
+                Generated by Notary Day, {format(new Date(), "MMMM d, yyyy")}
               </span>
               <div className="flex gap-1.5 items-center">
                 <button
