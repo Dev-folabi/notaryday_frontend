@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
 import { usersApi } from "@/api/users.api";
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  getPushSubscription,
+  pushSupported,
+} from "@/lib/push";
 import { Bell, Check, Mail } from "lucide-react";
 
 const NOTIF_DEFS = [
@@ -80,6 +86,7 @@ const CLIENT_NOTIF_DEFS = [
 ];
 
 const DEFAULT_NOTIF_PREFS: Record<string, boolean> = {
+  push_enabled: true,
   ...Object.fromEntries(NOTIF_DEFS.map((n) => [n.key, true])),
   ...Object.fromEntries(CLIENT_NOTIF_DEFS.map((n) => [n.key, true])),
 };
@@ -93,6 +100,12 @@ export default function NotificationsTab() {
       ?.notification_prefs;
     return { ...DEFAULT_NOTIF_PREFS, ...(stored ?? {}) };
   });
+  const [pushReady, setPushReady] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    getPushSubscription().then((subscription) => setPushReady(Boolean(subscription)));
+  }, []);
 
   const saveNotifPrefs = async () => {
     try {
@@ -106,11 +119,58 @@ export default function NotificationsTab() {
   const toggle = (key: string) =>
     setNotifPrefs((p) => ({ ...p, [key]: !p[key] }));
 
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushReady) {
+        await disablePushNotifications();
+        setPushReady(false);
+        const next = { ...notifPrefs, push_enabled: false };
+        setNotifPrefs(next);
+        await usersApi.updateSettings({ notificationPrefs: next });
+      } else {
+        await enablePushNotifications();
+        setPushReady(true);
+        const next = { ...notifPrefs, push_enabled: true };
+        setNotifPrefs(next);
+        await usersApi.updateSettings({ notificationPrefs: next });
+      }
+    } catch (error) {
+      addToast({
+        type: "error",
+        title: error instanceof Error ? error.message : "Could not update push notifications",
+      });
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
   return (
     <>
       <div className="alert al-blue mb-3.5">
         <span className="text-blue flex-shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg></span>
         <div className="font-inter text-[11px] leading-[1.4]">Payment failure and plan expiry notifications are always sent, they cannot be disabled. All others are optional.</div>
+      </div>
+      <div className="card p-4 mb-4">
+        <div className="font-inter text-[12px] font-semibold text-navy mb-1">
+          Push notifications
+        </div>
+        <p className="font-inter text-[11px] text-slate-secondary mb-2.5 leading-[1.4]">
+          Receive reminders and account updates even when Notary Day is not open. Your browser may ask for permission.
+        </p>
+        {!pushSupported() && (
+          <p className="font-inter text-[11px] text-amber mb-2">
+            Push notifications are not supported by this browser.
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={!pushSupported() || pushBusy}
+          onClick={togglePush}
+          className="btn-sm"
+        >
+          {pushBusy ? "Updating…" : pushReady ? "Disable push notifications" : "Enable push notifications"}
+        </button>
       </div>
       <div className="card p-4 mb-4">
         <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center"><Bell className="w-4 h-4" /> Your notifications</div>

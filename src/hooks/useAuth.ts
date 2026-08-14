@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryClient";
 import type { User, SessionUser } from "@/types/user";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
+import { disablePushNotifications } from "@/lib/push";
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -82,7 +83,12 @@ export function useAuth() {
 
   // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: () => authApi.logout(),
+    mutationFn: async () => {
+      // Remove the browser endpoint while the current user's token is still
+      // available, preventing notifications leaking across shared accounts.
+      await disablePushNotifications().catch(() => {});
+      return authApi.logout();
+    },
     onSuccess: () => {
       localStorage.removeItem("auth_token");
       // Also clear the cookie
