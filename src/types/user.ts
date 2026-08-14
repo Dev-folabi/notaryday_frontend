@@ -28,6 +28,9 @@ export interface UserSettings {
   client_eta_enabled: boolean;
   preferred_nav_app: NavApp;
   ics_feed_token: string;
+  scanback_duration_mins?: number | null;
+  state?: string | null;
+  notification_prefs?: Record<string, boolean> | null;
 }
 
 export interface BookingPageService {
@@ -71,6 +74,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   last_seen_at: string | null;
+  deleted_at?: string | null;
   settings?: UserSettings;
   signing_defaults?: SigningTypeDefault[];
 }
