@@ -38,8 +38,8 @@ export const metadata: Metadata = {
     title: "Notary Day",
   },
   icons: {
-    icon: "/favicon.ico",
-    apple: "/icons/icon.png",
+    icon: "/icons/notaryday-icon-badge.svg",
+    apple: "/icons/notaryday-icon-badge.svg",
   },
 };
 

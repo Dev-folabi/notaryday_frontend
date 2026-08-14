@@ -1,0 +1,26 @@
+<svg viewBox="0 0 320 340" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700&amp;family=Inter:wght@500&amp;display=swap');
+      .headline { font-family: 'Sora', 'Segoe UI', sans-serif; font-weight: 700; }
+      .tagline { font-family: 'Inter', 'Segoe UI', sans-serif; font-weight: 500; }
+    </style>
+    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0F2C4E"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(80,20)">
+    <circle cx="80" cy="80" r="80" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+    <line x1="24" y1="118" x2="136" y2="118" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M28 118 C 28 62, 132 62, 132 118" fill="none" stroke="url(#arcGrad)" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="28" cy="118" r="7" fill="#0F2C4E"/>
+    <circle cx="80" cy="52" r="9" fill="#F59E0B"/>
+    <circle cx="132" cy="118" r="7" fill="#0E7B6C"/>
+  </g>
+
+  <text x="160" y="256" text-anchor="middle" class="headline" font-size="44" fill="#0F2C4E">Notary<tspan fill="#2563EB">Day</tspan></text>
+  <text x="160" y="286" text-anchor="middle" class="tagline" font-size="13" letter-spacing="1.2" fill="#64748B">SMART SCHEDULING</text>
+  <text x="160" y="306" text-anchor="middle" class="tagline" font-size="13" letter-spacing="1.2" fill="#64748B">FOR NOTARIES</text>
+</svg>

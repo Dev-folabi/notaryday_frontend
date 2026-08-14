@@ -1,0 +1,22 @@
+<svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700&amp;family=Inter:wght@500&amp;display=swap');
+      .headline { font-family: 'Sora', 'Segoe UI', sans-serif; font-weight: 700; }
+      .tagline { font-family: 'Inter', 'Segoe UI', sans-serif; font-weight: 500; }
+    </style>
+  </defs>
+
+  <g fill="#0F2C4E">
+    <g transform="translate(20,20)">
+      <circle cx="80" cy="80" r="80" fill="none" stroke="#0F2C4E" stroke-width="2"/>
+      <line x1="24" y1="118" x2="136" y2="118" stroke="#0F2C4E" stroke-width="4" stroke-linecap="round" opacity="0.35"/>
+      <path d="M28 118 C 28 62, 132 62, 132 118" fill="none" stroke="#0F2C4E" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="28" cy="118" r="7"/>
+      <circle cx="80" cy="52" r="9"/>
+      <circle cx="132" cy="118" r="7"/>
+    </g>
+    <text x="210" y="100" class="headline" font-size="52">NotaryDay</text>
+    <text x="210" y="130" class="tagline" font-size="14" letter-spacing="1.2" opacity="0.75">SMART SCHEDULING FOR NOTARIES</text>
+  </g>
+</svg>

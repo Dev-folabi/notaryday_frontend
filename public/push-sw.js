@@ -9,8 +9,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Notary Day";
   const options = {
     body: data.body || "You have a new notification.",
-    icon: "/icons/icon-512.svg",
-    badge: "/icons/icon-512.svg",
+    icon: "/icons/notaryday-icon-badge.svg",
+    badge: "/icons/notaryday-icon-badge.svg",
     tag: data.tag || "notaryday",
     data: { url: data.url || "/notifications" },
   };

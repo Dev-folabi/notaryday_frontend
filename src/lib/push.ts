@@ -7,6 +7,9 @@ interface PushSubscriptionPayload {
   auth: string;
 }
 
+const serviceWorkerUrl =
+  process.env.NODE_ENV === "production" ? "/sw.js" : "/push-sw.js";
+
 function urlBase64ToUint8Array(value: string): Uint8Array {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -25,7 +28,7 @@ export function pushSupported(): boolean {
 
 export async function getPushSubscription(): Promise<PushSubscription | null> {
   if (!pushSupported()) return null;
-  const registration = await navigator.serviceWorker.register("/sw.js");
+  const registration = await navigator.serviceWorker.register(serviceWorkerUrl);
   return registration.pushManager.getSubscription();
 }
 
@@ -41,7 +44,7 @@ export async function enablePushNotifications(): Promise<PushSubscription> {
   const publicKey = unwrap<{ publicKey: string | null }>(response).publicKey;
   if (!publicKey) throw new Error("Push notifications are not configured");
 
-  const registration = await navigator.serviceWorker.register("/sw.js");
+  const registration = await navigator.serviceWorker.register(serviceWorkerUrl);
   const existing = await registration.pushManager.getSubscription();
   const subscription =
     existing ??
