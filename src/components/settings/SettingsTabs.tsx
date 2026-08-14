@@ -1,17 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  User,
-  Bell,
-  CreditCard,
-  Link2,
-  Mail,
-  MapPin,
-  Navigation,
-  KeyRound,
-  type LucideIcon,
-} from "lucide-react";
 
 export type TabKey =
   | "profile"
@@ -34,16 +23,16 @@ export const TAB_KEYS: TabKey[] = [
   "emails",
 ];
 
-const TABS: { key: TabKey; label: string; Icon: LucideIcon }[] = [
-  { key: "profile", label: "Profile", Icon: User },
-  { key: "operational", label: "Operational", Icon: MapPin },
-  { key: "navigation", label: "Navigation", Icon: Navigation },
-  { key: "password", label: "Password", Icon: KeyRound },
-  { key: "notifications", label: "Notifications", Icon: Bell },
-  { key: "billing", label: "Billing", Icon: CreditCard },
-  { key: "booking", label: "Booking", Icon: Link2 },
-  { key: "emails", label: "Emails", Icon: Mail },
-];
+const TAB_LABELS: Record<TabKey, string> = {
+  profile: "Profile",
+  operational: "Operational",
+  navigation: "Navigation",
+  password: "Password",
+  notifications: "Notifications",
+  billing: "Billing",
+  booking: "Booking",
+  emails: "Emails",
+};
 
 export default function SettingsTabs({
   tab,
@@ -54,13 +43,13 @@ export default function SettingsTabs({
 }) {
   return (
     <div className="tabs">
-      {TABS.map(({ key, label, Icon }) => (
+      {TAB_KEYS.map((key) => (
         <button
           key={key}
           className={cn("tab", tab === key && "on")}
           onClick={() => onChange(key)}
         >
-          <Icon className="w-3.5 h-3.5" /> {label}
+          {TAB_LABELS[key]}
         </button>
       ))}
     </div>

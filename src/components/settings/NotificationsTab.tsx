@@ -11,7 +11,7 @@ const NOTIF_DEFS = [
     key: "pre_sign_reminder",
     title: "Pre-signing reminder",
     desc: "30 minutes before each signing. Tap to navigate.",
-    channel: "Push + SMS",
+    channel: "Push",
     lock: false,
   },
   {

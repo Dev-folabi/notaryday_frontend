@@ -2,6 +2,8 @@ import api from "@/lib/api";
 
 export type SettingsPayload = {
   home_base_address?: string;
+  home_base_lat?: number;
+  home_base_lng?: number;
   scanback_duration_mins?: number;
   signing_defaults?: {
     signing_type: string;

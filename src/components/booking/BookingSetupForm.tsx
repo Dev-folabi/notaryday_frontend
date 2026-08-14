@@ -69,17 +69,21 @@ export default function BookingSetupForm() {
           );
         }
         if (s?.booking_page_active_hours) {
-          const h: Record<string, DayHours> = {};
-          for (const [day, v] of Object.entries(
+          const empty: Record<string, DayHours> = Object.fromEntries(
+            DAYS.map((d) => [d, { start: "", end: "", enabled: false }]),
+          );
+          for (const [rawDay, v] of Object.entries(
             s.booking_page_active_hours as Record<string, { start?: string; end?: string }>,
           )) {
-            h[day] = {
+            const day =
+              rawDay.charAt(0).toUpperCase() + rawDay.slice(1).toLowerCase();
+            empty[day] = {
               start: v.start ? from24h(v.start) : "",
               end: v.end ? from24h(v.end) : "",
               enabled: !!(v.start && v.end),
             };
           }
-          setHours((prev) => ({ ...prev, ...h }));
+          setHours(empty);
         }
         if (typeof s?.booking_min_notice_hours === "number")
           setMinNotice(s.booking_min_notice_hours);
