@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { JobImport, ImportConfirmOverrides } from "@/types/import";
 import type { SigningType } from "@/types/user";
+import { useAuth } from "@/hooks/useAuth";
+import { acceptedSigningTypes } from "@/lib/booking";
 
 const SIGNING_TYPES: SigningType[] = [
   "GENERAL",
@@ -88,7 +90,12 @@ export function ImportEditModal({
   onBack,
   onSave,
 }: ImportEditModalProps) {
+  const { user } = useAuth();
   const parsedTime = overrides.appointment_time ?? imp.parsed_appointment_time;
+  const importedSigningType =
+    overrides.signing_type ?? imp.parsed_signing_type ?? "GENERAL";
+  const acceptedTypes = acceptedSigningTypes(user);
+  const unsupportedImportedType = !acceptedTypes.includes(importedSigningType);
 
   const [address, setAddress] = useState(
     overrides.address ?? imp.parsed_address ?? "",
@@ -96,7 +103,7 @@ export function ImportEditModal({
   const [date, setDate] = useState(toDateInput(parsedTime));
   const [time, setTime] = useState(toTimeInput(parsedTime));
   const [signingType, setSigningType] = useState<SigningType>(
-    overrides.signing_type ?? imp.parsed_signing_type ?? "GENERAL",
+    unsupportedImportedType ? "GENERAL" : importedSigningType,
   );
   const [fee, setFee] = useState(
     String(overrides.fee ?? Number(imp.parsed_fee ?? 0)),
@@ -195,6 +202,15 @@ export function ImportEditModal({
           changes are validated before adding to schedule.
         </div>
       </div>
+      {unsupportedImportedType && (
+        <div className="alert al-amber mb-3">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber flex-shrink-0" />
+          <div className="text-[11px] leading-[1.3]">
+            {SIGNING_LABELS[importedSigningType]} is not in your accepted signing
+            types, so this import was set to General for review.
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2.5">
         <div className="field">
@@ -308,7 +324,9 @@ export function ImportEditModal({
               value={signingType}
               onChange={(e) => setSigningType(e.target.value as SigningType)}
             >
-              {SIGNING_TYPES.map((t) => (
+              {SIGNING_TYPES.filter(
+                (t) => acceptedTypes.includes(t) || t === "GENERAL",
+              ).map((t) => (
                 <option key={t} value={t}>
                   {SIGNING_LABELS[t]}
                 </option>

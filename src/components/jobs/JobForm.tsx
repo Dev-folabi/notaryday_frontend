@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Clock, DollarSign, User, Phone, Mail, Check, X } from "lucide-react";
 import { useCreateJob, useUpdateJob, useJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
+import { useAuth } from "@/hooks/useAuth";
 import type { SigningType } from "@/types/user";
+import { acceptedSigningTypes } from "@/lib/booking";
 import { toDateInputValue, toTimeInputValue, errMsg } from "@/lib/utils";
 
 const SERVICES: { label: string; value: SigningType }[] = [
@@ -76,6 +78,7 @@ export default function JobForm({
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const { addToast } = useUIStore();
+  const { user } = useAuth();
   const { data: job, isLoading } = useJob(jobId ?? "");
 
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -87,6 +90,16 @@ export default function JobForm({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const addrWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mode !== "new") return;
+    const accepted = acceptedSigningTypes(user);
+    if (!accepted.includes(selectedType)) {
+      const next = accepted[0] ?? "GENERAL";
+      setSelectedType(next);
+      setForm((current) => ({ ...current, signing_type: next }));
+    }
+  }, [mode, selectedType, user]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -362,7 +375,11 @@ export default function JobForm({
           <div className="field">
             <label className="lbl">Signing type <span className="req">*</span></label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {SERVICES.map((t) => (
+              {SERVICES.filter(
+                (t) =>
+                  acceptedSigningTypes(user).includes(t.value) ||
+                  (mode === "edit" && t.value === selectedType),
+              ).map((t) => (
                 <div
                   key={t.value}
                   className={`tpill ${selectedType === t.value ? "on" : ""}`}

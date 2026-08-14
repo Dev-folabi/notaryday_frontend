@@ -19,6 +19,8 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import CITTVerdictCard from "./CITTVerdictCard";
+import { acceptedSigningTypes } from "@/lib/booking";
+import type { SigningType } from "@/types/user";
 
 const cittSchema = z.object({
   address: z.string().min(5, "Address is required"),
@@ -46,6 +48,7 @@ export default function CITTModal() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
   const isPro = user?.plan && user.plan !== "FREE";
+  const defaultSigningType = acceptedSigningTypes(user)[0] ?? "GENERAL";
 
   const {
     control,
@@ -60,7 +63,7 @@ export default function CITTModal() {
     defaultValues: {
       address: "",
       appointment_time: "",
-      signing_type: "GENERAL",
+      signing_type: defaultSigningType,
       fee: 0,
       platform_fee: 0,
       signing_duration_mins: 45,
@@ -79,14 +82,22 @@ export default function CITTModal() {
       resetForm({
         address: cittPreFill.address || "",
         appointment_time: cittPreFill.time || "",
-        signing_type: (cittPreFill.type as any) || "GENERAL",
+        signing_type: (cittPreFill.type as SigningType) || defaultSigningType,
         fee: cittPreFill.fee || 0,
         platform_fee: 0,
         signing_duration_mins: 45,
         scanback_duration_mins: 30,
       });
     }
-  }, [isCITTOpen, cittPreFill, resetForm]);
+  }, [isCITTOpen, cittPreFill, defaultSigningType, resetForm]);
+
+  useEffect(() => {
+    if (!isCITTOpen || cittPreFill?.type) return;
+    const current = watch("signing_type");
+    if (!acceptedSigningTypes(user).includes(current)) {
+      setValue("signing_type", defaultSigningType);
+    }
+  }, [cittPreFill?.type, defaultSigningType, isCITTOpen, setValue, user, watch]);
 
   // Click outside for address autocomplete
   useEffect(() => {
@@ -338,7 +349,12 @@ export default function CITTModal() {
                         { v: "PURCHASE_CLOSING", l: "Purchase Closing" },
                         { v: "FIELD_INSPECTION", l: "Field Inspection" },
                         { v: "APOSTILLE", l: "Apostille" },
-                      ].map((t) => (
+                      ].filter(
+                        (t) =>
+                          acceptedSigningTypes(user).includes(
+                            t.v as SigningType,
+                          ) || t.v === field.value,
+                      ).map((t) => (
                         <div
                           key={t.v}
                           onClick={() => field.onChange(t.v)}

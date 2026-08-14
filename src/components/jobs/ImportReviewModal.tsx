@@ -8,6 +8,9 @@ import { Check, Mail, Pencil, Info, Loader2, AlertTriangle, X } from "lucide-rea
 import type { JobImport } from "@/types/import";
 import type { ImportConfirmOverrides } from "@/types/import";
 import type { CITTCheckResponse } from "@/types/citt";
+import { useAuth } from "@/hooks/useAuth";
+import { acceptedSigningTypes } from "@/lib/booking";
+import type { SigningType } from "@/types/user";
 
 const PENDING_STATUSES = ["QUEUED", "PROCESSING"];
 
@@ -40,10 +43,18 @@ export function ImportReviewModal({
   onDecline,
   isConfirming = false,
 }: ImportReviewModalProps) {
+  const { user } = useAuth();
   const address = overrides.address ?? imp.parsed_address ?? "";
   const appointmentTime =
     overrides.appointment_time ?? imp.parsed_appointment_time;
-  const signingType = overrides.signing_type ?? imp.parsed_signing_type ?? "GENERAL";
+  const importedSigningType =
+    overrides.signing_type ?? imp.parsed_signing_type ?? "GENERAL";
+  const unsupportedImportedType = !acceptedSigningTypes(user).includes(
+    importedSigningType as SigningType,
+  );
+  const signingType: SigningType = unsupportedImportedType
+    ? "GENERAL"
+    : (importedSigningType as SigningType);
   const fee = overrides.fee ?? Number(imp.parsed_fee ?? 0);
   const platformFee = overrides.platform_fee ?? Number(imp.parsed_platform_fee ?? 0);
   const clientName = overrides.client_name ?? imp.parsed_client_name;
@@ -123,6 +134,16 @@ export function ImportReviewModal({
           <div className="text-[11px] leading-[1.3]">
             This import failed to parse. You can retry by uploading a new
             screenshot or forwarding the email again.
+          </div>
+        </div>
+      )}
+
+      {unsupportedImportedType && (
+        <div className="alert al-amber mb-3 flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber flex-shrink-0" />
+          <div className="text-[11px] leading-[1.3]">
+            {signingLabel(importedSigningType)} is not in your accepted signing
+            types, so this import was set to General for review.
           </div>
         </div>
       )}
@@ -368,7 +389,13 @@ export function ImportReviewModal({
       <div className="flex flex-col gap-2 mt-4">
         <button
           className="btn-teal h-10"
-          onClick={() => onConfirm(overrides)}
+          onClick={() =>
+            onConfirm(
+              unsupportedImportedType
+                ? { ...overrides, signing_type: "GENERAL" }
+                : overrides,
+            )
+          }
           disabled={isConfirming || pending}
         >
           {pending ? (

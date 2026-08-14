@@ -1,4 +1,4 @@
-import type { SigningType } from "@/types/user";
+import type { SigningType, User } from "@/types/user";
 
 export interface BookingServiceInput {
   signing_type: SigningType;
@@ -35,6 +35,15 @@ export const BOOKING_SERVICE_LIST: BookingServiceInput[] = (
   signing_type,
   ...BOOKING_SERVICE_DEFAULTS[signing_type],
 }));
+
+export const ALL_SIGNING_TYPES = Object.keys(
+  BOOKING_SERVICE_DEFAULTS,
+) as SigningType[];
+
+export function acceptedSigningTypes(user?: User | null): SigningType[] {
+  const saved = user?.signing_defaults?.map((item) => item.signing_type) ?? [];
+  return saved.length > 0 ? saved : ALL_SIGNING_TYPES;
+}
 
 const SERVICE_ALIASES: Record<string, SigningType> = {
   general: "GENERAL",
