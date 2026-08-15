@@ -54,6 +54,20 @@ const VARIABLES: Record<string, string[]> = {
   client_eta: ["client_name", "notary_name", "eta_time"],
 };
 
+const SAMPLE_VARS: Record<string, string> = {
+  client_name: "Marcus Johnson",
+  notary_name: "Sarah Mitchell",
+  appointment_time: "2:00 PM",
+  address: "2201 E Century Blvd, Inglewood, CA",
+  date: "March 20, 2026",
+  service_type: "Hybrid Signing",
+  invoice_number: "ND-2026-0047",
+  total: "145.00",
+  payment_info: "Zelle: sarah@email.com",
+  eta_time: "2:15 PM",
+  alternative_times: "March 21 at 10:00 AM, March 22 at 3:00 PM",
+};
+
 export default function EmailTemplatesManager({
   embedded = false,
 }: {
@@ -69,7 +83,9 @@ export default function EmailTemplatesManager({
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["email-templates"],
     queryFn: async () => {
-      const res = (await api.get("/email-templates")) as unknown as ApiResponse<EmailTemplate[]>;
+      const res = (await api.get("/email-templates")) as unknown as ApiResponse<
+        EmailTemplate[]
+      >;
       return res.data;
     },
   });
@@ -115,24 +131,28 @@ export default function EmailTemplatesManager({
 
   const renderPreview = (html: string) => {
     let rendered = html;
-    const sampleVars: Record<string, string> = {
-      client_name: "Marcus Johnson",
-      notary_name: "Sarah Mitchell",
-      appointment_time: "2:00 PM",
-      address: "2201 E Century Blvd, Inglewood, CA",
-      date: "March 20, 2026",
-      service_type: "Hybrid Signing",
-      invoice_number: "INV-2026-0047",
-      total: "145.00",
-      payment_info: "Zelle: sarah@email.com",
-      eta_time: "2:15 PM",
-      alternative_times:
-        "<li>March 21 at 10:00 AM</li><li>March 22 at 3:00 PM</li>",
-    };
-    for (const [key, value] of Object.entries(sampleVars)) {
+    for (const [key, value] of Object.entries(SAMPLE_VARS)) {
       rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
     }
+    rendered = rendered.replace(
+      /\{\{#alternative_times\}\}[\s\S]*?\{\{\/alternative_times\}\}/g,
+      rendered.includes("March 21")
+        ? "<p>Here are some alternative times that may work:</p><ul><li>March 21 at 10:00 AM</li><li>March 22 at 3:00 PM</li></ul>"
+        : "",
+    );
     return rendered;
+  };
+
+  const previewShell = (type: string, subject: string, body: string) => {
+    const labels: Record<string, string> = {
+      appointment_reminder:
+        "Appointment reminder · Sent on behalf of Sarah Mitchell",
+      invoice: "Invoice #ND-2026-0047 · Powered by Notary Day",
+      booking_confirmation: "Notary Day · Booking confirmation",
+      booking_declined: "Notary Day · Booking request",
+      client_eta: "Client ETA update",
+    };
+    return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;max-width:620px"><div style="background:#0F2C4E;padding:16px 20px;display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#fff">Notary Day</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">${labels[type] ?? "Client email"}</div></div><div style="font-size:11px;color:rgba(255,255,255,.5)">Mar 20, 2026</div></div><div style="padding:22px"><div style="font-size:12px;color:#64748B;margin-bottom:4px">Subject</div><div style="font-size:14px;font-weight:700;color:#0F2C4E;margin-bottom:18px">${renderPreview(subject)}</div>${renderPreview(body)}</div><div style="padding:14px 22px;background:#F8FAFC;border-top:1px solid #E2E8F0;color:#94A3B8;font-size:10px">Powered by Notary Day</div></div>`;
   };
 
   return (
@@ -222,9 +242,9 @@ export default function EmailTemplatesManager({
                     Body:
                   </div>
                   <div
-                    className="prose prose-sm max-w-none border border-border rounded-8px p-4"
+                    className="max-w-none rounded-8px"
                     dangerouslySetInnerHTML={{
-                      __html: renderPreview(editBody),
+                      __html: previewShell(activeType, editSubject, editBody),
                     }}
                   />
                 </div>
@@ -243,13 +263,14 @@ export default function EmailTemplatesManager({
                   </div>
                   <div>
                     <label className="font-inter text-xs font-medium text-slate-body block mb-1.5">
-                      Email body (HTML)
+                      Message content
                     </label>
                     <textarea
                       value={editBody}
                       onChange={(e) => setEditBody(e.target.value)}
-                      rows={12}
-                      className="w-full border border-border rounded-8px p-3 font-mono text-xs leading-relaxed resize-y focus:border-interactive-blue focus:ring-2 focus:ring-blue-100 outline-none"
+                      rows={8}
+                      placeholder="Write the message your client will receive. Use the variable chips above for job details."
+                      className="w-full border border-border rounded-8px p-3 font-inter text-xs leading-relaxed resize-y focus:border-interactive-blue focus:ring-2 focus:ring-blue-100 outline-none"
                     />
                   </div>
                 </div>
