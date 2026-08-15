@@ -541,7 +541,7 @@ export default function BookingDetailPage() {
                       setAltTimes((prev) => [...prev, new Date(altDraft).toISOString()]);
                       setAltDraft("");
                     }}
-                    className="btn-sm"
+                    className="bg-blue text-white border border-blue rounded-[8px] h-[34px] font-inter text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 px-3 whitespace-nowrap transition-colors hover:bg-blue-hover"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add
                   </button>

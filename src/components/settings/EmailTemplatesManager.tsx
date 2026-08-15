@@ -65,7 +65,86 @@ const SAMPLE_VARS: Record<string, string> = {
   total: "145.00",
   payment_info: "Zelle: sarah@email.com",
   eta_time: "2:15 PM",
-  alternative_times: "March 21 at 10:00 AM, March 22 at 3:00 PM",
+  alternative_times:
+    "<li>March 21 at 10:00 AM</li><li>March 22 at 3:00 PM</li>",
+};
+
+/** Legacy HTML bodies -> plain text for the editor (blank line = paragraph). */
+const htmlToText = (html: string) =>
+  html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6])>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const escapeHtmlText = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+/** Plain text -> HTML (mirrors the backend template-text util). */
+const textToHtml = (text: string): string => {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let buf: string[] = [];
+  const flush = () => {
+    if (!buf.length) return;
+    const para = buf.join("\n");
+    const bare = para.match(/^\{\{([^{}]+)\}\}$/);
+    if (bare && bare[1] === "alternative_times") {
+      out.push(`<ul>{{${bare[1]}}}</ul>`);
+    } else {
+      const html = para
+        .split(/(\{\{[^{}]*\}\})/g)
+        .map((part) =>
+          part.startsWith("{{") && part.endsWith("}}")
+            ? part
+            : escapeHtmlText(part),
+        )
+        .join("")
+        .replace(/\n/g, "<br>");
+      out.push(`<p>${html}</p>`);
+    }
+    buf = [];
+  };
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (/^\{\{#[^{}]+\}\}$/.test(line) || /^\{\{\/[^{}]+\}\}$/.test(line)) {
+      flush();
+      out.push(line);
+      continue;
+    }
+    if (!line) {
+      flush();
+      continue;
+    }
+    buf.push(line);
+  }
+  flush();
+  return out.join("");
+};
+
+const substituteVars = (text: string) => {
+  let out = text;
+  for (const [key, value] of Object.entries(SAMPLE_VARS)) {
+    out = out.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+  }
+  return out;
 };
 
 export default function EmailTemplatesManager({
@@ -125,22 +204,17 @@ export default function EmailTemplatesManager({
   const startEdit = (template: EmailTemplate) => {
     setActiveType(template.type);
     setEditSubject(template.subject);
-    setEditBody(template.body);
+    setEditBody(htmlToText(template.body));
     setPreview(false);
   };
 
-  const renderPreview = (html: string) => {
-    let rendered = html;
-    for (const [key, value] of Object.entries(SAMPLE_VARS)) {
-      rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
-    }
-    rendered = rendered.replace(
-      /\{\{#alternative_times\}\}[\s\S]*?\{\{\/alternative_times\}\}/g,
-      rendered.includes("March 21")
-        ? "<p>Here are some alternative times that may work:</p><ul><li>March 21 at 10:00 AM</li><li>March 22 at 3:00 PM</li></ul>"
-        : "",
+  const renderPreview = (text: string) => {
+    let body = text;
+    body = body.replace(
+      /\{\{#alternative_times\}\}([\s\S]*?)\{\{\/alternative_times\}\}/g,
+      "$1",
     );
-    return rendered;
+    return substituteVars(textToHtml(body));
   };
 
   const previewShell = (type: string, subject: string, body: string) => {
@@ -152,7 +226,7 @@ export default function EmailTemplatesManager({
       booking_declined: "Notary Day · Booking request",
       client_eta: "Client ETA update",
     };
-    return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;max-width:620px"><div style="background:#0F2C4E;padding:16px 20px;display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#fff">Notary Day</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">${labels[type] ?? "Client email"}</div></div><div style="font-size:11px;color:rgba(255,255,255,.5)">Mar 20, 2026</div></div><div style="padding:22px"><div style="font-size:12px;color:#64748B;margin-bottom:4px">Subject</div><div style="font-size:14px;font-weight:700;color:#0F2C4E;margin-bottom:18px">${renderPreview(subject)}</div>${renderPreview(body)}</div><div style="padding:14px 22px;background:#F8FAFC;border-top:1px solid #E2E8F0;color:#94A3B8;font-size:10px">Powered by Notary Day</div></div>`;
+    return `<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;max-width:620px"><div style="background:#0F2C4E;padding:16px 20px;display:flex;justify-content:space-between;gap:12px"><div><div style="font-family:Arial,sans-serif;font-size:16px;font-weight:700;color:#fff">Notary Day</div><div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">${labels[type] ?? "Client email"}</div></div><div style="font-size:11px;color:rgba(255,255,255,.5)">Mar 20, 2026</div></div><div style="padding:22px"><div style="font-size:12px;color:#64748B;margin-bottom:4px">Subject</div><div style="font-size:14px;font-weight:700;color:#0F2C4E;margin-bottom:18px">${substituteVars(subject)}</div>${renderPreview(body)}</div><div style="padding:14px 22px;background:#F8FAFC;border-top:1px solid #E2E8F0;color:#94A3B8;font-size:10px">Powered by Notary Day</div></div>`;
   };
 
   return (
@@ -236,7 +310,7 @@ export default function EmailTemplatesManager({
                     Subject:
                   </div>
                   <div className="font-inter text-sm font-semibold text-primary-navy mb-4">
-                    {renderPreview(editSubject)}
+                    {substituteVars(editSubject)}
                   </div>
                   <div className="font-inter text-xs text-slate-secondary mb-1">
                     Body:
