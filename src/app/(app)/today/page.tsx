@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,13 +43,7 @@ export default function TodayPage() {
   const { activeDate, setActiveDate } = useUIStore();
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const today = new Date();
-  const todayIso = toDateInputValue(today);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday start
-
-  // Ensure activeDate is today on mount
-  useEffect(() => {
-    setActiveDate(todayIso);
-  }, [setActiveDate, todayIso]);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(weekStart, i);
