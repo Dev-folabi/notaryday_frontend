@@ -79,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TopNav isPro={isPro} initials={initials} />
 
         {/* Page content — offset for mobile top bar (56px) */}
-        <div className="flex-1 min-h-0 pt-[56px] lg:pt-0 pb-[64px] lg:pb-0">
+        <div className="flex-1 min-h-0 pt-[56px] lg:pt-0 pb-[72px] lg:pb-0">
           {children}
         </div>
 

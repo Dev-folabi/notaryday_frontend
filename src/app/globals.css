@@ -736,7 +736,7 @@ textarea {
 
 /* Toast */
 #toast-container {
-  @apply fixed bottom-[76px] left-1/2 -translate-x-1/2 flex flex-col gap-2 z-[200] pointer-events-none w-[92%] max-w-[380px] items-center;
+  @apply fixed bottom-[80px] left-1/2 -translate-x-1/2 flex flex-col gap-2 z-[200] pointer-events-none w-[92%] max-w-[380px] items-center;
 }
 .toast {
   @apply flex items-center gap-2.5 p-2.5 lg:p-3 rounded-[10px] font-inter text-[13px] font-medium shadow-[0_8px_24px_rgba(0,0,0,0.16)] pointer-events-auto animate-toastIn w-full;
