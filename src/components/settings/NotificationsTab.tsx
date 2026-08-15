@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
+import { queryKeys } from "@/lib/queryClient";
 import { usersApi } from "@/api/users.api";
 import {
   disablePushNotifications,
@@ -94,6 +96,7 @@ const DEFAULT_NOTIF_PREFS: Record<string, boolean> = {
 export default function NotificationsTab() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
+  const qc = useQueryClient();
 
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>(() => {
     const stored = (user?.settings as { notification_prefs?: Record<string, boolean> } | null)
@@ -110,6 +113,7 @@ export default function NotificationsTab() {
   const saveNotifPrefs = async () => {
     try {
       await usersApi.updateSettings({ notificationPrefs: notifPrefs });
+      await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       addToast({ type: "success", title: "Notification preferences saved" });
     } catch {
       addToast({ type: "error", title: "Could not save notification preferences" });
@@ -128,12 +132,14 @@ export default function NotificationsTab() {
         const next = { ...notifPrefs, push_enabled: false };
         setNotifPrefs(next);
         await usersApi.updateSettings({ notificationPrefs: next });
+        await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       } else {
         await enablePushNotifications();
         setPushReady(true);
         const next = { ...notifPrefs, push_enabled: true };
         setNotifPrefs(next);
         await usersApi.updateSettings({ notificationPrefs: next });
+        await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       }
     } catch (error) {
       addToast({

@@ -463,7 +463,7 @@ export default function CITTVerdictCard({
               Want Notary Day to automatically plan your whole day around this
               job?
             </div>
-            <button className="bg-[#F59E0B] text-[#0F2C4E] px-3.5 h-9 rounded-[8px] text-[12px] font-bold flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+            <button className="bg-[#FBBF24] text-[#0F2C4E] px-3.5 h-9 rounded-[8px] text-[12px] font-bold flex items-center gap-1.5 whitespace-nowrap shadow-sm">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Upgrade to Pro</span>
             </button>

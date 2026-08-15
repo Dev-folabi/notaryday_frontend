@@ -133,7 +133,7 @@ The design system is implemented as a combination of Tailwind config extensions 
 | `bg`               | `#F8FAFC` | Page canvas                                                |
 | `scanback-bg`      | `#FEF3C7` | Scanback time-block calendar background                    |
 | `gap-finder-bg`    | `#EDE9FE` | Gap opportunity card background                            |
-| `pro-gold`         | `#F59E0B` | Pro badge, upgrade prompts, annual plan highlight          |
+| `pro-gold`         | `#FBBF24` | Pro badge, upgrade prompts, annual plan highlight          |
 
 ### Typography
 

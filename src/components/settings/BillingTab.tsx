@@ -11,6 +11,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CreditCard, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 
+// Billing-management actions are hidden during the trial rollout.
+// Restore them by flipping this to true — code stays in place.
+const SHOW_BILLING_MANAGEMENT = false;
+
 export default function BillingTab() {
   const { user } = useAuth();
   const { addToast } = useUIStore();
@@ -24,11 +28,14 @@ export default function BillingTab() {
       const res = (await billingApi.getStatus()) as unknown as ApiResponse<{
         plan?: string;
         planExpiresAt?: string | null;
+        isTrial?: boolean;
       }>;
       return res.data;
     },
     retry: false,
   });
+
+  const isTrial = billingStatus?.isTrial ?? false;
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -83,44 +90,50 @@ export default function BillingTab() {
         <div className="flex justify-between gap-2.5 mb-2.5 flex-wrap">
           <div>
             <div className="flex gap-1.5 mb-1 flex-wrap">
-              <span className={cn("chip", isPro ? "c-pro" : "c-free")}>{isPro ? "pro" : "free"}</span>
+              <span className={cn("chip", isPro ? "c-pro" : "c-free")}>{isTrial ? "pro trial" : isPro ? "pro" : "free"}</span>
               <span className="font-inter text-[11px] text-teal-success font-semibold flex gap-1 items-center"><Check className="w-3 h-3" /> Active</span>
             </div>
             <div className="font-sora text-[18px] font-bold text-navy">
-              ${isPro ? "19" : "0"} <span className="font-inter text-[12px] font-normal text-slate-secondary">{isPro ? "/month" : "/forever"}</span>
+              {isTrial ? "Free" : isPro ? "$19" : "$0"} <span className="font-inter text-[12px] font-normal text-slate-secondary">{isTrial ? "for 30 days" : isPro ? "/month" : "/forever"}</span>
             </div>
             <div className="font-inter text-[11px] text-slate-secondary mt-0.5">
-              Next renewal: <strong className="text-navy">{isPro ? renewalDate : "—"}</strong>
+              {isTrial ? (
+                <>Trial ends: <strong className="text-navy">{renewalDate}</strong></>
+              ) : (
+                <>Next renewal: <strong className="text-navy">{isPro ? renewalDate : "—"}</strong></>
+              )}
             </div>
           </div>
-          {isPro && (
+          {isPro && SHOW_BILLING_MANAGEMENT && (
             <button className="btn-sm flex-shrink-0" onClick={handleSwitchAnnual}>
               Switch to Annual, save $99
             </button>
           )}
         </div>
         <div className="h-px bg-border" />
-        <div className="flex justify-between py-2.5 border-b border-border gap-2"><span className="font-inter text-[11px] text-slate-secondary">Plan</span><span className="font-inter text-[11px] font-semibold text-navy">{isPro ? "Pro Monthly" : "Free"}</span></div>
-        <div className="flex justify-between py-2.5 border-b border-border gap-2"><span className="font-inter text-[11px] text-slate-secondary">Billing cycle</span><span className="font-inter text-[11px] font-semibold text-navy">{isPro ? "Monthly" : "—"}</span></div>
+        <div className="flex justify-between py-2.5 border-b border-border gap-2"><span className="font-inter text-[11px] text-slate-secondary">Plan</span><span className="font-inter text-[11px] font-semibold text-navy">{isTrial ? "Pro Trial (Monthly)" : isPro ? "Pro Monthly" : "Free"}</span></div>
+        <div className="flex justify-between py-2.5 border-b border-border gap-2"><span className="font-inter text-[11px] text-slate-secondary">Billing cycle</span><span className="font-inter text-[11px] font-semibold text-navy">{isTrial ? "Trial" : isPro ? "Monthly" : "—"}</span></div>
       </div>
 
-      <div className="card p-4 mb-4">
-        <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center"><CreditCard className="w-4 h-4" /> Manage billing</div>
-        <div className="flex justify-between gap-2.5 py-2.5 border-b border-border flex-wrap">
-          <div className="flex-1 min-w-[180px]">
-            <div className="font-inter text-[12px] font-semibold text-navy">Update payment method</div>
-            <div className="font-inter text-[11px] text-slate-secondary mt-0.5">Change or update the card on file via Stripe portal.</div>
+      {SHOW_BILLING_MANAGEMENT && (
+        <div className="card p-4 mb-4">
+          <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center"><CreditCard className="w-4 h-4" /> Manage billing</div>
+          <div className="flex justify-between gap-2.5 py-2.5 border-b border-border flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <div className="font-inter text-[12px] font-semibold text-navy">Update payment method</div>
+              <div className="font-inter text-[11px] text-slate-secondary mt-0.5">Change or update the card on file via Stripe portal.</div>
+            </div>
+            <button className="btn-sm" onClick={handlePortal}>Update card</button>
           </div>
-          <button className="btn-sm" onClick={handlePortal}>Update card</button>
-        </div>
-        <div className="flex justify-between gap-2.5 py-2.5 flex-wrap">
-          <div className="flex-1 min-w-[180px]">
-            <div className="font-inter text-[12px] font-semibold text-navy">View invoice history</div>
-            <div className="font-inter text-[11px] text-slate-secondary mt-0.5">Download receipts for all past payments.</div>
+          <div className="flex justify-between gap-2.5 py-2.5 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <div className="font-inter text-[12px] font-semibold text-navy">View invoice history</div>
+              <div className="font-inter text-[11px] text-slate-secondary mt-0.5">Download receipts for all past payments.</div>
+            </div>
+            <button className="btn-sm" onClick={handlePortal}>View invoices</button>
           </div>
-          <button className="btn-sm" onClick={handlePortal}>View invoices</button>
         </div>
-      </div>
+      )}
 
       {!isPro && (
         <div className="card p-4 mb-4">
@@ -133,7 +146,7 @@ export default function BillingTab() {
         </div>
       )}
 
-      {isPro && (
+      {isPro && SHOW_BILLING_MANAGEMENT && (
         <div className="card p-4 mb-4">
           <div className="flex justify-between gap-2.5 flex-wrap">
             <div className="flex-1 min-w-[180px]">

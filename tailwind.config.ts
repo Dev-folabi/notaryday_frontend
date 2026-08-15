@@ -51,12 +51,12 @@ export default {
         scanback: "#FEF3C7",
         "gap-finder": "#EDE9FE",
 
-        pro: "#F59E0B",
-        gold: "#F59E0B",
+        pro: "#FBBF24",
+        gold: "#FBBF24",
 
         // Aliases heavily used in UI
         "primary-navy": "#0F2C4E",
-        "pro-gold": "#F59E0B",
+        "pro-gold": "#FBBF24",
         "teal-success": "#0E7B6C",
         "amber-warning": "#D97706",
         "interactive-blue": "#2563EB",
