@@ -32,6 +32,7 @@ export interface ApiError {
 const api: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1",
   withCredentials: false,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },

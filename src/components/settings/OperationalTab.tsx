@@ -69,6 +69,7 @@ export default function OperationalTab() {
   const [suggestions, setSuggestions] = useState<AddressFeature[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
   const addrWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function OperationalTab() {
     );
 
   const saveOperational = async () => {
+    setSaving(true);
     try {
       const existing = new Map(
         (user?.signing_defaults ?? []).map((s) => [s.signing_type, s]),
@@ -155,6 +157,8 @@ export default function OperationalTab() {
       addToast({ type: "success", title: "Operational settings saved" });
     } catch {
       addToast({ type: "error", title: "Could not save operational settings" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -252,10 +256,16 @@ export default function OperationalTab() {
       <div className="flex justify-end mt-3.5">
         <button
           onClick={saveOperational}
+          disabled={saving}
           className="btn-p"
-          style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}
+          style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px", opacity: saving ? 0.7 : 1 }}
         >
-          <Check className="w-4 h-4" /> Save operational
+          {saving ? (
+            <span className="w-3.5 h-3.5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}{" "}
+          {saving ? "Saving…" : "Save operational"}
         </button>
       </div>
     </div>

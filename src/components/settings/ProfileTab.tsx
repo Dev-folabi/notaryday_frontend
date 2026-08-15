@@ -65,26 +65,34 @@ export default function ProfileTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
 
   const setPay = <K extends keyof PaymentInfo>(k: K, v: string) =>
     setPayment((p) => ({ ...p, [k]: v }));
 
   const saveProfile = async () => {
+    setSavingProfile(true);
     try {
       await usersApi.updateProfile({ fullName, phone, bio, state });
       await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       addToast({ type: "success", title: "Profile saved" });
     } catch {
       addToast({ type: "error", title: "Could not save profile" });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
   const savePayment = async () => {
+    setSavingPayment(true);
     try {
       await usersApi.updateSettings({ paymentInfo: payment });
       addToast({ type: "success", title: "Payment details saved" });
     } catch {
       addToast({ type: "error", title: "Could not save payment details" });
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -121,7 +129,7 @@ export default function ProfileTab() {
           </div>
         </div>
         <div className="field"><label className="lbl">Short bio</label><textarea className="ta" value={bio} onChange={(e) => setBio(e.target.value)} /></div>
-        <div className="flex justify-end mt-2"><button onClick={saveProfile} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}><Check className="w-4 h-4" /> Save profile</button></div>
+        <div className="flex justify-end mt-2"><button onClick={saveProfile} disabled={savingProfile} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px", opacity: savingProfile ? 0.7 : 1 }}>{savingProfile ? <span className="w-3.5 h-3.5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" /> : <Check className="w-4 h-4" />} {savingProfile ? "Saving…" : "Save profile"}</button></div>
       </div>
 
       <div className="card p-4 mb-4">
@@ -140,7 +148,7 @@ export default function ProfileTab() {
           <div className="field"><label className="lbl">Routing (last 4)</label><input className="inp" maxLength={4} placeholder="5678" value={payment.routing_last4} onChange={(e) => setPay("routing_last4", e.target.value)} /></div>
         </div>
         <div className="field"><label className="lbl">Other payment info</label><input className="inp" placeholder="e.g. Cash, Check payable to…" value={payment.other} onChange={(e) => setPay("other", e.target.value)} /></div>
-        <div className="flex justify-end mt-2"><button onClick={savePayment} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}><Check className="w-4 h-4" /> Save payment details</button></div>
+        <div className="flex justify-end mt-2"><button onClick={savePayment} disabled={savingPayment} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px", opacity: savingPayment ? 0.7 : 1 }}>{savingPayment ? <span className="w-3.5 h-3.5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" /> : <Check className="w-4 h-4" />} {savingPayment ? "Saving…" : "Save payment details"}</button></div>
       </div>
 
       <div className="card p-4 mb-4 border" style={{ borderColor: "var(--red-b)" }}>

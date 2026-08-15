@@ -105,18 +105,22 @@ export default function NotificationsTab() {
   });
   const [pushReady, setPushReady] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   useEffect(() => {
     getPushSubscription().then((subscription) => setPushReady(Boolean(subscription)));
   }, []);
 
   const saveNotifPrefs = async () => {
+    setSavingPrefs(true);
     try {
       await usersApi.updateSettings({ notificationPrefs: notifPrefs });
       await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       addToast({ type: "success", title: "Notification preferences saved" });
     } catch {
       addToast({ type: "error", title: "Could not save notification preferences" });
+    } finally {
+      setSavingPrefs(false);
     }
   };
 
@@ -221,7 +225,7 @@ export default function NotificationsTab() {
           </div>
         ))}
       </div>
-      <div className="flex justify-end mt-3"><button onClick={saveNotifPrefs} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}><Check className="w-4 h-4" /> Save preferences</button></div>
+      <div className="flex justify-end mt-3"><button onClick={saveNotifPrefs} disabled={savingPrefs} className="btn-p" style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px", opacity: savingPrefs ? 0.7 : 1 }}>{savingPrefs ? <span className="w-3.5 h-3.5 border-2 border-border border-t-interactive-blue rounded-full animate-spin" /> : <Check className="w-4 h-4" />} {savingPrefs ? "Saving…" : "Save preferences"}</button></div>
     </>
   );
 }

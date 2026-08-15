@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import CITTModal from "@/components/citt/CITTModal";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 
 const ONBOARDING_STEPS = [
   ROUTES.ONBOARDING.HOME,
@@ -87,6 +88,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Global CITT Modal */}
         <CITTModal />
+
+        {/* PWA install prompt */}
+        <InstallPrompt />
       </main>
     </div>
   );

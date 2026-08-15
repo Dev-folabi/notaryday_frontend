@@ -953,10 +953,13 @@ textarea {
 
 @media (max-width: 767px) {
   .con {
-    @apply p-4;
+    @apply pt-2.5 px-3.5 pb-4;
+  }
+  .con-narrow {
+    @apply pt-2.5 px-3.5 pb-4;
   }
   .ph {
-    @apply px-3.5 py-3;
+    @apply px-3.5 py-2;
   }
   .g3 {
     @apply grid-cols-1;
