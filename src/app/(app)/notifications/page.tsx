@@ -73,7 +73,7 @@ export default function NotificationsPage() {
           <Bell className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
           <div className="font-inter text-[11px] leading-[1.4]">
             These are your in app notifications. Payment failure and plan expiry
-            are always sent. Manage preferences in Account — Notifications.
+            are always sent. Manage preferences in Account &gt; Notifications.
           </div>
         </div>
 

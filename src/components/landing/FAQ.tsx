@@ -4,7 +4,7 @@ export function FAQ() {
   const faqs = [
     [
       "Does CITT really work on the free plan?",
-      "Yes — fully and without limits. The check uses OpenRouteService for real drive times, the current IRS mileage rate, and your actual schedule including scanback windows. There is no capped or degraded version on the free plan. It is the acquisition feature — we want every notary to use it.",
+      "Yes, fully and without limits. The check uses OpenRouteService for real drive times, the current IRS mileage rate, and your actual schedule including scanback windows. There is no capped or degraded version on the free plan. It is the acquisition feature; we want every notary to use it.",
     ],
     [
       "What is a scanback and why does it matter?",
@@ -16,11 +16,11 @@ export function FAQ() {
     ],
     [
       "How does the booking page work?",
-      "You get a public URL at notaryday.app/book/username. Clients submit requests. The system checks your schedule in real time — including drive time and scanback windows — before confirming. You never get a booking that conflicts with an existing commitment.",
+      "You get a public URL at notaryday.app/book/username. Clients submit requests. The system checks your schedule in real time, including drive time and scanback windows, before confirming. You never get a booking that conflicts with an existing commitment.",
     ],
     [
       "Is my data safe?",
-      "Yes. Passwords are hashed with bcrypt and never stored in plain text. Payment details are handled entirely by Stripe — Notary Day never stores card numbers. Data is hosted on Railway/Render with automated backups.",
+      "Yes. Passwords are hashed with bcrypt and never stored in plain text. Payment details are handled entirely by Stripe. Notary Day never stores card numbers. Data is hosted on Railway/Render with automated backups.",
     ],
     [
       "What happens to my data if I cancel Pro?",

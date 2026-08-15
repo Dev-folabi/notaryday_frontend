@@ -12,7 +12,7 @@ import { Check, CreditCard, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 
 // Billing-management actions are hidden during the trial rollout.
-// Restore them by flipping this to true — code stays in place.
+// Restore them by flipping this to true; code stays in place.
 const SHOW_BILLING_MANAGEMENT = false;
 
 export default function BillingTab() {
@@ -165,11 +165,11 @@ export default function BillingTab() {
               <div className="flex items-center gap-2 mb-2"><X className="w-5 h-5 text-red" /><span className="font-sora font-bold text-[16px]">Cancel Pro plan</span></div>
               <div className="alert al-amber mb-4">
                 <span className="text-amber flex-shrink-0 mt-0.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg></span>
-                <div className="font-inter text-[11px] leading-[1.4]">Your Pro access continues until {renewalDate || "your renewal date"}. After that your account moves to Free — route optimisation, booking page, email import and auto invoicing are locked. All data stays.</div>
+                <div className="font-inter text-[11px] leading-[1.4]">Your Pro access continues until {renewalDate || "your renewal date"}. After that your account moves to Free. Route optimisation, booking page, email import and auto invoicing are locked. All data stays.</div>
               </div>
               <div className="flex flex-col gap-2.5">
                 <button onClick={confirmCancelPlan} disabled={cancelBusy} className="btn-danger" style={{ width: "100%" }}><X className="w-3.5 h-3.5" /> {cancelBusy ? "Cancelling…" : "Yes, cancel Pro"}</button>
-                <button onClick={() => setShowCancelModal(false)} className="btn-gh" style={{ width: "100%" }}><Check className="w-3.5 h-3.5" /> Keep Pro — don&apos;t cancel</button>
+                <button onClick={() => setShowCancelModal(false)} className="btn-gh" style={{ width: "100%" }}><Check className="w-3.5 h-3.5" /> Keep Pro, don&apos;t cancel</button>
               </div>
             </div>
           </div>

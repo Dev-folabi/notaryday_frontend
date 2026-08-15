@@ -37,7 +37,7 @@ export default function OnboardingBookingPage() {
         booking_advance_limit_days: advanceLimit,
       } as Record<string, unknown>);
       await completeOnboarding.mutateAsync();
-      addToast({ type: "success", title: "Welcome — your booking page is set up." });
+      addToast({ type: "success", title: "Welcome! Your booking page is set up." });
       router.push(ROUTES.APP.TODAY);
     } catch {
       addToast({ type: "error", title: "Could not finish setup" });

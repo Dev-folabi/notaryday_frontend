@@ -4,7 +4,7 @@ export function ScanbackCallout() {
   const points = [
     "Auto-inserted after every Loan Refi or Hybrid signing",
     "Duration based on your real scanback time (configurable per job)",
-    "CITT checks honour it — no false positives",
+    "CITT checks honour it, with no false positives",
     "Route engine builds around it, not through it",
   ];
 
@@ -17,7 +17,7 @@ export function ScanbackCallout() {
     },
     {
       t: "9:45 AM",
-      l: "Scanback — Job #1 (auto)",
+      l: "Scanback · Job #1 (auto)",
       c: "text-amber-600",
       bg: "bg-amber-50",
       sb: true,
@@ -44,7 +44,7 @@ export function ScanbackCallout() {
         <p className="text-base leading-[1.7] text-slate-500">
           Every tool plans your schedule as if signings end when you walk out
           the door. But you know that&apos;s not true. After every Loan Refi or
-          Hybrid, you have to scan and send the documents — and that takes 20–45
+          Hybrid, you have to scan and send the documents, and that takes 20–45
           minutes. You can&apos;t drive. You can&apos;t start the next job.
           Every tool ignores this. Notary Day doesn&apos;t.
         </p>
@@ -60,7 +60,7 @@ export function ScanbackCallout() {
           </div>
           <p className="mb-5 text-sm leading-[1.7] text-white/65">
             Notary Day inserts a time block after every loan signing
-            automatically — equal to your actual scanback duration. Your day
+            automatically, equal to your actual scanback duration. Your day
             will never be double-booked. Route optimisation accounts for it.
             CITT checks against it. It&apos;s the scheduling moat no competitor
             has.

@@ -56,7 +56,7 @@ const entryLabel = (id: string): string => {
   return `#JN-${(hash % 1679616).toString(36).toUpperCase().padStart(4, "0")}`;
 };
 
-// entry_date is stored as a UTC date — keep it timezone-stable for the date input
+// entry_date is stored as a UTC date; keep it timezone-stable for the date input
 const toDateInputValueUtc = (dateISO: string): string => {
   const d = new Date(dateISO);
   if (Number.isNaN(d.getTime())) return dateISO;
@@ -351,7 +351,7 @@ export default function JournalPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2">
                 {[
                   ["Signer", e.signer],
-                  ["ID", `${e.idType} — ${e.idNo}`],
+                  ["ID", `${e.idType} · ${e.idNo}`],
                   ["Document", e.doc],
                   ["Location", e.addr],
                   ["Fee", e.fee],

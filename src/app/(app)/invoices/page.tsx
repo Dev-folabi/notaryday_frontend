@@ -225,7 +225,7 @@ export default function InvoicesPage() {
       const url = fresh?.pdf_url;
       if (!url) {
         addToast({
-          title: "PDF not ready yet — check back in a minute",
+          title: "PDF not ready yet, check back in a minute",
           type: "error",
         });
         return;
@@ -511,7 +511,7 @@ export default function InvoicesPage() {
         {/* Bottom card */}
         <div className="card p-3 flex gap-2 flex-wrap justify-between items-center">
           <div className="font-inter text-[11px] text-slate-secondary">
-            Completed jobs get a draft invoice automatically — review it and
+            Completed jobs get a draft invoice automatically. Review it and
             send to your client.
           </div>
           <Link href="/jobs" className="btn-sm">
@@ -687,7 +687,7 @@ function InvoiceModal({
             <DollarSign className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
             <div className="text-[11px] text-blue leading-relaxed">
               Your payment details (Zelle, Venmo, PayPal.me, or bank info from
-              Settings) appear on the invoice PDF. {client} pays you directly —
+              Settings) appear on the invoice PDF. {client} pays you directly;
               Notary Day is not involved in the transaction.
             </div>
           </div>

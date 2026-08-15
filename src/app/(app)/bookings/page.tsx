@@ -216,7 +216,7 @@ function BookingCard({
     >
       <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)" }}>
-          {b.client_name} — {b.service_type?.replace(/_/g, " ")}
+          {b.client_name} · {b.service_type?.replace(/_/g, " ")}
         </div>
         <div
           style={{

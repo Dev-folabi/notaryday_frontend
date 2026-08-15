@@ -181,7 +181,7 @@ export default function BookingSetupForm() {
           </div>
           <div className="font-inter text-[11px] text-slate-secondary mt-0.5 leading-[1.4]">
             {enabled
-              ? "Your page is live — clients can request appointments right now."
+              ? "Your page is live. Clients can request appointments right now."
               : "Booking page is paused. Clients will be told you aren't taking requests."}
           </div>
         </div>

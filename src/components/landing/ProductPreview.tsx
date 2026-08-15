@@ -66,7 +66,7 @@ export function ProductPreview() {
           <div className="border-b border-border border-l-[3px] border-l-amber-600 bg-amber-50 px-[18px] py-[9px]">
             <span className="flex items-center gap-[5px] text-[11px] italic text-amber-600">
               <ScanText className="h-[11px] w-[11px]" />
-              <span>Scanback — Job #1 · 9:45–10:15 AM · Auto-blocked</span>
+              <span>Scanback · Job #1 · 9:45–10:15 AM · Auto-blocked</span>
             </span>
           </div>
 
@@ -111,7 +111,7 @@ export function ProductPreview() {
         </div>
         <div className="py-4 pb-10 text-center">
           <span className="text-xs text-slate-400">
-            Route optimised · Scanback auto-blocked · Gap opportunity surfaced —
+            Route optimised, scanback auto-blocked, gap opportunity surfaced,
             all automatically
           </span>
         </div>

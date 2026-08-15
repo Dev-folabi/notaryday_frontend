@@ -100,7 +100,7 @@ export default function ImportPage() {
       await jobImportApi.upload(file);
       addToast({
         type: "success",
-        title: "Screenshot uploaded — parsing...",
+        title: "Screenshot uploaded, parsing...",
       });
       qc.invalidateQueries({ queryKey: ["imports"] });
     } catch {
@@ -164,7 +164,7 @@ export default function ImportPage() {
           qc.invalidateQueries({ queryKey: ["imports"] });
         }
       } catch {
-        // transient failure — keep polling
+        // transient failure; keep polling
       }
     }, 2000);
     return () => {

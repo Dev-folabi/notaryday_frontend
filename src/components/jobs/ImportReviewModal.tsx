@@ -114,7 +114,7 @@ export function ImportReviewModal({
           <Mail className="w-3 h-3" /> Imported via {imp.import_type === "EMAIL" ? "email" : "screenshot"}
         </span>
         <span className="font-inter text-[10px] text-slate-secondary">
-          Auto parsed — AI extracted
+          Auto parsed · AI extracted
         </span>
       </div>
 
@@ -122,7 +122,7 @@ export function ImportReviewModal({
         <div className="alert al-blue mb-3 flex items-center gap-2">
           <Loader2 className="w-3.5 h-3.5 text-blue flex-shrink-0 animate-spin" />
           <div className="text-[11px] leading-[1.3]">
-            Still parsing this import — fields will appear here automatically
+            Still parsing this import. Fields will appear here automatically
             once the AI has finished. Keep this window open.
           </div>
         </div>

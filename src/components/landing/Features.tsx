@@ -22,7 +22,7 @@ export function Features() {
       icColor: "text-navy",
       icon: <CalendarDays className="h-5 w-5" />,
       title: "Smart Day Planner",
-      desc: "Every morning your day is laid out for you — jobs sequenced in the most efficient geographic order, scanback windows blocked, drive times calculated. You open the app and start driving.",
+      desc: "Every morning your day is laid out for you: jobs sequenced in the most efficient geographic order, scanback windows blocked, drive times calculated. You open the app and start driving.",
       badge: "pro",
     },
     {
@@ -30,7 +30,7 @@ export function Features() {
       icColor: "text-violet-600",
       icon: <Sparkles className="h-5 w-5" />,
       title: "Gap Finder",
-      desc: "After your route is optimised, Notary Day scans your pending jobs and surfaces the ones that fit into free windows — based on their location, your drive time, and your scanback commitments.",
+      desc: "After your route is optimised, Notary Day scans your pending jobs and surfaces the ones that fit into free windows, based on their location, your drive time, and your scanback commitments.",
       badge: "pro",
     },
     {
@@ -46,7 +46,7 @@ export function Features() {
       icColor: "text-amber-600",
       icon: <Mail className="h-5 w-5" />,
       title: "Email import",
-      desc: "Forward your Snapdocs or SigningOrder confirmation email and the job appears in your schedule automatically — address, time, fee, signing type all extracted by AI. A CITT check runs immediately.",
+      desc: "Forward your Snapdocs or SigningOrder confirmation email and the job appears in your schedule automatically: address, time, fee, signing type all extracted by AI. A CITT check runs immediately.",
       badge: "pro",
     },
     {

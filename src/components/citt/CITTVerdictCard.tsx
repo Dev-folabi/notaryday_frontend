@@ -397,7 +397,7 @@ export default function CITTVerdictCard({
               <span>
                 {isAdding
                   ? "Adding..."
-                  : "Accept anyway — I understand the risk"}
+                  : "Accept anyway, I understand the risk"}
               </span>
             </button>
           ) : null}
@@ -415,8 +415,8 @@ export default function CITTVerdictCard({
               {isDecline
                 ? "Decline this signing"
                 : isRisky
-                  ? "Decline — not worth the risk"
-                  : "Decline — not taking it"}
+                  ? "Decline, not worth the risk"
+                  : "Decline, not taking it"}
             </span>
           </button>
 

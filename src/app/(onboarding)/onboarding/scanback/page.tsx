@@ -136,7 +136,7 @@ export default function OnboardingScanbackPage() {
             </div>
             <p className="font-inter text-[11px] text-muted font-medium mt-2 leading-relaxed">
               Used to calculate mileage cost in CITT checks and profitability.
-              The default is ${DEFAULT_IRS_RATE}/mile — you can change it later
+              The default is ${DEFAULT_IRS_RATE}/mile; you can change it later
               in Settings.
             </p>
           </div>

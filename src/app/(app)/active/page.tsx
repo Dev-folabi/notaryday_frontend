@@ -136,12 +136,12 @@ export default function ActiveSigningPage() {
       });
       if (next === "SCANNING") {
         addToast({
-          title: "Scanback started — ETA sent to next client",
+          title: "Scanback started, ETA sent to next client",
           type: "info",
         });
       }
       if (next === "COMPLETE") {
-        addToast({ title: "Signing complete — invoice draft ready", type: "success" });
+        addToast({ title: "Signing complete, invoice draft ready", type: "success" });
       }
     } catch {
       addToast({ title: "Failed to update status", type: "error" });

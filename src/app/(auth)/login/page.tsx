@@ -111,13 +111,13 @@ export default function LoginPage() {
           </div>
           <p className="font-inter text-lg text-white/60 leading-relaxed mb-12">
             Your schedule, earnings, and journal are waiting. Sessions last 30
-            days — you probably won&apos;t need this form very often.
+            days, so you probably won&apos;t need this form very often.
           </p>
           <div className="space-y-6">
             {[
               "Your jobs and schedule are exactly as you left them",
               "CITT checks run instantly on login",
-              "All your data stays private — always",
+              "All your data stays private, always",
             ].map((text, i) => (
               <div key={i} className="flex items-center gap-4">
                 <div className="w-6 h-6 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0">

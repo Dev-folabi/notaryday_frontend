@@ -75,7 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content area */}
       <main className="flex-1 min-w-0 flex flex-col lg:ml-0">
-        {/* Mobile top bar — 56px height per prototype */}
+        {/* Mobile top bar: 56px height per prototype */}
         <TopNav isPro={isPro} initials={initials} />
 
         {/* Page content */}
@@ -83,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
 
-        {/* Mobile bottom nav — 64px height */}
+        {/* Mobile bottom nav: 64px height */}
         <BottomNav isPro={isPro} username={user?.username} />
 
         {/* Global CITT Modal */}

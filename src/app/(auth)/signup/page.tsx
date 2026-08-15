@@ -194,7 +194,7 @@ export default function SignupPage() {
         </Link>
       </div>
 
-      {/* Left Panel — Desktop Only */}
+      {/* Left Panel: Desktop Only */}
       <div className="hidden lg:flex w-[44%] bg-navy p-12 xl:p-20 flex-col justify-center relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-pro-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
@@ -215,9 +215,9 @@ export default function SignupPage() {
           <div className="flex flex-col gap-3">
             {[
               "Unlimited jobs & journal entries",
-              "Can I Take This? — free, unlimited",
+              "Can I Take This?, free and unlimited",
               "Real earnings per signing (IRS rate)",
-              "Pro from $19/month — cancel any time",
+              "Pro from $19/month, cancel any time",
             ].map((text, i) => (
               <div
                 key={i}
@@ -234,7 +234,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* Right Panel — Form */}
+      {/* Right Panel: Form */}
       <div className="flex-1 bg-white flex flex-col items-center justify-center px-6 py-12 lg:px-20 overflow-y-auto">
         <div className="w-full max-w-[420px]">
           <div className="mb-7">

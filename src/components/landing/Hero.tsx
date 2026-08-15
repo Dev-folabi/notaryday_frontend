@@ -15,14 +15,14 @@ export function Hero() {
         <em className="font-sora not-italic text-blue-600">planned for you.</em>
       </h1>
       <p className="mx-auto mb-9 max-w-[560px] text-lg leading-[1.7] text-slate-500">
-        The only scheduling tool built for how mobile notaries actually work —
+        The only scheduling tool built for how mobile notaries actually work:
         signings, mandatory scanbacks, mileage costs, and all. Know your real
         earnings before you accept any job.
       </p>
       <div className="mb-4 flex flex-wrap justify-center gap-3">
         <Link href="/signup">
           <Button className="h-[52px] rounded-[10px] px-7 text-[15px]">
-            <ArrowRight className="h-4 w-4" /> Start for free — no credit card
+            <ArrowRight className="h-4 w-4" /> Start for free, no credit card
           </Button>
         </Link>
         <Link href="#features">

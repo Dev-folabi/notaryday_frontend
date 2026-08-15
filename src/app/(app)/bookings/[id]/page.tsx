@@ -103,7 +103,7 @@ export default function BookingDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.bookings.all() });
-      addToast({ type: "success", title: "Booking approved — client notified" });
+      addToast({ type: "success", title: "Booking approved, client notified" });
       router.push("/bookings");
     },
     onError: (e) => addToast({ type: "error", title: errMsg(e, "Could not approve") }),
@@ -394,7 +394,7 @@ export default function BookingDetailPage() {
                         ok={!hasConflicts}
                         label={
                           hasConflicts
-                            ? `${conflicting.length} schedule conflict${conflicting.length > 1 ? "s" : ""} — overlaps existing signing block`
+                            ? `${conflicting.length} schedule conflict${conflicting.length > 1 ? "s" : ""}; overlaps existing signing block`
                             : "No schedule conflicts with existing signings"
                         }
                       />
@@ -413,7 +413,7 @@ export default function BookingDetailPage() {
                           ok={cittResult!.can_make_it}
                           label={
                             cittResult!.can_make_it
-                              ? "Drive time fits — you can make it on time"
+                              ? "Drive time fits, you can make it on time"
                               : "Insufficient drive time from previous location"
                           }
                         />
@@ -500,7 +500,7 @@ export default function BookingDetailPage() {
                 className="btn-gh"
                 style={{ color: "var(--red)" }}
               >
-                <XCircle className="w-4 h-4" /> Decline — suggest alternative times
+                <XCircle className="w-4 h-4" /> Decline and suggest alternative times
               </button>
             </div>
           )}
@@ -661,7 +661,7 @@ function CITTVerdict({ result }: { result: ExtendedCITT }) {
         <div className="flex items-center gap-1.5 mb-0.5">
           <Zap className="w-3 h-3" style={{ color }} />
           <span className="font-inter text-[11px] font-semibold" style={{ color }}>
-            CITT — {label}
+            CITT · {label}
           </span>
         </div>
         <span className="font-inter text-[11px] text-slate-secondary leading-[1.4]">

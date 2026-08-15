@@ -35,7 +35,7 @@ export function HowItWorks() {
           Three questions. Then you&apos;re running.
         </h2>
         <p className="text-base leading-[1.7] text-slate-500">
-          Onboarding takes under 3 minutes. Three questions — and every feature
+          Onboarding takes under 3 minutes. Three questions, and every feature
           that matters works from day one.
         </p>
       </div>

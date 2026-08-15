@@ -110,7 +110,7 @@ export default function TodayPage() {
   // demand); use its summary for the Drive stat instead of the raw job rows.
   const { data: plan } = useTodayPlan(activeDate);
 
-  // Metrics — this week
+  // Metrics for this week
   const weeklyEarnings = weekJobs.reduce(
     (sum: number, j: Job) =>
       sum + (parseFloat(j.net_earnings ?? j.fee ?? "0") || 0),

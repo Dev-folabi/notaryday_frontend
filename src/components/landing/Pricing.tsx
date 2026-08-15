@@ -96,7 +96,7 @@ export function Pricing() {
               /month
             </span>
           </div>
-          <p className="mb-1 text-xs text-slate-400">or $208/year — save $20</p>
+          <p className="mb-1 text-xs text-slate-400">or $208/year, save $20</p>
           <p className="mb-3.5 text-xs font-medium text-teal-600">
             Less than the fee from one extra signing.
           </p>
@@ -121,7 +121,7 @@ export function Pricing() {
               className="h-[48px] w-full text-[14px] font-bold"
               fullWidth
             >
-              <Sparkles className="h-[13px] w-[13px]" /> Start Pro — $19/month
+              <Sparkles className="h-[13px] w-[13px]" /> Start Pro at $19/month
             </Button>
           </Link>
           <p className="mt-2 text-center text-[11px] text-slate-400">

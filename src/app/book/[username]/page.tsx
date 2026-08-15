@@ -133,7 +133,7 @@ export default function PublicBookingPage() {
     base_fee: "",
   });
 
-  // Address autocomplete (Photon) — same pattern as the job/CITT forms
+  // Address autocomplete (Photon), same pattern as the job/CITT forms
   const [suggestions, setSuggestions] = useState<PhotonFeature[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -199,7 +199,7 @@ export default function PublicBookingPage() {
     retry: false,
     placeholderData: keepPreviousData,
     // Slots are live (they change the moment someone books), so never serve a
-    // cached date without refetching — switching back to a date must be fresh.
+    // cached date without refetching; switching back to a date must be fresh.
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -635,7 +635,7 @@ export default function PublicBookingPage() {
                   <div className="font-inter text-[11px] text-slate-secondary mt-0.5 leading-[1.4]">
                     {notary?.full_name ?? "This notary"} has no free slots on{" "}
                     {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}.
-                    Try another date — or reach out directly.
+                    Try another date, or reach out directly.
                   </div>
                 </div>
               ) : (
@@ -841,7 +841,7 @@ export default function PublicBookingPage() {
               <button onClick={() => setAltOpen(false)} className="btn-gh">
                 <X className="w-4 h-4" />
                 <span>
-                  Cancel — I&apos;ll contact{" "}
+                  Cancel, I&apos;ll contact{" "}
                   {notary?.full_name ?? "the notary"} directly
                 </span>
               </button>

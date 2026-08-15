@@ -344,7 +344,7 @@ function InvoiceDraft({
         title: isPaid
           ? "Details saved"
           : isSent
-            ? "Saved — PDF will regenerate"
+            ? "Saved, PDF will regenerate"
             : "Saved as draft",
         type: "success",
       });
@@ -368,7 +368,7 @@ function InvoiceDraft({
   const handleSaveClick = () => {
     if (!invoice) {
       addToast({
-        title: "Draft still being created — try again in a moment",
+        title: "Draft still being created, try again in a moment",
         type: "info",
       });
       return;
@@ -402,7 +402,7 @@ function InvoiceDraft({
   const nnaLine = user?.nna_certified ? "NNA Certified" : null;
   const billToPhone = job.client_phone ?? invoice?.job?.client_phone ?? null;
 
-  // Payment details from Settings (payment_info) — shown on the invoice so the
+  // Payment details from Settings (payment_info), shown on the invoice so the
   // client knows exactly how to pay the notary directly.
   const paymentLines = paymentInfoLines(user?.settings?.payment_info);
 
@@ -440,7 +440,7 @@ function InvoiceDraft({
             {invoice?.sent_at
               ? ` on ${format(parseISO(invoice.sent_at), "MMMM d, yyyy")}`
               : ""}
-            . Changes regenerate the PDF — use Resend to send the updated copy.
+            . Changes regenerate the PDF. Use Resend to send the updated copy.
           </div>
         </div>
       ) : (

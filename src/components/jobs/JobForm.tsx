@@ -173,7 +173,7 @@ export default function JobForm({
   const set = (k: keyof FormState, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  // Stable idempotency key for the current manual create — generated on the
+  // Stable idempotency key for the current manual create; generated on the
   // first submit and reused on retries so a failed request never duplicates.
   const idempotencyKeyRef = useRef<string | null>(null);
 

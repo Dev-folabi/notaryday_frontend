@@ -57,7 +57,7 @@ export function FinalCTA() {
                 className="h-[52px] rounded-[10px] bg-amber-500 px-6 text-[15px] hover:bg-amber-600"
               >
                 <Sparkles className="h-4 w-4 text-navy" />
-                <span className="text-navy">Start Pro — $19/mo</span>
+                <span className="text-navy">Start Pro at $19/mo</span>
               </Button>
             </Link>
           </>

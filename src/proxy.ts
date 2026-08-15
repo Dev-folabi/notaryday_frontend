@@ -35,7 +35,7 @@ export function proxy(request: NextRequest) {
   const authTokenCookie = request.cookies.get("auth_token");
   const hasToken = !!authTokenCookie?.value;
 
-  // Protect onboarding paths — require token
+  // Protect onboarding paths: require token
   if (pathname.startsWith("/onboarding/")) {
     if (!hasToken) {
       const redirectUrl = new URL("/login", request.url);
@@ -45,7 +45,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect app routes — require token
+  // Protect app routes: require token
   const PROTECTED_PREFIXES = [
     "/today",
     "/jobs",

@@ -116,7 +116,7 @@ export function ImportEditModal({
   );
   const [notes, setNotes] = useState(imp.parsed_notes ?? "");
 
-  // Address autocomplete (Photon — same as Job form / CITT)
+  // Address autocomplete (Photon, same as Job form / CITT)
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -198,7 +198,7 @@ export function ImportEditModal({
       <div className="alert al-amber mb-3">
         <AlertTriangle className="w-3.5 h-3.5 text-amber flex-shrink-0" />
         <div className="text-[11px] leading-[1.3]">
-          Edit the fields extracted by AI. The original import is kept — all
+          Edit the fields extracted by AI. The original import is kept; all
           changes are validated before adding to schedule.
         </div>
       </div>

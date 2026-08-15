@@ -43,7 +43,7 @@ export function BottomNav({ isPro = false, username }: BottomNavProps) {
       aria-label="Mobile navigation"
     >
       <div className="relative" style={{ height: "68px" }}>
-        {/* Notched SVG background — white fill matches existing nav bg */}
+        {/* Notched SVG background: white fill matches existing nav bg */}
         <svg
           className="absolute inset-0 w-full h-full drop-shadow-[0_-1px_0_rgba(226,232,240,1)]"
           viewBox="0 0 375 68"
@@ -134,7 +134,7 @@ export function BottomNav({ isPro = false, username }: BottomNavProps) {
           })}
         </div>
 
-        {/* Centre CITT FAB — floats above the notch, icon only */}
+        {/* Centre CITT FAB: floats above the notch, icon only */}
         <div className="absolute left-1/2 -translate-x-1/2 -top-[26px] z-50">
           <button
             onClick={() => openCITT()}

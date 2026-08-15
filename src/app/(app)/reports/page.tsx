@@ -942,7 +942,7 @@ function TaxTab() {
         JSON.stringify({ report, pdf: pdf ?? null, at: Date.now() }),
       );
     } catch {
-      /* storage full — non-fatal */
+      /* storage full; non-fatal */
     }
   };
 
@@ -1031,7 +1031,7 @@ function TaxTab() {
     }
   };
 
-  // Download reuses the cached PDF when available — it is only (re)built when
+  // Download reuses the cached PDF when available; it is only (re)built when
   // the user explicitly taps "Regenerate PDF".
   const downloadPdf = async () => {
     if (pdfDataUrl) {
@@ -1133,7 +1133,7 @@ function TaxTab() {
       {generated ? (
         <>
           <span className="slbl">
-            Report preview —{" "}
+            Report preview:{" "}
             {generated.from?.slice(0, 4) === String(year)
               ? `Full year ${year} YTD`
               : `${generated.from ?? ""} to ${generated.to ?? ""}`}
@@ -1141,7 +1141,7 @@ function TaxTab() {
           <div className="card overflow-hidden mb-4">
             <div className="bg-navy px-[18px] py-4">
               <div className="font-sora text-[15px] font-bold text-white mb-[3px]">
-                Schedule C — Notary Income Summary
+                Schedule C: Notary Income Summary
               </div>
               <div className="font-inter text-[11px] text-white/60">
                 {headerSubtitle}
@@ -1306,7 +1306,7 @@ function TaxTab() {
           </div>
 
           <p className="font-inter text-[11px] text-muted text-center italic">
-            For informational purposes only — not tax advice. Consult your
+            For informational purposes only. Not tax advice. Consult your
             accountant.
           </p>
         </>

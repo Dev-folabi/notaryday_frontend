@@ -178,7 +178,7 @@ export default function ProfileTab() {
               </div>
               <div className="flex flex-col gap-2.5 mt-1">
                 <button onClick={confirmDeleteAccount} disabled={deleteConfirm !== "DELETE" || deleteBusy} className="btn-danger" style={{ width: "100%" }}><Trash2 className="w-3.5 h-3.5" /> {deleteBusy ? "Deleting…" : "Delete my account permanently"}</button>
-                <button onClick={() => { setShowDeleteModal(false); setDeleteConfirm(""); }} className="btn-gh" style={{ width: "100%" }}><X className="w-3.5 h-3.5" /> Cancel — keep my account</button>
+                <button onClick={() => { setShowDeleteModal(false); setDeleteConfirm(""); }} className="btn-gh" style={{ width: "100%" }}><X className="w-3.5 h-3.5" /> Cancel and keep my account</button>
               </div>
             </div>
           </div>
