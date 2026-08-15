@@ -47,6 +47,7 @@ export default function ActiveSigningPage() {
   const updateStatus = useUpdateJobStatus();
   const queryClient = useQueryClient();
   const [manualOverride, setManualOverride] = useState<number | null>(null);
+  const [justCompleted, setJustCompleted] = useState<Job | null>(null);
 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["jobs", "active-today", today],
@@ -62,7 +63,7 @@ export default function ActiveSigningPage() {
   const activeJob =
     jobs.find((j) => j.status === "IN_PROGRESS") ||
     jobs.find((j) => j.status === "SCANNING") ||
-    jobs.find((j) => j.status === "COMPLETE");
+    justCompleted;
 
   const progress =
     manualOverride ?? progressFromStatus(activeJob?.status ?? "CONFIRMED");
@@ -136,12 +137,17 @@ export default function ActiveSigningPage() {
       });
       if (next === "SCANNING") {
         addToast({
-          title: "Scanback started, ETA sent to next client",
+          title: "Scanback started",
           type: "info",
         });
       }
       if (next === "COMPLETE") {
-        addToast({ title: "Signing complete, invoice draft ready", type: "success" });
+        setJustCompleted({ ...activeJob, status: "COMPLETE" });
+        setManualOverride(4);
+        addToast({
+          title: "Signing complete, invoice draft ready",
+          type: "success",
+        });
       }
     } catch {
       addToast({ title: "Failed to update status", type: "error" });
@@ -189,14 +195,23 @@ export default function ActiveSigningPage() {
         </div>
         <span
           className="chip"
-          style={{
-            background: "#FFFBEB",
-            color: "#D97706",
-            border: "1px solid #FDE68A",
-            fontSize: 9,
-          }}
+          style={
+            justCompleted
+              ? {
+                  background: "var(--teal-bg)",
+                  color: "#0E7B6C",
+                  border: "1px solid var(--teal-border)",
+                  fontSize: 9,
+                }
+              : {
+                  background: "#FFFBEB",
+                  color: "#D97706",
+                  border: "1px solid #FDE68A",
+                  fontSize: 9,
+                }
+          }
         >
-          IN PROGRESS
+          {justCompleted ? "COMPLETE" : "IN PROGRESS"}
         </span>
       </div>
 
@@ -363,8 +378,8 @@ export default function ActiveSigningPage() {
               Signing complete
             </div>
             <div className="text-[12px] text-slate-secondary mt-1">
-              Invoice draft auto generated. Mileage logged. ETA sent to next
-              client.
+              Invoice draft auto generated. Mileage logged. Your next client is
+              notified when their appointment is close.
             </div>
             <button
               className="btn-p mt-3"
@@ -385,8 +400,8 @@ export default function ActiveSigningPage() {
           >
             <Info className="w-4 h-4 text-blue flex-shrink-0 mt-0.5" />
             <div className="text-[11px] text-slate-secondary leading-[1.4]">
-              When you tap Signing done, an ETA notification is sent to your
-              next client:{" "}
+              When you tap Signing done, your next client is notified
+              automatically when their appointment is close:{" "}
               <strong className="text-primary-navy">
                 Your notary is on their way - arriving approx{" "}
                 {format(parseISO(nextJob.appointment_time), "h:mm a")}
@@ -399,13 +414,15 @@ export default function ActiveSigningPage() {
           <button className="btn-gh" onClick={() => router.push("/day")}>
             Back to Day View
           </button>
-          <button
-            className="btn-gh"
-            onClick={resetProgress}
-            disabled={updateStatus.isPending}
-          >
-            Reset progress
-          </button>
+          {!justCompleted && (
+            <button
+              className="btn-gh"
+              onClick={resetProgress}
+              disabled={updateStatus.isPending}
+            >
+              Reset progress
+            </button>
+          )}
         </div>
       </div>
     </div>
