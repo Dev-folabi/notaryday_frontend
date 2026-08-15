@@ -79,31 +79,13 @@ textarea {
 }
 
 /* ─── SCROLLBAR ───────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: theme("colors.background");
-}
-
-::-webkit-scrollbar-thumb {
-  background: theme("colors.border");
-  border-radius: 2px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: theme("colors.slate-secondary");
-}
-
-/* Hide scrollbar but keep scrollable (for strip navigation) */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
+/* Hide scrollbars everywhere for a native app feel; scroll still works. */
+* {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
 }
 
 /* ─── FOCUS STATES ────────────────────────────────────── */
@@ -736,7 +718,7 @@ textarea {
 
 /* Toast */
 #toast-container {
-  @apply fixed bottom-[80px] left-1/2 -translate-x-1/2 flex flex-col gap-2 z-[200] pointer-events-none w-[92%] max-w-[380px] items-center;
+  @apply fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 flex flex-col gap-2 z-[200] pointer-events-none w-[92%] max-w-[380px] items-center;
 }
 .toast {
   @apply flex items-center gap-2.5 p-2.5 lg:p-3 rounded-[10px] font-inter text-[13px] font-medium shadow-[0_8px_24px_rgba(0,0,0,0.16)] pointer-events-auto animate-toastIn w-full;

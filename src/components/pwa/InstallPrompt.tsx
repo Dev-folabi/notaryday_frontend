@@ -59,7 +59,7 @@ export default function InstallPrompt() {
   };
 
   return (
-    <div className="fixed left-3 right-3 lg:left-auto lg:right-6 lg:w-[360px] bottom-[68px] lg:bottom-6 z-50 bg-white border border-border rounded-[16px] shadow-[0_12px_40px_rgba(9,18,30,0.2)] p-4 flex items-start gap-3">
+    <div className="fixed left-3 right-3 lg:left-auto lg:right-6 lg:w-[360px] bottom-[calc(68px+env(safe-area-inset-bottom))] lg:bottom-6 z-50 bg-white border border-border rounded-[16px] shadow-[0_12px_40px_rgba(9,18,30,0.2)] p-4 flex items-start gap-3">
       <Image
         src="/icons/notaryday-icon-192.png"
         alt="Notary Day"

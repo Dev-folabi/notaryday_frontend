@@ -2,11 +2,11 @@
 
 import { MapPin, Clock, DollarSign, Plus, Navigation, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import type { Job, JobStatus } from "@/types/job";
-import { formatTime, formatCurrency, profitabilityColor } from "@/lib/utils";
+import { formatTime, formatCurrency, profitabilityColor, toDateInputValue } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import JobStatusBadge from "@/components/jobs/JobStatusBadge";
 
 const STATUS_FILTERS = [
@@ -54,12 +54,18 @@ function typeLabel(signingType: string): string {
 
 export default function JobsPage() {
   const router = useRouter();
-  const { openCITT } = useUIStore();
-  const [filter, setFilter] = useState<StatusFilter>("All");
-  const [date, setDate] = useState<string>(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  const {
+    openCITT,
+    jobsDate,
+    setJobsDate,
+    jobsStatusFilter,
+    setJobsStatusFilter,
+  } = useUIStore();
+  const today = toDateInputValue(new Date());
+  const date = jobsDate || today;
+  const filter = STATUS_FILTERS.includes(jobsStatusFilter as StatusFilter)
+    ? (jobsStatusFilter as StatusFilter)
+    : "All";
   const { data: jobs, isLoading, isError } = useJobs({ date });
 
   const filtered =
@@ -113,7 +119,7 @@ export default function JobsPage() {
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
-              onClick={() => setFilter(f)}
+              onClick={() => setJobsStatusFilter(f)}
             >
               {f}
             </button>
@@ -147,7 +153,7 @@ export default function JobsPage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => setJobsDate(e.target.value)}
               style={{
                 border: "none",
                 outline: "none",
@@ -159,10 +165,7 @@ export default function JobsPage() {
           </div>
           <button
             onClick={() => {
-              const d = new Date();
-              setDate(
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-              );
+              setJobsDate(toDateInputValue(new Date()));
             }}
             style={{
               fontSize: 11,
@@ -173,7 +176,9 @@ export default function JobsPage() {
               fontWeight: 500,
             }}
           >
-            Today
+            {date === today
+              ? "Today"
+              : format(parseISO(date), "EEE, MMM d")}
           </button>
           <span style={{ fontSize: 11, color: "#64748B" }}>
             {filtered.length} jobs, {formatCurrency(totalNet)} net

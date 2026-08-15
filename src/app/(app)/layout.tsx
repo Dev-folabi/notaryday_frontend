@@ -49,7 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // While checking auth, show nothing
   if (isLoadingUser || !isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-bg">
+      <div className="flex items-center justify-center min-h-dvh bg-bg">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
           <span className="font-inter text-sm text-slate-secondary">
@@ -66,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className="flex min-h-dvh bg-bg">
       {/* Desktop sidebar */}
       <Sidebar isPro={isPro} username={user?.username} notifCount={0} />
 
@@ -79,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <TopNav isPro={isPro} initials={initials} />
 
         {/* Page content */}
-        <div className="flex-1 min-h-0 pb-[72px] lg:pb-0">
+        <div className="flex-1 min-h-0 pb-[calc(72px+env(safe-area-inset-bottom))] lg:pb-0">
           {children}
         </div>
 

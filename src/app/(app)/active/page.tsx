@@ -330,23 +330,15 @@ export default function ActiveSigningPage() {
         </div>
 
         {progress === 2 && (
-          <button
-            className="w-full h-[52px] text-white border-none rounded-[10px] text-[14px] font-bold flex items-center justify-center gap-2 cursor-pointer"
-            style={{ background: "#0F2C4E", opacity: updateStatus.isPending ? 0.7 : 1 }}
-            disabled={updateStatus.isPending}
-            onClick={() => advance(needsScanback ? "SCANNING" : "COMPLETE")}
-          >
-            {updateStatus.isPending ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                Saving…
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4" /> Signing done - start scanback
-              </>
-            )}
-          </button>
+          <div>
+            <span className="slbl">Signing countdown</span>
+            <SigningCountdown
+              job={activeJob}
+              needsScanback={needsScanback}
+              onDone={() => advance(needsScanback ? "SCANNING" : "COMPLETE")}
+              isPending={updateStatus.isPending}
+            />
+          </div>
         )}
 
         {progress === 3 && (
@@ -464,13 +456,38 @@ function getScanbackEnd(job: { scanback_ends_at?: string | null; scanning_starte
   return null;
 }
 
-function ScanbackCountdown({
-  job,
-  onDone,
+function getSigningCountdown(job: {
+  started_at?: string | null;
+  signing_ends_at?: string | null;
+  signing_duration_mins?: number | null;
+}): { end: number | null; totalMs: number } {
+  const durationMins = job.signing_duration_mins || 0;
+  const totalMs = Math.max(durationMins * 60_000, 1);
+  if (job.started_at && durationMins > 0) {
+    return {
+      end: new Date(job.started_at).getTime() + durationMins * 60_000,
+      totalMs,
+    };
+  }
+  if (job.signing_ends_at) {
+    return { end: new Date(job.signing_ends_at).getTime(), totalMs };
+  }
+  return { end: null, totalMs };
+}
+
+function CountdownCard({
+  label,
+  end,
+  totalMs,
+  actionLabel,
+  onAction,
   isPending,
 }: {
-  job: { scanback_ends_at?: string | null; scanning_started_at?: string | null; scanback_duration_mins?: number | null };
-  onDone: () => void;
+  label: string;
+  end: number | null;
+  totalMs: number;
+  actionLabel: string;
+  onAction: () => void;
   isPending: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -478,18 +495,6 @@ function ScanbackCountdown({
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-
-  const end = getScanbackEnd(job);
-  const startedMs = job.scanning_started_at
-    ? new Date(job.scanning_started_at).getTime()
-    : null;
-
-  const totalMs =
-    end && startedMs
-      ? Math.max(end - startedMs, 1)
-      : job.scanback_duration_mins
-        ? job.scanback_duration_mins * 60_000
-        : 1;
 
   const totalLabel = `${String(Math.floor(totalMs / 60_000)).padStart(2, "0")}:${String(Math.floor((totalMs % 60_000) / 1000)).padStart(2, "0")}`;
 
@@ -510,7 +515,7 @@ function ScanbackCountdown({
       }}
     >
       <div className="text-[11px] font-semibold text-amber mb-1">
-        SCANBACK IN PROGRESS
+        {label}
       </div>
       <div className="font-sora text-[32px] font-bold text-primary-navy mb-0.5">
         {remainingLabel}
@@ -525,7 +530,7 @@ function ScanbackCountdown({
         className="mt-3.5 text-white border-none rounded-[8px] h-[42px] px-5 text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
         style={{ background: "#0E7B6C", opacity: isPending ? 0.7 : 1 }}
         disabled={isPending}
-        onClick={onDone}
+        onClick={onAction}
       >
         {isPending ? (
           <>
@@ -534,10 +539,71 @@ function ScanbackCountdown({
           </>
         ) : (
           <>
-            <Check className="w-4 h-4" /> Scanback done
+            <Check className="w-4 h-4" /> {actionLabel}
           </>
         )}
       </button>
     </div>
+  );
+}
+
+function ScanbackCountdown({
+  job,
+  onDone,
+  isPending,
+}: {
+  job: { scanback_ends_at?: string | null; scanning_started_at?: string | null; scanback_duration_mins?: number | null };
+  onDone: () => void;
+  isPending: boolean;
+}) {
+  const end = getScanbackEnd(job);
+  const startedMs = job.scanning_started_at
+    ? new Date(job.scanning_started_at).getTime()
+    : null;
+
+  const totalMs =
+    end && startedMs
+      ? Math.max(end - startedMs, 1)
+      : job.scanback_duration_mins
+        ? job.scanback_duration_mins * 60_000
+        : 1;
+
+  return (
+    <CountdownCard
+      label="SCANBACK IN PROGRESS"
+      end={end}
+      totalMs={totalMs}
+      actionLabel="Scanback done"
+      onAction={onDone}
+      isPending={isPending}
+    />
+  );
+}
+
+function SigningCountdown({
+  job,
+  needsScanback,
+  onDone,
+  isPending,
+}: {
+  job: {
+    started_at?: string | null;
+    signing_ends_at?: string | null;
+    signing_duration_mins?: number | null;
+  };
+  needsScanback: boolean;
+  onDone: () => void;
+  isPending: boolean;
+}) {
+  const { end, totalMs } = getSigningCountdown(job);
+  return (
+    <CountdownCard
+      label="SIGNING IN PROGRESS"
+      end={end}
+      totalMs={totalMs}
+      actionLabel={needsScanback ? "Signing done - start scanback" : "Signing done - complete"}
+      onAction={onDone}
+      isPending={isPending}
+    />
   );
 }

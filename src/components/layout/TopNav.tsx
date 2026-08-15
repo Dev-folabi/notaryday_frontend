@@ -13,7 +13,13 @@ export function TopNav({ isPro = false, initials }: TopNavProps) {
   const setOpen = useUIStore((s) => s.setMobileMenuOpen);
 
   return (
-    <header className="topbar lg:hidden">
+    <header
+      className="topbar lg:hidden"
+      style={{
+        height: "calc(56px + env(safe-area-inset-top))",
+        paddingTop: "env(safe-area-inset-top)",
+      }}
+    >
       <div className="tb-left">
         <button className="tb-hamburger" onClick={() => setOpen(true)} aria-label="Open menu">
           <Menu className="w-[18px] h-[18px]" />

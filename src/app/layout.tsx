@@ -39,7 +39,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/icons/notaryday-icon-badge.svg",
-    apple: "/icons/notaryday-icon-badge.svg",
+    apple: {
+      url: "/icons/apple-touch-icon.png",
+      sizes: "180x180",
+      type: "image/png",
+    },
   },
 };
 
@@ -47,6 +51,7 @@ export const viewport: Viewport = {
   themeColor: "#0F2C4E",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

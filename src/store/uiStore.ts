@@ -33,6 +33,12 @@ interface UIState {
   activeDate: string;
   setActiveDate: (date: string) => void;
 
+  // Jobs list filter (date + status pill) — survives navigation, not reload
+  jobsDate: string;
+  setJobsDate: (date: string) => void;
+  jobsStatusFilter: string;
+  setJobsStatusFilter: (filter: string) => void;
+
   // Toasts
   toasts: Toast[];
   addToast: (toast: Omit<Toast, "id">) => void;
@@ -62,6 +68,12 @@ export const useUIStore = create<UIState>()(
       // Active date
       activeDate: new Date().toISOString().split("T")[0],
       setActiveDate: (date) => set({ activeDate: date }),
+
+      // Jobs list filter
+      jobsDate: "",
+      setJobsDate: (date) => set({ jobsDate: date }),
+      jobsStatusFilter: "All",
+      setJobsStatusFilter: (filter) => set({ jobsStatusFilter: filter }),
 
       // Toasts
       toasts: [],
