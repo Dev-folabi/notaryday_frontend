@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
+import { LOGO_URL } from "@/lib/logo";
 
 export function Navbar() {
   const { isAuthenticated, user, isLoadingUser } = useAuth();
@@ -19,7 +21,14 @@ export function Navbar() {
   return (
     <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-6 md:px-12">
       <div className="flex items-center gap-8">
-        <div>
+        <div className="flex items-center gap-2.5">
+          <Image
+            src={LOGO_URL}
+            alt="Notary Day"
+            width={28}
+            height={28}
+            unoptimized
+          />
           <div className="font-sora text-lg font-bold tracking-[-0.3px] text-navy">
             Notary Day
           </div>

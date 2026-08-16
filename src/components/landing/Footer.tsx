@@ -1,11 +1,18 @@
+import Image from "next/image";
+
 export function Footer() {
   return (
     <div className="bg-navy p-12 md:px-12 md:py-12">
       <div className="mb-10 grid grid-cols-1 gap-10 lg:grid-cols-[2fr_1fr_1fr_1fr]">
         <div>
-          <div className="mb-2 font-sora text-lg font-bold text-white">
-            Notary Day
-          </div>
+          <Image
+            src="/notaryday-white-text.svg"
+            alt="Notary Day"
+            width={102}
+            height={32}
+            unoptimized
+            className="mb-2"
+          />
           <p className="max-w-[240px] text-[13px] leading-[1.6] text-white/50">
             Everything you already do manually, done automatically. Smart
             scheduling for full-time mobile notaries and loan signing agents.

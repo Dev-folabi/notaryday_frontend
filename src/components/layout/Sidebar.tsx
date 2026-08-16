@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
+import { LOGO_URL } from "@/lib/logo";
 
 interface SidebarProps {
   isPro?: boolean;
@@ -95,10 +96,11 @@ export function Sidebar({
       <div className="sidebar-header">
         <div className="flex items-center gap-2.5">
           <Image
-            src="/icons/notaryday-icon-badge.svg"
+            src={LOGO_URL}
             alt="Notary Day"
             width={32}
             height={32}
+            unoptimized
             className="flex-shrink-0"
           />
           <div>

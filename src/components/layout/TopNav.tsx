@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { LOGO_URL } from "@/lib/logo";
 
 interface TopNavProps {
   isPro?: boolean;
@@ -19,10 +20,11 @@ export function TopNav({ isPro = false, initials }: TopNavProps) {
     >
       <div className="tb-left">
         <Image
-          src="/icons/notaryday-icon-badge.svg"
+          src={LOGO_URL}
           alt="Notary Day"
           width={28}
           height={28}
+          unoptimized
           className="flex-shrink-0"
         />
         <span className="tb-logo">Notary Day</span>

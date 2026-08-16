@@ -7,11 +7,13 @@ import { TopNav } from "@/components/layout/TopNav";
 import { MobileDrawer } from "@/components/layout/MobileDrawer";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Image from "next/image";
 import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import CITTModal from "@/components/citt/CITTModal";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { useNavStatus } from "@/hooks/useNavStatus";
+import { LOGO_URL } from "@/lib/logo";
 
 const ONBOARDING_STEPS = [
   ROUTES.ONBOARDING.HOME,
@@ -48,16 +50,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoadingUser, isAuthenticated, router]);
 
-  // While checking auth, show nothing
+  // While checking auth, show the logo (this is the launch screen on mobile)
   if (isLoadingUser || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-bg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-border border-t-interactive-blue rounded-full animate-spin" />
-          <span className="font-inter text-sm text-slate-secondary">
-            Loading…
-          </span>
-        </div>
+        <Image
+          src={LOGO_URL}
+          alt="Notary Day"
+          width={56}
+          height={56}
+          unoptimized
+          className="animate-pulse"
+          priority
+        />
       </div>
     );
   }
