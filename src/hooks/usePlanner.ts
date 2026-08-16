@@ -59,6 +59,7 @@ export interface PlannerJob {
   net_earnings: number;
   status: string;
   client_name: string | null;
+  platform_name: string | null;
   route_sequence: number | null;
   drive_from_prev_mins: number | null;
   drive_from_prev_miles: number | null;

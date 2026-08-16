@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { jobsApi } from "@/api/jobs.api";
 import { notificationsApi } from "@/api/notifications.api";
+import { plannerApi } from "@/api/planner.api";
 import { queryKeys } from "@/lib/queryClient";
 import { toDateInputValue } from "@/lib/utils";
 import type { ApiResponse } from "@/lib/api";
@@ -12,7 +13,11 @@ interface NotificationItem {
   is_read?: boolean;
 }
 
-export function useNavStatus() {
+interface GapCandidate {
+  candidates: unknown[];
+}
+
+export function useNavStatus(isPro = false) {
   const today = toDateInputValue(new Date());
 
   const { data: jobs = [] } = useQuery({
@@ -45,5 +50,20 @@ export function useNavStatus() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  return { hasActiveSigning, unreadCount };
+  const { data: gaps = [] } = useQuery({
+    queryKey: ["planner", "gaps", today],
+    queryFn: async () => {
+      const res = (await plannerApi.gaps(today)) as unknown as ApiResponse<
+        GapCandidate[]
+      >;
+      return res.data ?? [];
+    },
+    enabled: isPro,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  const gapCount = gaps.filter((g) => g.candidates.length > 0).length;
+
+  return { hasActiveSigning, unreadCount, gapCount };
 }

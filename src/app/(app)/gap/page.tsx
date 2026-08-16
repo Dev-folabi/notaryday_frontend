@@ -197,7 +197,7 @@ export default function GapPage() {
               <div>
                 <div className="text-[11px] font-semibold mb-0.5">
                   {totalCandidates} pending job
-                  {totalCandidates === 1 ? "" : "s"} matched today&apos;s gaps
+                  {totalCandidates === 1 ? "" : "s"}  matched today&apos;s gaps
                 </div>
                 <div className="text-[11px] leading-[1.4]">
                   Don&apos;t see one? Forward Snapdocs confirmations to{" "}

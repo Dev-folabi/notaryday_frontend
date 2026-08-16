@@ -40,7 +40,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
       { href: ROUTES.APP.ACTIVE, icon: Clock, label: "Active Signing", liveTag: true },
       { href: ROUTES.APP.JOBS, icon: Briefcase, label: "My Jobs" },
       { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true },
-      { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true },
+      { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true, badgeKey: "gap" },
     ],
   },
   {
@@ -66,6 +66,7 @@ interface MobileDrawerProps {
   username?: string;
   notifCount?: number;
   hasActiveSigning?: boolean;
+  gapCount?: number;
 }
 
 export function MobileDrawer({
@@ -73,6 +74,7 @@ export function MobileDrawer({
   username,
   notifCount = 0,
   hasActiveSigning = false,
+  gapCount = 0,
 }: MobileDrawerProps) {
   const pathname = usePathname();
   const isOpen = useUIStore((s) => s.isMobileMenuOpen);
@@ -117,6 +119,7 @@ export function MobileDrawer({
                   const isActive =
                     pathname === href || (href !== "/" && pathname.startsWith(href));
                   const showNotifBadge = badgeKey === "notif" && notifCount > 0;
+                  const showGapBadge = badgeKey === "gap" && gapCount > 0;
                   const showLive = liveTag && hasActiveSigning;
 
                   return (
@@ -137,6 +140,11 @@ export function MobileDrawer({
                       {proOnly && !isPro && (
                         <span className="si-badge" style={{ background: "var(--gold)", color: "var(--navy)" }}>
                           Pro
+                        </span>
+                      )}
+                      {showGapBadge && (
+                        <span className="si-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", border: "1px solid var(--violet-border)" }}>
+                          {gapCount}
                         </span>
                       )}
                       {showNotifBadge && <span className="si-badge">{notifCount}</span>}

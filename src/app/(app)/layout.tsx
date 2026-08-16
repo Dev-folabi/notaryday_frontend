@@ -26,7 +26,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoadingUser, isAuthenticated } = useAuth();
   const router = useRouter();
   const { setOnboardingStep } = useUIStore();
-  const { hasActiveSigning, unreadCount } = useNavStatus();
+  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
+  const { hasActiveSigning, unreadCount, gapCount } = useNavStatus(isPro);
 
   // Redirect to onboarding if authenticated but onboarding not complete
   useEffect(() => {
@@ -67,7 +68,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const initials = (user?.full_name || user?.username || "??")
     .slice(0, 2)
     .toUpperCase();
@@ -80,6 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         username={user?.username}
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
+        gapCount={gapCount}
       />
 
       {/* Mobile drawer (hamburger menu) */}
@@ -88,6 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         username={user?.username}
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
+        gapCount={gapCount}
       />
 
       {/* Main content area */}
@@ -104,6 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <BottomNav
           unreadCount={unreadCount}
           hasActiveSigning={hasActiveSigning}
+          gapCount={gapCount}
         />
 
         {/* Global CITT Modal */}

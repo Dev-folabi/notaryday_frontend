@@ -26,11 +26,13 @@ const RIGHT_ITEMS = [
 interface BottomNavProps {
   unreadCount?: number;
   hasActiveSigning?: boolean;
+  gapCount?: number;
 }
 
 export function BottomNav({
   unreadCount = 0,
   hasActiveSigning = false,
+  gapCount = 0,
 }: BottomNavProps) {
   const pathname = usePathname();
   const openCITT = useUIStore((s) => s.openCITT);
@@ -40,7 +42,7 @@ export function BottomNav({
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
 
-  const showMoreDot = hasActiveSigning || unreadCount > 0;
+  const showMoreDot = hasActiveSigning || unreadCount > 0 || gapCount > 0;
 
   return (
     <nav

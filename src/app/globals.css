@@ -289,6 +289,15 @@ textarea {
   border-left: 1px dashed theme("colors.border");
   @apply pl-2.5 pt-1.5 relative min-w-0;
 }
+.tl-grid {
+  @apply relative;
+}
+.tl-hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed theme("colors.border");
+}
 .tl-job {
   @apply bg-white border border-border border-l-[3px] border-l-navy rounded-r-[10px] p-2.5 lg:p-3 mb-0.5 shadow-card cursor-pointer min-w-0;
 }
@@ -347,6 +356,12 @@ textarea {
 .wday.today .wd-d {
   background: theme("colors.navy");
   color: #fff;
+}
+.wday.active .wd-d {
+  box-shadow: inset 0 0 0 2px theme("colors.blue");
+}
+.wday.today.active .wd-d {
+  box-shadow: inset 0 0 0 2px #fff;
 }
 .wd-dot {
   width: 4px;

@@ -9,8 +9,8 @@ export function Footer() {
           <Image
             src={FOOTER_LOGO_URL}
             alt="Notary Day"
-            width={102}
-            height={32}
+            width={128}
+            height={40}
             unoptimized
             className="mb-2"
           />

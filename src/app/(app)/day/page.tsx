@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useTodayPlan, useGaps } from "@/hooks/usePlanner";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,8 +19,21 @@ import {
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
+import DayMap from "@/components/map/DayMap";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HOUR_PX = 84;
+const PX_PER_MIN = HOUR_PX / 60;
+
+function minutesOfDay(d: Date): number {
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function hourLabel(hour: number): string {
+  if (hour === 0) return "12 AM";
+  if (hour === 12) return "12 PM";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
 
 export default function DayPage() {
   const { user } = useAuth();
@@ -40,8 +53,49 @@ export default function DayPage() {
   const bestCandidate = firstGap?.candidates[0];
 
   const driveMins = summary?.total_drive_mins ?? 0;
-  const firstSigning = jobs[0]
-    ? format(parseISO(jobs[0].appointment_time), "h:mm a")
+
+  const parsedJobs = jobs.map((j) => {
+    const start = new Date(j.appointment_time);
+    const end = new Date(
+      j.scanback_ends_at ?? j.signing_ends_at ?? j.appointment_time,
+    );
+    return { job: j, start, end };
+  });
+
+  const gridStartHour = parsedJobs.length
+    ? Math.floor(
+        Math.min(...parsedJobs.map((p) => minutesOfDay(p.start))) / 60,
+      )
+    : 8;
+  const gridEndHour = parsedJobs.length
+    ? Math.max(
+        15,
+        Math.ceil(Math.max(...parsedJobs.map((p) => minutesOfDay(p.end))) / 60),
+      )
+    : 15;
+  const gridLabels = Array.from(
+    { length: gridEndHour - gridStartHour + 1 },
+    (_, i) => gridStartHour + i,
+  );
+  const offsetPx = (d: Date) =>
+    (minutesOfDay(d) - gridStartHour * 60) * PX_PER_MIN;
+
+  const isToday = date === toDateInputValue(new Date());
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const now = new Date(nowTick);
+  const nowMins = minutesOfDay(now);
+  const showNowMarker =
+    isToday && nowMins >= gridStartHour * 60 && nowMins < (gridEndHour + 1) * 60;
+
+  const firstSigning = parsedJobs.length
+    ? format(
+        new Date(Math.min(...parsedJobs.map((p) => p.start.getTime()))),
+        "h:mm a",
+      )
     : "—";
   const totalNet = summary?.total_earnings ?? 0;
 
@@ -49,10 +103,13 @@ export default function DayPage() {
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() - d.getDay() + i);
+    const iso = toDateInputValue(d);
     return {
       label: DAYS[d.getDay()],
       day: d.getDate(),
-      isToday: d.toDateString() === new Date().toDateString(),
+      date: iso,
+      isToday: iso === toDateInputValue(new Date()),
+      isActive: iso === date,
     };
   });
 
@@ -61,7 +118,15 @@ export default function DayPage() {
       {/* Week strip */}
       <div className="wstrip">
         {weekDays.map((d, i) => (
-          <div key={i} className={cn("wday", d.isToday && "today")}>
+          <div
+            key={i}
+            className={cn(
+              "wday",
+              d.isToday && "today",
+              d.isActive && "active",
+            )}
+            onClick={() => useUIStore.getState().setActiveDate(d.date)}
+          >
             <span className="wd-n">{d.label}</span>
             <span className="wd-d">{d.day}</span>
             <span className="wd-dot" style={{ opacity: 0 }} />
@@ -96,12 +161,20 @@ export default function DayPage() {
           className="sday-btn"
           onClick={(e) => {
             e.stopPropagation();
+            if (!isPro) {
+              useUIStore.getState().addToast({
+                title: "This is a Pro feature",
+                message: "Upgrade to Pro to unlock the route map.",
+                type: "warning",
+              });
+              return;
+            }
             useUIStore.getState().addToast({
               title: "Opening optimized route map",
               message: "Start navigation",
               type: "info",
             });
-            router.push("/map");
+            setTab("map");
           }}
         >
           <ArrowRight className="w-3.5 h-3.5" /> Start Day
@@ -135,7 +208,7 @@ export default function DayPage() {
           List
         </div>
         <div
-          className="tab"
+          className={cn("tab", tab === "map" && "on")}
           onClick={() => {
             if (!isPro) {
               useUIStore.getState().addToast({
@@ -145,7 +218,7 @@ export default function DayPage() {
               });
               return;
             }
-            router.push("/map");
+            setTab("map");
           }}
         >
           Map
@@ -184,170 +257,208 @@ export default function DayPage() {
               <div className="flex-1 overflow-y-auto">
                 <div className="tl-wrap" style={{ padding: "16px 16px 0" }}>
                   <div className="tl-times">
-                    {[
-                      "8 AM",
-                      "9 AM",
-                      "10 AM",
-                      "11 AM",
-                      "12 PM",
-                      "1 PM",
-                      "2 PM",
-                      "3 PM",
-                    ].map((t) => (
-                      <div key={t} className="tl-tr">
-                        <span className="tl-label">{t}</span>
+                    {gridLabels.map((h) => (
+                      <div key={h} className="tl-tr">
+                        <span className="tl-label">{hourLabel(h)}</span>
                       </div>
                     ))}
                   </div>
                   <div className="tl-body">
-                    <div style={{ height: 84 }} />
-                    {jobs.map((j, idx) => (
-                      <div key={j.id}>
+                    <div
+                      className="tl-grid"
+                      style={{ height: gridLabels.length * HOUR_PX }}
+                    >
+                      {gridLabels.map((_, i) => (
+                        <div key={i} className="tl-hour" />
+                      ))}
+
+                      {showNowMarker && (
                         <div
-                          className="tl-job"
+                          className="now-wrap"
                           style={{
-                            borderLeftColor: j.route_sequence
-                              ? "#0F2C4E"
-                              : "#2563EB",
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            top: offsetPx(now),
+                            margin: 0,
                           }}
-                          onClick={() => router.push(`/jobs/${j.id}`)}
                         >
-                          <div className="flex justify-between gap-2 mb-0.5 flex-wrap">
-                            <div className="text-[11px] font-bold text-primary-navy flex gap-1 items-center">
-                              <Clock className="w-3 h-3" />{" "}
-                              {format(parseISO(j.appointment_time), "h:mm a")} -{" "}
-                              {format(
-                                parseISO(
-                                  j.signing_ends_at ?? j.appointment_time,
-                                ),
-                                "h:mm a",
-                              )}
-                            </div>
-                            <span
-                              className={cn(
-                                "text-[12px] font-bold",
-                                profitabilityColor(j.net_earnings),
-                              )}
-                            >
-                              {formatCurrency(j.net_earnings)}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate mb-1 flex gap-1 items-center">
-                            <MapPin className="w-3 h-3 flex-shrink-0" />
-                            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                              {j.address}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-1.5 flex-wrap">
-                            <div className="flex gap-1 flex-wrap">
+                          <div className="now-dot" />
+                          <div className="now-line" />
+                          <span className="now-lbl">
+                            NOW {format(now, "h:mm a")}
+                          </span>
+                        </div>
+                      )}
+
+                      {parsedJobs.map(({ job: j, start }, idx) => (
+                        <div
+                          key={j.id}
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            top: offsetPx(start),
+                          }}
+                        >
+                          <div
+                            className="tl-job"
+                            style={{
+                              borderLeftColor: j.route_sequence
+                                ? "#0F2C4E"
+                                : "#2563EB",
+                            }}
+                            onClick={() => router.push(`/jobs/${j.id}`)}
+                          >
+                            <div className="flex justify-between gap-2 mb-0.5 flex-wrap">
+                              <div className="text-[11px] font-bold text-primary-navy flex gap-1 items-center">
+                                <Clock className="w-3 h-3" />{" "}
+                                {format(parseISO(j.appointment_time), "h:mm a")}{" "}
+                                -{" "}
+                                {format(
+                                  parseISO(
+                                    j.signing_ends_at ?? j.appointment_time,
+                                  ),
+                                  "h:mm a",
+                                )}
+                              </div>
                               <span
                                 className={cn(
-                                  "chip",
-                                  getTypeChipClass(j.signing_type),
+                                  "text-[12px] font-bold",
+                                  profitabilityColor(j.net_earnings),
                                 )}
                               >
-                                {formatSigningType(j.signing_type)}
+                                {formatCurrency(j.net_earnings)}
                               </span>
-                              {(j as any).platform_name && (
-                                <span className="chip c-plat">
-                                  {(j as any).platform_name}
+                            </div>
+                            <div className="text-[11px] text-slate mb-1 flex gap-1 items-center">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                                {j.address}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-1.5 flex-wrap">
+                              <div className="flex gap-1 flex-wrap">
+                                <span
+                                  className={cn(
+                                    "chip",
+                                    getTypeChipClass(j.signing_type),
+                                  )}
+                                >
+                                  {formatSigningType(j.signing_type)}
+                                </span>
+                                {j.platform_name && (
+                                  <span className="chip c-plat">
+                                    {j.platform_name}
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                className="text-[10px] font-semibold text-blue flex gap-1 items-center cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(
+                                    `https://maps.google.com/?q=${encodeURIComponent(j.address)}`,
+                                    "_blank",
+                                  );
+                                }}
+                              >
+                                <Navigation className="w-3 h-3" /> Navigate
+                              </div>
+                            </div>
+                          </div>
+                          {j.scanback_duration_mins > 0 && (
+                            <>
+                              <div className="tl-sb">
+                                <div className="flex justify-between gap-2 flex-wrap">
+                                  <span className="text-[10px] italic text-amber flex gap-1 items-center">
+                                    <Scan className="w-3 h-3" /> Scanback Job{" "}
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-[9px] text-amber font-medium">
+                                    {format(
+                                      parseISO(j.appointment_time),
+                                      "h:mm a",
+                                    )}{" "}
+                                    to{" "}
+                                    {format(
+                                      parseISO(
+                                        j.scanback_ends_at ??
+                                          j.appointment_time,
+                                      ),
+                                      "h:mm a",
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="tl-drv">
+                                <Car className="w-3 h-3" />{" "}
+                                {j.drive_from_prev_mins ?? 0} min drive
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+
+                      {firstGap && bestCandidate && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            top: offsetPx(new Date(firstGap.gap_start)),
+                          }}
+                        >
+                          <div className="flex gap-1.5 items-center py-1 px-0 text-[11px] font-semibold text-violet">
+                            <Sparkles className="w-3.5 h-3.5" /> Gap
+                            opportunity,{" "}
+                            {format(parseISO(firstGap.gap_start), "h:mm a")},{" "}
+                            {firstGap.gap_mins} min available
+                          </div>
+                          <div className="gap-card">
+                            <div className="text-[12px] font-semibold text-primary-navy mb-1">
+                              {bestCandidate.address}
+                            </div>
+                            <div className="text-[11px] text-slate-secondary mb-2 flex gap-1.5 flex-wrap">
+                              <span>
+                                Offered:{" "}
+                                <strong className="text-slate">
+                                  {formatCurrency(bestCandidate.fee)}
+                                </strong>
+                              </span>
+                              <span>
+                                Est. net:{" "}
+                                <strong className="text-teal">
+                                  {formatCurrency(bestCandidate.net_earnings)}
+                                </strong>
+                              </span>
+                              {bestCandidate.miles_from != null && (
+                                <span>
+                                  {formatMiles(bestCandidate.miles_from)} from{" "}
+                                  {bestCandidate.miles_from_label}
                                 </span>
                               )}
                             </div>
-                            <div
-                              className="text-[10px] font-semibold text-blue flex gap-1 items-center cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(
-                                  `https://maps.google.com/?q=${encodeURIComponent(j.address)}`,
-                                  "_blank",
-                                );
+                            <button
+                              className="btn-sm"
+                              style={{
+                                borderColor: "#C4B5FD",
+                                color: "#7C3AED",
                               }}
+                              onClick={() =>
+                                useUIStore.getState().openCITT({
+                                  address: bestCandidate.address,
+                                  time: bestCandidate.appointment_time,
+                                  fee: bestCandidate.fee,
+                                })
+                              }
                             >
-                              <Navigation className="w-3 h-3" /> Navigate
-                            </div>
+                              <Zap className="w-3 h-3" /> Run CITT check
+                            </button>
                           </div>
                         </div>
-                        {j.scanback_duration_mins > 0 && (
-                          <>
-                            <div className="tl-sb">
-                              <div className="flex justify-between gap-2 flex-wrap">
-                                <span className="text-[10px] italic text-amber flex gap-1 items-center">
-                                  <Scan className="w-3 h-3" /> Scanback Job{" "}
-                                  {idx + 1}
-                                </span>
-                                <span className="text-[9px] text-amber font-medium">
-                                  {format(
-                                    parseISO(j.appointment_time),
-                                    "h:mm a",
-                                  )}{" "}
-                                  to{" "}
-                                  {format(
-                                    parseISO(
-                                      j.scanback_ends_at ?? j.appointment_time,
-                                    ),
-                                    "h:mm a",
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="tl-drv">
-                              <Car className="w-3 h-3" />{" "}
-                              {j.drive_from_prev_mins ?? 0} min drive
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-
-                    {firstGap && bestCandidate && (
-                      <div className="mt-3">
-                        <div className="flex gap-1.5 items-center py-1 px-0 text-[11px] font-semibold text-violet">
-                          <Sparkles className="w-3.5 h-3.5" /> Gap opportunity,{" "}
-                          {format(parseISO(firstGap.gap_start), "h:mm a")},{" "}
-                          {firstGap.gap_mins} min available
-                        </div>
-                        <div className="gap-card">
-                          <div className="text-[12px] font-semibold text-primary-navy mb-1">
-                            {bestCandidate.address}
-                          </div>
-                          <div className="text-[11px] text-slate-secondary mb-2 flex gap-1.5 flex-wrap">
-                            <span>
-                              Offered:{" "}
-                              <strong className="text-slate">
-                                {formatCurrency(bestCandidate.fee)}
-                              </strong>
-                            </span>
-                            <span>
-                              Est. net:{" "}
-                              <strong className="text-teal">
-                                {formatCurrency(bestCandidate.net_earnings)}
-                              </strong>
-                            </span>
-                            {bestCandidate.miles_from != null && (
-                              <span>
-                                {formatMiles(bestCandidate.miles_from)} from{" "}
-                                {bestCandidate.miles_from_label}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            className="btn-sm"
-                            style={{ borderColor: "#C4B5FD", color: "#7C3AED" }}
-                            onClick={() =>
-                              useUIStore.getState().openCITT({
-                                address: bestCandidate.address,
-                                time: bestCandidate.appointment_time,
-                                fee: bestCandidate.fee,
-                              })
-                            }
-                          >
-                            <Zap className="w-3 h-3" /> Run CITT check
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    <div style={{ height: 24 }} />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -379,9 +490,9 @@ export default function DayPage() {
                       >
                         {formatSigningType(j.signing_type)}
                       </span>
-                      {(j as any).platform_name && (
+                      {j.platform_name && (
                         <span className="chip c-plat">
-                          {(j as any).platform_name}
+                          {j.platform_name}
                         </span>
                       )}
                     </div>
@@ -433,6 +544,23 @@ export default function DayPage() {
                   </div>
                 </div>
               )}
+            </div>
+          ) : isPro ? (
+            <div className="flex-1 min-h-0">
+              <DayMap
+                jobs={jobs}
+                homeBase={
+                  user?.settings?.home_base_lat != null &&
+                  user?.settings?.home_base_lng != null
+                    ? {
+                        lat: user.settings.home_base_lat,
+                        lng: user.settings.home_base_lng,
+                      }
+                    : null
+                }
+                className="h-full"
+                now={nowTick}
+              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
