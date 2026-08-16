@@ -15,11 +15,13 @@ import {
   Sparkles,
   ArrowRight,
   Zap,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import DayMap from "@/components/map/DayMap";
+import DayBreakdownModal from "@/components/planner/DayBreakdownModal";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HOUR_PX = 84;
@@ -41,6 +43,7 @@ export default function DayPage() {
   const date = activeDate || toDateInputValue(new Date());
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const [tab, setTab] = useState<"timeline" | "list" | "map">("timeline");
+  const [isBreakdownOpen, setBreakdownOpen] = useState(false);
   const router = useRouter();
 
   const { data: plan, isLoading } = useTodayPlan(date);
@@ -135,7 +138,7 @@ export default function DayPage() {
       </div>
 
       {/* Navy summary strip */}
-      <div className="dstrip" onClick={() => router.push("/day")}>
+      <div className="dstrip" onClick={() => setBreakdownOpen(true)}>
         <div className="ds">
           <span className="ds-v">{jobs.length}</span>
           <span className="ds-l">Signings</span>
@@ -161,20 +164,7 @@ export default function DayPage() {
           className="sday-btn"
           onClick={(e) => {
             e.stopPropagation();
-            if (!isPro) {
-              useUIStore.getState().addToast({
-                title: "This is a Pro feature",
-                message: "Upgrade to Pro to unlock the route map.",
-                type: "warning",
-              });
-              return;
-            }
-            useUIStore.getState().addToast({
-              title: "Opening optimized route map",
-              message: "Start navigation",
-              type: "info",
-            });
-            setTab("map");
+            setBreakdownOpen(true);
           }}
         >
           <ArrowRight className="w-3.5 h-3.5" /> Start Day
@@ -233,25 +223,37 @@ export default function DayPage() {
         <>
           {tab === "timeline" ? (
             <>
-              <div className="al-teal" style={{ flexShrink: 0 }}>
-                <Route className="w-4 h-4" />
-                <span className="text-[11px] font-semibold text-teal">
-                  Route optimised
-                </span>
-                <span className="text-[11px] text-slate-secondary">
-                  Reordered {jobs.length} jobs, saved 22 min vs time entry order
-                </span>
-                <span
-                  className="ml-auto text-[10px] text-slate-secondary cursor-pointer"
-                  onClick={() =>
-                    useUIStore.getState().addToast({
-                      title: "Route recalculated",
-                      type: "info",
-                    })
-                  }
-                >
-                  Re-run
-                </span>
+              <div className="flex-shrink-0 bg-teal-bg border-b border-teal-border px-4 py-2.5">
+                <div className="flex items-center gap-2.5 w-full">
+                  <div className="w-8 h-8 rounded-full bg-white border border-teal-border flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Route className="w-4 h-4 text-teal" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11.5px] font-bold text-teal">
+                        Route optimised
+                      </span>
+                      <span className="text-[9px] font-semibold text-teal bg-white border border-teal-border rounded-full px-1.5 py-[1px]">
+                        saved 22 min
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-secondary leading-snug mt-0.5">
+                      Reordered {jobs.length} jobs for less driving — best
+                      order for today
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      useUIStore.getState().addToast({
+                        title: "Route recalculated",
+                        type: "info",
+                      })
+                    }
+                    className="flex-shrink-0 ml-auto flex items-center gap-1 text-[10px] font-semibold text-slate-secondary bg-white border border-border rounded-full px-2 py-1.5 cursor-pointer hover:border-teal hover:text-teal transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Re-run
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto">
@@ -573,6 +575,34 @@ export default function DayPage() {
           )}
         </>
       )}
+      <DayBreakdownModal
+        isOpen={isBreakdownOpen}
+        date={date}
+        jobs={jobs}
+        summary={summary}
+        isPro={isPro}
+        irsRatePerMile={
+          parseFloat(String(user?.settings?.irs_rate_per_mile ?? 0.67)) || 0.67
+        }
+        onClose={() => setBreakdownOpen(false)}
+        onStartDay={() => {
+          setBreakdownOpen(false);
+          if (!isPro) {
+            useUIStore.getState().addToast({
+              title: "This is a Pro feature",
+              message: "Upgrade to Pro to unlock the route map.",
+              type: "warning",
+            });
+            return;
+          }
+          useUIStore.getState().addToast({
+            title: "Opening optimized route map",
+            message: "Start navigation",
+            type: "info",
+          });
+          setTab("map");
+        }}
+      />
     </div>
   );
 }

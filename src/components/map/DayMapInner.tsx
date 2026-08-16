@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { formatCurrency, formatDuration, formatMiles } from "@/lib/utils";
 import { Navigation, Plus, Minus, Route } from "lucide-react";
 import type { PlannerJob } from "@/hooks/usePlanner";
@@ -90,6 +91,7 @@ export default function DayMapInner({
           zoom={11}
           className="h-full w-full z-0"
           scrollWheelZoom
+          zoomControl={false}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
@@ -127,9 +129,8 @@ export default function DayMapInner({
               </Popup>
             </Marker>
           ))}
+          <ZoomControls />
         </MapContainer>
-
-        <ZoomControls />
 
         <div className="absolute top-2.5 left-2.5 z-[1000] bg-white border border-border rounded-lg px-2.5 py-1.5 text-[10px] max-w-[70%] shadow-sm">
           <div className="flex gap-1 items-center text-primary-navy font-semibold mb-1">
