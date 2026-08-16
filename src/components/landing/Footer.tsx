@@ -1,3 +1,4 @@
+import { FOOTER_LOGO_URL } from "@/lib/logo";
 import Image from "next/image";
 
 export function Footer() {
@@ -6,7 +7,7 @@ export function Footer() {
       <div className="mb-10 grid grid-cols-1 gap-10 lg:grid-cols-[2fr_1fr_1fr_1fr]">
         <div>
           <Image
-            src="/notaryday-white-text.svg"
+            src={FOOTER_LOGO_URL}
             alt="Notary Day"
             width={102}
             height={32}

@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import Image from "next/image";
+import { LOGO_URL } from "@/lib/logo";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { bookingApi } from "@/api/booking.api";
 import {
   MapPin,
@@ -22,7 +29,11 @@ import {
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { unwrap, getInitials, errMsg } from "@/lib/utils";
-import { BOOKING_SERVICE_LIST, normalizeBookingServices, from24h } from "@/lib/booking";
+import {
+  BOOKING_SERVICE_LIST,
+  normalizeBookingServices,
+  from24h,
+} from "@/lib/booking";
 
 type NotaryInfo = {
   full_name?: string | null;
@@ -70,8 +81,17 @@ const DAY_LABELS: Record<string, string> = {
 function PublicHeader() {
   return (
     <div className="bg-white border-b border-border px-4 py-3 md:px-7 md:py-3.5 flex items-center justify-between flex-shrink-0">
-      <div className="font-sora font-bold text-[15px] text-primary-navy">
-        Notary Day
+      <div className="flex items-center gap-2.5">
+        <Image
+          src={LOGO_URL}
+          alt="Notary Day"
+          width={28}
+          height={28}
+          unoptimized
+        />
+        <div className="font-sora font-bold text-[15px] text-primary-navy">
+          Notary Day
+        </div>
       </div>
       <span className="text-xs text-slate-secondary">
         Scheduling powered by Notary Day
@@ -198,8 +218,6 @@ export default function PublicBookingPage() {
     enabled: !!username && !!date,
     retry: false,
     placeholderData: keepPreviousData,
-    // Slots are live (they change the moment someone books), so never serve a
-    // cached date without refetching; switching back to a date must be fresh.
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -233,7 +251,15 @@ export default function PublicBookingPage() {
   });
 
   const resetForm = () => {
-    setForm({ client_name: "", client_email: "", client_phone: "", address: "", notes: "", document_type: "", base_fee: "" });
+    setForm({
+      client_name: "",
+      client_email: "",
+      client_phone: "",
+      address: "",
+      notes: "",
+      document_type: "",
+      base_fee: "",
+    });
     setSelectedSlot(null);
     setBookingRef(null);
   };
@@ -302,13 +328,22 @@ export default function PublicBookingPage() {
 
   if (submitted) {
     const rows: [string, string][] = [
-      ["Notary", `${notary?.full_name ?? "Notary"}, NNA Certified Loan Signing Agent`],
+      [
+        "Notary",
+        `${notary?.full_name ?? "Notary"}, NNA Certified Loan Signing Agent`,
+      ],
       ["Service", selectedServiceName],
       ["Date", format(new Date(`${date}T00:00:00`), "EEEE, MMMM d, yyyy")],
-      ["Time", selectedSlotLabel + (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : "")],
+      [
+        "Time",
+        selectedSlotLabel +
+          (notary?.timezone_abbr ? ` (${notary.timezone_abbr})` : ""),
+      ],
       ["Signing fee", feeValid ? `$${feeValue.toFixed(2)}` : "—"],
       ["Address", form.address],
-      ...(form.document_type ? [["Document type", form.document_type] as [string, string]] : []),
+      ...(form.document_type
+        ? [["Document type", form.document_type] as [string, string]]
+        : []),
       ["Client", form.client_name],
       ["Booking ref", bookingRef ?? "—"],
     ];
@@ -540,35 +575,37 @@ export default function PublicBookingPage() {
                   }}
                   className="inp has-icon"
                 />
-                {showSuggestions &&
-                  (suggestions.length > 0 || isSearching) && (
-                    <ul
-                      className="absolute left-0 right-0 z-20 bg-white border border-border rounded-[8px] max-h-60 overflow-y-auto"
-                      style={{ marginTop: 4, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}
-                    >
-                      {isSearching && suggestions.length === 0 && (
-                        <li className="px-3 py-2.5 text-[11px] text-slate-secondary text-center">
-                          Searching addresses…
+                {showSuggestions && (suggestions.length > 0 || isSearching) && (
+                  <ul
+                    className="absolute left-0 right-0 z-20 bg-white border border-border rounded-[8px] max-h-60 overflow-y-auto"
+                    style={{
+                      marginTop: 4,
+                      boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+                    }}
+                  >
+                    {isSearching && suggestions.length === 0 && (
+                      <li className="px-3 py-2.5 text-[11px] text-slate-secondary text-center">
+                        Searching addresses…
+                      </li>
+                    )}
+                    {suggestions.map((s, i) => {
+                      const { name, street, city, state, postcode } =
+                        s.properties;
+                      const label = [name || street, city, state, postcode]
+                        .filter(Boolean)
+                        .join(", ");
+                      return (
+                        <li
+                          key={i}
+                          onClick={() => handleSelectAddress(s)}
+                          className="px-3 py-2 text-xs text-slate border-b border-border cursor-pointer hover:bg-bg"
+                        >
+                          {label}
                         </li>
-                      )}
-                      {suggestions.map((s, i) => {
-                        const { name, street, city, state, postcode } =
-                          s.properties;
-                        const label = [name || street, city, state, postcode]
-                          .filter(Boolean)
-                          .join(", ");
-                        return (
-                          <li
-                            key={i}
-                            onClick={() => handleSelectAddress(s)}
-                            className="px-3 py-2 text-xs text-slate border-b border-border cursor-pointer hover:bg-bg"
-                          >
-                            {label}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
             </div>
 
@@ -584,7 +621,9 @@ export default function PublicBookingPage() {
                   inputMode="decimal"
                   placeholder="0.00"
                   value={form.base_fee}
-                  onChange={(e) => setForm({ ...form, base_fee: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, base_fee: e.target.value })
+                  }
                   className="inp has-icon"
                 />
               </div>
@@ -634,8 +673,8 @@ export default function PublicBookingPage() {
                   </div>
                   <div className="font-inter text-[11px] text-slate-secondary mt-0.5 leading-[1.4]">
                     {notary?.full_name ?? "This notary"} has no free slots on{" "}
-                    {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}.
-                    Try another date, or reach out directly.
+                    {format(new Date(`${date}T00:00:00`), "EEEE, MMMM d")}. Try
+                    another date, or reach out directly.
                   </div>
                 </div>
               ) : (
@@ -731,12 +770,16 @@ export default function PublicBookingPage() {
             <div className="flex flex-col gap-1.5">
               <label className="lbl">
                 Document type{" "}
-                <span className="font-inter text-[11px] text-muted font-normal">· optional</span>
+                <span className="font-inter text-[11px] text-muted font-normal">
+                  · optional
+                </span>
               </label>
               <input
                 placeholder="e.g. Deed of Trust, Loan Package, Power of Attorney…"
                 value={form.document_type}
-                onChange={(e) => setForm({ ...form, document_type: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, document_type: e.target.value })
+                }
                 className="inp"
               />
               <span className="hint">
@@ -841,8 +884,8 @@ export default function PublicBookingPage() {
               <button onClick={() => setAltOpen(false)} className="btn-gh">
                 <X className="w-4 h-4" />
                 <span>
-                  Cancel, I&apos;ll contact{" "}
-                  {notary?.full_name ?? "the notary"} directly
+                  Cancel, I&apos;ll contact {notary?.full_name ?? "the notary"}{" "}
+                  directly
                 </span>
               </button>
             </div>
