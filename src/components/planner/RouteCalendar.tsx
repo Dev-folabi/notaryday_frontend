@@ -14,12 +14,14 @@ interface RouteCalendarProps {
   jobs: PlannerJob[];
   scanbackBlocks: ScanbackBlockType[];
   optimised: boolean;
+  origin?: string | null;
 }
 
 export default function RouteCalendar({
   jobs,
   scanbackBlocks,
   optimised,
+  origin,
 }: RouteCalendarProps) {
   // Build timeline items interleaving jobs, drive segments, and scanback blocks
   const getBlockForJob = (jobId: string) =>
@@ -98,7 +100,7 @@ export default function RouteCalendar({
                       <button
                         onClick={() =>
                           window.open(
-                            `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}&travelmode=driving`,
+                            `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}&travelmode=driving${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`,
                             "_blank",
                           )
                         }

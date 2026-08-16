@@ -178,16 +178,20 @@ export function importEmailFor(username?: string | null): string {
 }
 
 /**
- * Open navigation deep link
+ * Open navigation deep link. `origin` is the notary's starting point (e.g. home
+ * base address); Waze always starts from the device's current location.
  */
 export function openNavigation(
   address: string,
   app: "google" | "apple" | "waze",
+  origin?: string | null,
 ): void {
   const encoded = encodeURIComponent(address);
+  const originParam = (param: string) =>
+    origin ? `&${param}=${encodeURIComponent(origin)}` : "";
   const urls: Record<string, string> = {
-    google: `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`,
-    apple: `maps://maps.apple.com/?daddr=${encoded}&dirflg=d`,
+    google: `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving${originParam("origin")}`,
+    apple: `maps://maps.apple.com/?daddr=${encoded}&dirflg=d${originParam("saddr")}`,
     waze: `https://waze.com/ul?q=${encoded}&navigate=yes`,
   };
   window.open(urls[app], "_blank", "noopener,noreferrer");

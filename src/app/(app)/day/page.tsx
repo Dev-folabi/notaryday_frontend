@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUIStore } from "@/store/uiStore";
-import { useTodayPlan, useGaps } from "@/hooks/usePlanner";
+import { useTodayPlan, useGaps, useOptimise } from "@/hooks/usePlanner";
 import { useAuth } from "@/hooks/useAuth";
 import { toDateInputValue, formatCurrency, formatMiles } from "@/lib/utils";
 import {
@@ -48,6 +48,7 @@ export default function DayPage() {
 
   const { data: plan, isLoading } = useTodayPlan(date);
   const { data: gaps = [] } = useGaps(isPro ? date : "");
+  const optimiseMutation = useOptimise();
 
   const jobs = plan?.jobs ?? [];
   const summary = plan?.summary;
@@ -101,11 +102,12 @@ export default function DayPage() {
       )
     : "—";
   const totalNet = summary?.total_earnings ?? 0;
+  const savedMin = summary?.saved_drive_mins ?? null;
 
   const weekStart = new Date();
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
-    d.setDate(d.getDate() - d.getDay() + i);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + i);
     const iso = toDateInputValue(d);
     return {
       label: DAYS[d.getDay()],
@@ -231,28 +233,42 @@ export default function DayPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[11.5px] font-bold text-teal">
-                        Route optimised
+                        {isPro ? "Route optimised" : "Today's plan"}
                       </span>
-                      <span className="text-[9px] font-semibold text-teal bg-white border border-teal-border rounded-full px-1.5 py-[1px]">
-                        saved 22 min
-                      </span>
+                      {savedMin != null && savedMin >= 1 && (
+                        <span className="text-[9px] font-semibold text-teal bg-white border border-teal-border rounded-full px-1.5 py-[1px]">
+                          saved {Math.round(savedMin)} min
+                        </span>
+                      )}
                     </div>
                     <p className="text-[10.5px] text-slate-secondary leading-snug mt-0.5">
-                      Reordered {jobs.length} jobs for less driving — best
-                      order for today
+                      {isPro
+                        ? `Reordered ${jobs.length} jobs for less driving. Best order for today.`
+                        : `${jobs.length} signing${jobs.length === 1 ? "" : "s"} today — upgrade to Pro to optimise the route`}
                     </p>
                   </div>
-                  <button
-                    onClick={() =>
-                      useUIStore.getState().addToast({
-                        title: "Route recalculated",
-                        type: "info",
-                      })
-                    }
-                    className="flex-shrink-0 ml-auto flex items-center gap-1 text-[10px] font-semibold text-slate-secondary bg-white border border-border rounded-full px-2 py-1.5 cursor-pointer hover:border-teal hover:text-teal transition-colors"
-                  >
-                    <RefreshCw className="w-3 h-3" /> Re-run
-                  </button>
+                  {isPro && (
+                    <button
+                      onClick={() => {
+                        if (optimiseMutation.isPending) return;
+                        optimiseMutation.mutate(date, {
+                          onError: () =>
+                            useUIStore.getState().addToast({
+                              title: "Couldn't optimise route",
+                              message: "Please try again shortly.",
+                              type: "error",
+                            }),
+                        });
+                      }}
+                      disabled={optimiseMutation.isPending}
+                      className="flex-shrink-0 ml-auto flex items-center gap-1 text-[10px] font-semibold text-slate-secondary bg-white border border-border rounded-full px-2 py-1.5 cursor-pointer hover:border-teal hover:text-teal transition-colors disabled:opacity-60 disabled:cursor-default"
+                    >
+                      <RefreshCw
+                        className={`w-3 h-3 ${optimiseMutation.isPending ? "animate-spin" : ""}`}
+                      />
+                      {optimiseMutation.isPending ? "Optimising…" : "Re-run"}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -528,7 +544,7 @@ export default function DayPage() {
                   </div>
                   <div className="p-2.5 border-b border-border flex gap-2 text-[11px] text-slate-secondary">
                     <Route className="w-4 h-4 flex-shrink-0" /> Reorder jobs by
-                    geography to cut 22+ min
+                    geography to cut drive time
                   </div>
                   <div className="p-2.5 border-b border-border flex gap-2 text-[11px] text-slate-secondary">
                     <Scan className="w-4 h-4 flex-shrink-0" /> Block scanback
@@ -560,6 +576,7 @@ export default function DayPage() {
                       }
                     : null
                 }
+                homeBaseAddress={user?.settings?.home_base_address ?? null}
                 className="h-full"
                 now={nowTick}
               />
@@ -581,6 +598,7 @@ export default function DayPage() {
         jobs={jobs}
         summary={summary}
         isPro={isPro}
+        now={nowTick}
         irsRatePerMile={
           parseFloat(String(user?.settings?.irs_rate_per_mile ?? 0.67)) || 0.67
         }

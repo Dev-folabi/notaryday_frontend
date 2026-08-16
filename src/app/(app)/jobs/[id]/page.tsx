@@ -130,6 +130,7 @@ export default function JobDetailPage() {
     | "google"
     | "apple"
     | "waze";
+  const navOrigin = user?.settings?.home_base_address ?? null;
 
   if (isLoading) {
     return (
@@ -269,7 +270,7 @@ export default function JobDetailPage() {
               cursor: "pointer",
               width: "100%",
             }}
-            onClick={() => openNavigation(job.address, navApp)}
+            onClick={() => openNavigation(job.address, navApp, navOrigin)}
           >
             <Navigation className="w-4 h-4" /> Navigate to address
           </button>

@@ -13,6 +13,7 @@ interface DayBreakdownModalProps {
   summary?: TodayPlan["summary"];
   isPro: boolean;
   irsRatePerMile?: number;
+  now?: number;
   onClose: () => void;
   onStartDay: () => void;
 }
@@ -52,6 +53,7 @@ export default function DayBreakdownModal({
   summary,
   isPro,
   irsRatePerMile,
+  now,
   onClose,
   onStartDay,
 }: DayBreakdownModalProps) {
@@ -93,7 +95,17 @@ export default function DayBreakdownModal({
     );
   const effectiveRate = totalWorkMins > 0 ? net / (totalWorkMins / 60) : 0;
 
-  const firstJob = jobs[0];
+  // The job the route map highlights: the next appointment that hasn't started
+  // (mirrors DayMapInner's currentIdx so the number matches the blue pin).
+  let currentIdx = jobs.length - 1;
+  if (now != null) {
+    const idx = jobs.findIndex(
+      (j) => new Date(j.appointment_time).getTime() > now,
+    );
+    if (idx !== -1) currentIdx = idx;
+  }
+  const currentJob = jobs[currentIdx];
+  const savedMins = summary?.saved_drive_mins ?? null;
 
   const byType = jobs.reduce<Record<string, { count: number; total: number }>>(
     (acc, j) => {
@@ -114,7 +126,7 @@ export default function DayBreakdownModal({
               `${i === 0 ? `Home to ${shortAddress(j.address)}` : `to ${shortAddress(j.address)}`} (${j.drive_from_prev_mins ?? 0} min)`,
           )
           .join(", ") +
-        `, back Home (${jobs[jobs.length - 1].drive_from_prev_mins ?? 0} min). Total ${miles.toFixed(1)} mi optimized, saved 22 min vs time order.`
+        `, back Home (${jobs[jobs.length - 1].drive_from_prev_mins ?? 0} min). Total ${miles.toFixed(1)} mi optimized${savedMins != null && savedMins >= 1 ? `, saved ${Math.round(savedMins)} min vs time order` : ""}.`
       : "";
 
   return (
@@ -303,12 +315,13 @@ export default function DayBreakdownModal({
               className="bg-[#0F2C4E] text-white font-inter font-semibold text-[14px] rounded-[8px] h-12 px-4 w-full flex items-center justify-center gap-2 hover:bg-[#1A3D6B] transition-colors"
             >
               <Navigation className="w-4 h-4" />
-              <span>Start Day — navigate to Job 1</span>
+              <span>Start Day, navigate to job {currentIdx + 1}</span>
             </button>
             <p className="text-[10px] text-[#64748B] text-center flex items-center justify-center gap-1">
               <Car className="w-3 h-3" />
-              {firstJob.address} · {format(parseISO(firstJob.appointment_time), "h:mm a")} ·{" "}
-              {firstJob.drive_from_prev_mins ?? 0} min from home base
+              {currentJob.address} ·{" "}
+              {format(parseISO(currentJob.appointment_time), "h:mm a")} ·{" "}
+              {currentJob.drive_from_prev_mins ?? 0} min from home base
             </p>
           </div>
         )}

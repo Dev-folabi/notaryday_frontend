@@ -6,6 +6,7 @@ import type { Job } from "@/types/job";
 interface JobCardProps {
   job: Job;
   showNav?: boolean;
+  origin?: string | null;
 }
 
 function getTypeChipClasses(type: string) {
@@ -27,7 +28,7 @@ function getTypeLabel(type: string) {
   return type;
 }
 
-export default function JobCard({ job, showNav = true }: JobCardProps) {
+export default function JobCard({ job, showNav = true, origin }: JobCardProps) {
   const time = new Date(job.appointment_time);
   const formattedTime = format(time, "h:mm a");
 
@@ -42,7 +43,7 @@ export default function JobCard({ job, showNav = true }: JobCardProps) {
     const encoded = encodeURIComponent(job.address);
     // Prefer Google Maps by default if user setting not passed
     window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`,
+      `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`,
       "_blank",
     );
   };

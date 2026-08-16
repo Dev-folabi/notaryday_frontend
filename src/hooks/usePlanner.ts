@@ -84,7 +84,14 @@ export interface Conflict {
 export interface TodayPlan {
   jobs: PlannerJob[];
   scanback_blocks: ScanbackBlock[];
-  summary: { total_jobs: number; total_drive_mins: number; total_earnings: number; total_miles: number };
+  summary: {
+    total_jobs: number;
+    total_drive_mins: number;
+    total_earnings: number;
+    total_miles: number;
+    naive_total_drive_mins?: number | null;
+    saved_drive_mins?: number | null;
+  };
   optimised: boolean;
   conflicts: Conflict[];
 }

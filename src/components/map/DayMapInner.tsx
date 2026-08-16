@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { formatCurrency, formatDuration, formatMiles } from "@/lib/utils";
-import { Navigation, Plus, Minus, Route } from "lucide-react";
+import { Navigation, Plus, Minus, Route, ChevronUp, ChevronDown } from "lucide-react";
 import type { PlannerJob } from "@/hooks/usePlanner";
 
 interface DayMapInnerProps {
   jobs: PlannerJob[];
   homeBase?: { lat: number; lng: number } | null;
+  homeBaseAddress?: string | null;
   now?: number;
   className?: string;
 }
@@ -58,6 +59,7 @@ function ZoomControls() {
 export default function DayMapInner({
   jobs,
   homeBase,
+  homeBaseAddress,
   now,
   className,
 }: DayMapInnerProps) {
@@ -78,10 +80,18 @@ export default function DayMapInner({
     return idx === -1 ? jobs.length - 1 : idx;
   }, [jobs, now]);
 
+  const navOrigin = useMemo(() => {
+    if (homeBaseAddress) return homeBaseAddress;
+    if (homeBase) return `${homeBase.lat},${homeBase.lng}`;
+    return "";
+  }, [homeBaseAddress, homeBase]);
+
   const icons = useMemo(
     () => jobs.map((_, i) => numberedIcon(i + 1, i === currentIdx)),
     [jobs, currentIdx],
   );
+
+  const [listOpen, setListOpen] = useState(false);
 
   return (
     <div className={`flex flex-col h-full ${className ?? ""}`}>
@@ -148,17 +158,36 @@ export default function DayMapInner({
             </span>
           </div>
         </div>
+
+        {!listOpen && (
+          <button
+            onClick={() => setListOpen(true)}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] bg-white border border-border rounded-full pl-3 pr-2 py-1.5 text-[11px] font-semibold text-primary-navy shadow-[0_2px_8px_rgba(15,44,78,0.18)] flex items-center gap-1.5 cursor-pointer hover:border-teal hover:text-teal transition-colors"
+          >
+            <Route className="w-3 h-3" /> Route list
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      <div className="flex-shrink-0 border-t border-border bg-white max-h-[220px] overflow-y-auto">
-        <div className="px-4 py-2.5 flex justify-between border-b border-border flex-wrap gap-1.5">
-          <span className="text-[12px] font-semibold text-primary-navy">
-            Today&apos;s route, {jobs.length} stops
-          </span>
-          <span className="text-[10px] text-slate-secondary">
-            {formatDuration(totalDriveMins)} total drive
-          </span>
-        </div>
+      {listOpen && (
+        <div className="flex-shrink-0 border-t border-border bg-white max-h-[220px] overflow-y-auto">
+          <div className="px-4 py-2.5 flex justify-between items-center border-b border-border flex-wrap gap-1.5">
+            <span className="text-[12px] font-semibold text-primary-navy">
+              Today&apos;s route, {jobs.length} stops
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-slate-secondary">
+                {formatDuration(totalDriveMins)} total drive
+              </span>
+              <button
+                onClick={() => setListOpen(false)}
+                className="flex items-center gap-1 text-[10px] font-semibold text-blue cursor-pointer hover:underline"
+              >
+                Hide <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
         {jobs.map((job, i) => (
           <div
             key={job.id}
@@ -194,7 +223,7 @@ export default function DayMapInner({
               <button
                 onClick={() =>
                   window.open(
-                    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}&travelmode=driving`,
+                    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}&travelmode=driving${navOrigin ? `&origin=${encodeURIComponent(navOrigin)}` : ""}`,
                     "_blank",
                   )
                 }
@@ -205,7 +234,8 @@ export default function DayMapInner({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

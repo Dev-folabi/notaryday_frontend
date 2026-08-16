@@ -11,11 +11,18 @@ const DayMapInner = dynamic(
 interface DayMapProps {
   jobs: PlannerJob[];
   homeBase?: { lat: number; lng: number } | null;
+  homeBaseAddress?: string | null;
   now?: number;
   className?: string;
 }
 
-export default function DayMap({ jobs, homeBase, now, className }: DayMapProps) {
+export default function DayMap({
+  jobs,
+  homeBase,
+  homeBaseAddress,
+  now,
+  className,
+}: DayMapProps) {
   if (jobs.length === 0) {
     return (
       <div
@@ -30,6 +37,7 @@ export default function DayMap({ jobs, homeBase, now, className }: DayMapProps) 
     <DayMapInner
       jobs={jobs}
       homeBase={homeBase}
+      homeBaseAddress={homeBaseAddress}
       now={now}
       className={className}
     />
