@@ -8,12 +8,12 @@ import {
   CalendarDays,
   Briefcase,
   BarChart2,
-  User,
+  MoreHorizontal,
   Zap,
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 
-// Prototype bottom nav: Today | Jobs | [CITT FAB] | Reports | Account
+// Prototype bottom nav: Today | Jobs | [CITT FAB] | Reports | More (opens menu)
 const LEFT_ITEMS = [
   { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
   { href: ROUTES.APP.JOBS, icon: Briefcase, label: "Jobs" },
@@ -21,20 +21,26 @@ const LEFT_ITEMS = [
 
 const RIGHT_ITEMS = [
   { href: ROUTES.APP.REPORTS, icon: BarChart2, label: "Reports" },
-  { href: ROUTES.APP.ACCOUNT, icon: User, label: "Account" },
 ];
 
 interface BottomNavProps {
-  isPro?: boolean;
-  username?: string;
+  unreadCount?: number;
+  hasActiveSigning?: boolean;
 }
 
-export function BottomNav({ isPro = false, username }: BottomNavProps) {
+export function BottomNav({
+  unreadCount = 0,
+  hasActiveSigning = false,
+}: BottomNavProps) {
   const pathname = usePathname();
   const openCITT = useUIStore((s) => s.openCITT);
+  const menuOpen = useUIStore((s) => s.isMobileMenuOpen);
+  const setMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
+
+  const showMoreDot = hasActiveSigning || unreadCount > 0;
 
   return (
     <nav
@@ -132,6 +138,41 @@ export function BottomNav({ isPro = false, username }: BottomNavProps) {
               </Link>
             );
           })}
+
+          {/* More — opens the side menu */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors"
+            aria-label="More"
+            aria-expanded={menuOpen}
+          >
+            <span className="relative">
+              <MoreHorizontal
+                className={cn(
+                  "h-5 w-5 transition-colors",
+                  menuOpen ? "text-primary-navy" : "text-slate-secondary"
+                )}
+                strokeWidth={menuOpen ? 2.5 : 2}
+              />
+              {showMoreDot && (
+                <span
+                  className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-red border border-white"
+                  aria-hidden="true"
+                />
+              )}
+            </span>
+            <span
+              className={cn(
+                "text-[10px] font-inter font-medium transition-colors",
+                menuOpen
+                  ? "text-primary-navy font-semibold"
+                  : "text-slate-secondary"
+              )}
+            >
+              More
+            </span>
+          </button>
         </div>
 
         {/* Centre CITT FAB: floats above the notch, icon only */}

@@ -1,7 +1,6 @@
 "use client";
 
-import { Menu } from "lucide-react";
-import { useUIStore } from "@/store/uiStore";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface TopNavProps {
@@ -10,8 +9,6 @@ interface TopNavProps {
 }
 
 export function TopNav({ isPro = false, initials }: TopNavProps) {
-  const setOpen = useUIStore((s) => s.setMobileMenuOpen);
-
   return (
     <header
       className="topbar lg:hidden"
@@ -21,9 +18,13 @@ export function TopNav({ isPro = false, initials }: TopNavProps) {
       }}
     >
       <div className="tb-left">
-        <button className="tb-hamburger" onClick={() => setOpen(true)} aria-label="Open menu">
-          <Menu className="w-[18px] h-[18px]" />
-        </button>
+        <Image
+          src="/icons/notaryday-icon-badge.svg"
+          alt="Notary Day"
+          width={28}
+          height={28}
+          className="flex-shrink-0"
+        />
         <span className="tb-logo">Notary Day</span>
       </div>
       <div className="tb-right">

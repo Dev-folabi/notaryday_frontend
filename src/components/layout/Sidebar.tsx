@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/config/routes";
@@ -19,17 +20,14 @@ import {
   Zap,
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
-import { useQuery } from "@tanstack/react-query";
-import { jobsApi } from "@/api/jobs.api";
 import { useAuth } from "@/hooks/useAuth";
-import { toDateInputValue } from "@/lib/utils";
-import type { Job } from "@/types/job";
 
 interface SidebarProps {
   isPro?: boolean;
   username?: string;
   initials?: string;
   notifCount?: number;
+  hasActiveSigning?: boolean;
 }
 
 interface NavItem {
@@ -70,7 +68,13 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   },
 ];
 
-export function Sidebar({ isPro = false, username, initials, notifCount = 0 }: SidebarProps) {
+export function Sidebar({
+  isPro = false,
+  username,
+  initials,
+  notifCount = 0,
+  hasActiveSigning = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const openCITT = useUIStore((s) => s.openCITT);
   const { logoutMutation } = useAuth();
@@ -78,22 +82,6 @@ export function Sidebar({ isPro = false, username, initials, notifCount = 0 }: S
   const handleLogout = () => {
     logoutMutation.mutate();
   };
-
-  // Check if there is an active (IN_PROGRESS or SCANNING) job today
-  const today = toDateInputValue(new Date());
-  const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs", "sidebar-active", today],
-    queryFn: async () => {
-      const res = await jobsApi.list({ date: today });
-      const p = (res as any).data ?? res;
-      return (p.data ?? p) as Job[];
-    },
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
-  const hasActiveJob = jobs.some(
-    (j) => j.status === "IN_PROGRESS" || j.status === "SCANNING"
-  );
 
   const displayInitials = initials
     ? initials
@@ -105,9 +93,18 @@ export function Sidebar({ isPro = false, username, initials, notifCount = 0 }: S
     <aside className="hidden lg:flex flex-col w-[256px] bg-white border-r border-border h-screen sticky top-0 shrink-0 overflow-hidden">
       {/* Logo + plan badge */}
       <div className="sidebar-header">
-        <div>
-          <div className="sb-wordmark">Notary Day</div>
-          <span className="sb-tag">Smart scheduling for notaries</span>
+        <div className="flex items-center gap-2.5">
+          <Image
+            src="/icons/notaryday-icon-badge.svg"
+            alt="Notary Day"
+            width={32}
+            height={32}
+            className="flex-shrink-0"
+          />
+          <div>
+            <div className="sb-wordmark">Notary Day</div>
+            <span className="sb-tag">Smart scheduling for notaries</span>
+          </div>
         </div>
         <span className={cn("chip", isPro ? "c-pro" : "c-free")}>
           {isPro ? "Pro" : "Free"}
@@ -123,7 +120,7 @@ export function Sidebar({ isPro = false, username, initials, notifCount = 0 }: S
               const isActive =
                 pathname === href || (href !== "/" && pathname.startsWith(href));
 
-              const showLive = liveTag && hasActiveJob;
+              const showLive = liveTag && hasActiveSigning;
               const showNotifBadge = badgeKey === "notif" && notifCount > 0;
 
               return (

@@ -11,6 +11,7 @@ import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import CITTModal from "@/components/citt/CITTModal";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import { useNavStatus } from "@/hooks/useNavStatus";
 
 const ONBOARDING_STEPS = [
   ROUTES.ONBOARDING.HOME,
@@ -23,6 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoadingUser, isAuthenticated } = useAuth();
   const router = useRouter();
   const { setOnboardingStep } = useUIStore();
+  const { hasActiveSigning, unreadCount } = useNavStatus();
 
   // Redirect to onboarding if authenticated but onboarding not complete
   useEffect(() => {
@@ -68,10 +70,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh bg-bg">
       {/* Desktop sidebar */}
-      <Sidebar isPro={isPro} username={user?.username} notifCount={0} />
+      <Sidebar
+        isPro={isPro}
+        username={user?.username}
+        notifCount={unreadCount}
+        hasActiveSigning={hasActiveSigning}
+      />
 
       {/* Mobile drawer (hamburger menu) */}
-      <MobileDrawer isPro={isPro} username={user?.username} notifCount={0} />
+      <MobileDrawer
+        isPro={isPro}
+        username={user?.username}
+        notifCount={unreadCount}
+        hasActiveSigning={hasActiveSigning}
+      />
 
       {/* Main content area */}
       <main className="flex-1 min-w-0 flex flex-col lg:ml-0">
@@ -84,7 +96,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Mobile bottom nav: 64px height */}
-        <BottomNav isPro={isPro} username={user?.username} />
+        <BottomNav
+          unreadCount={unreadCount}
+          hasActiveSigning={hasActiveSigning}
+        />
 
         {/* Global CITT Modal */}
         <CITTModal />
