@@ -600,7 +600,7 @@ export default function BookingDetailPage() {
   );
 }
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
+// Small helpers
 
 function DetailRow({
   label,

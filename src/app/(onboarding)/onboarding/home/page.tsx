@@ -6,13 +6,11 @@ import { useUIStore } from "@/store/uiStore";
 import { Button } from "@/components/ui/Button";
 import { MapPin, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/store/auth.store";
 import { ADDRESS_SUGGESTIONS } from "@/lib/constants/addresses";
 
 export default function OnboardingHomePage() {
   const { saveHomeBase } = useOnboarding();
   const { setOnboardingStep } = useUIStore();
-  const { user } = useAuthStore();
 
   const [address, setAddress] = useState("");
   const [lat, setLat] = useState<number | null>(null);
@@ -168,7 +166,7 @@ export default function OnboardingHomePage() {
             {/* Autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div className="absolute z-50 top-full mt-2 left-0 right-0 bg-white border-2 border-border rounded-16px shadow-xl shadow-slate-200/50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                {suggestions.map((s, i) => (
+                {suggestions.map((s) => (
                   <button
                     key={s.place_id}
                     type="button"

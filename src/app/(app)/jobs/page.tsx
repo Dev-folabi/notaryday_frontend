@@ -1,13 +1,13 @@
 "use client";
 
-import { MapPin, Clock, DollarSign, Plus, Navigation, Filter } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useJobs } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
-import type { Job, JobStatus } from "@/types/job";
-import { formatTime, formatCurrency, profitabilityColor, toDateInputValue } from "@/lib/utils";
+import type { JobStatus } from "@/types/job";
+import { formatCurrency, toDateInputValue } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
-import JobStatusBadge from "@/components/jobs/JobStatusBadge";
+import JobCard from "@/components/jobs/JobCard";
 
 const STATUS_FILTERS = [
   "All",
@@ -28,34 +28,9 @@ const STATUS_ENUM_MAP: Record<Exclude<StatusFilter, "All">, JobStatus> = {
   Cancelled: "CANCELLED",
 };
 
-function typeKey(signingType: string): "gen" | "loan" | "hyb" {
-  const t = signingType.toUpperCase();
-  if (t === "LOAN_REFI" || t === "PURCHASE_CLOSING") return "loan";
-  if (t === "HYBRID") return "hyb";
-  return "gen";
-}
-
-function typeChipClass(typeKey: string): string {
-  if (typeKey === "loan") return "bg-blue-100 text-blue-700";
-  if (typeKey === "hyb") return "bg-violet-100 text-violet-700";
-  return "bg-emerald-100 text-emerald-800";
-}
-
-function typeLabel(signingType: string): string {
-  const t = signingType.toUpperCase();
-  if (t === "LOAN_REFI") return "Loan Refi";
-  if (t === "GENERAL") return "General";
-  if (t === "HYBRID") return "Hybrid";
-  if (t === "PURCHASE_CLOSING") return "Purchase Closing";
-  if (t === "FIELD_INSPECTION") return "Field Inspection";
-  if (t === "APOSTILLE") return "Apostille";
-  return signingType;
-}
-
 export default function JobsPage() {
   const router = useRouter();
   const {
-    openCITT,
     jobsDate,
     setJobsDate,
     jobsStatusFilter,
@@ -200,10 +175,12 @@ export default function JobsPage() {
         {!isLoading && !isError && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {filtered.map((job) => (
-              <JobListItem
+              <JobCard
                 key={job.id}
                 job={job}
+                variant="jobs"
                 onClick={() => router.push(`/jobs/${job.id}`)}
+                onResume={() => router.push("/active")}
               />
             ))}
             {filtered.length === 0 && (
@@ -222,95 +199,5 @@ export default function JobsPage() {
         )}
       </div>
     </>
-  );
-}
-
-function JobListItem({ job, onClick }: { job: Job; onClick: () => void }) {
-  const router = useRouter();
-  const isLive = job.status === "IN_PROGRESS";
-  const net = parseFloat(job.net_earnings ?? "0") || 0;
-  const tk = typeKey(job.signing_type);
-
-  return (
-    <div
-      className="jcard"
-      style={{
-        border: isLive ? "2px solid #D97706" : undefined,
-        background: isLive ? "#FFFBEB" : undefined,
-        cursor: "pointer",
-      }}
-      onClick={onClick}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            gap: 6,
-            alignItems: "center",
-            marginBottom: 4,
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#0F2C4E" }}>
-            {formatTime(job.appointment_time)}
-          </span>
-          <JobStatusBadge status={job.status} />
-          {isLive && (
-            <span
-              className="chip"
-              style={{ background: "#D97706", color: "#fff", fontSize: 8 }}
-            >
-              LIVE - Tap to resume
-            </span>
-          )}
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "#64748B",
-            display: "flex",
-            gap: 4,
-            alignItems: "center",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          <MapPin className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{job.address}</span>
-        </div>
-        <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
-          <span className={`chip ${typeChipClass(tk)}`}>{typeLabel(job.signing_type)}</span>
-          <span className="chip c-plat">{job.platform_name || "Direct"}</span>
-        </div>
-        {isLive && (
-          <button
-            style={{
-              marginTop: 8,
-              background: "#D97706",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              padding: "6px 10px",
-              fontSize: 10,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push("/active");
-            }}
-          >
-            <Clock className="w-3 h-3 inline" /> Open Active Signing
-          </button>
-        )}
-      </div>
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div className={`text-[14px] font-bold ${profitabilityColor(net)}`}>
-          {formatCurrency(net)}
-        </div>
-        <div style={{ fontSize: 9, color: "#64748B" }}>net</div>
-      </div>
-    </div>
   );
 }

@@ -29,7 +29,7 @@ export default function ProGate({ children, feature }: ProGateProps) {
           Upgrade to unlock
         </p>
         <Link
-          href="/settings/billing"
+          href="/settings?tab=billing"
           className="inline-flex items-center gap-1.5 bg-pro-gold text-primary-navy font-inter font-bold text-xs rounded-button h-9 px-4"
         >
           <Sparkles className="w-3.5 h-3.5" />

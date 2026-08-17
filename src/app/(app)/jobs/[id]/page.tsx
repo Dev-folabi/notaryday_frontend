@@ -12,13 +12,11 @@ import {
   Pencil,
   Trash2,
   Phone,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
 } from "lucide-react";
 import { useJob, useUpdateJobStatus, useDeleteJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
-import type { Job, JobStatus } from "@/types/job";
+import type { JobStatus } from "@/types/job";
 import {
   formatTime,
   formatDate,
@@ -26,10 +24,10 @@ import {
   openNavigation,
   errMsg,
 } from "@/lib/utils";
-import JobStatusBadge from "@/components/jobs/JobStatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { invoicesApi } from "@/api/invoices.api";
 import { unwrap } from "@/lib/utils";
+import ProfitabilityRow from "@/components/jobs/ProfitabilityRow";
 
 function typeLabel(signingType: string): string {
   const t = signingType.toUpperCase();
@@ -61,7 +59,7 @@ export default function JobDetailPage() {
   const { data: job, isLoading, isError } = useJob(id ?? "");
   const updateStatus = useUpdateJobStatus();
   const deleteJob = useDeleteJob();
-  const { addToast, closeCITT } = useUIStore();
+  const { addToast } = useUIStore();
   const { user } = useAuth();
   const [showDelete, setShowDelete] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState(false);
@@ -70,7 +68,7 @@ export default function JobDetailPage() {
     try {
       setViewingInvoice(true);
       const res = await invoicesApi.list();
-      const invoices = (unwrap<any[]>(res) ?? []) as any[];
+      const invoices = unwrap<Array<{ id: string; job_id?: string }>>(res) ?? [];
       const inv = invoices.find((i) => i.job_id === job?.id);
       if (inv) {
         router.push(`/invoices?focus=${inv.id}`);
@@ -157,7 +155,6 @@ export default function JobDetailPage() {
   const mileageCost = parseFloat(job.mileage_cost ?? "0") || 0;
   const miles = parseFloat(job.mileage_miles ?? "0") || 0;
   const fee = parseFloat(job.fee ?? "0") || 0;
-  const platformFee = parseFloat(job.platform_fee ?? "0") || 0;
   const irsRate = parseFloat(String(user?.settings?.irs_rate_per_mile ?? 0.67)) || 0.67;
   const needsScanback = job.scanback_duration_mins > 0;
   const tk = typeKey(job.signing_type);
@@ -278,29 +275,13 @@ export default function JobDetailPage() {
 
         {/* Net earnings breakdown */}
         <span className="slbl">Net earnings</span>
-        <div className="em" style={{ marginBottom: 16 }}>
-          <div className="em-c">
-            <span className="em-l">Offered fee</span>
-            <span className="em-v" style={{ color: "#475569" }}>
-              {formatCurrency(fee)}
-            </span>
-          </div>
-          <div className="em-c" style={{ borderLeft: "1px solid #E2E8F0" }}>
-            <span className="em-l">Mileage cost</span>
-            <span className="em-v" style={{ color: "#D97706" }}>
-              -{formatCurrency(mileageCost)}
-            </span>
-            <span style={{ fontSize: 9, color: "#64748B", display: "block", marginTop: 2 }}>
-              {miles.toFixed(1)} mi x ${irsRate.toFixed(2)}
-            </span>
-          </div>
-          <div className="em-c" style={{ borderLeft: "1px solid #E2E8F0" }}>
-            <span className="em-l">Net earnings</span>
-            <span className="em-v" style={{ color: "#0E7B6C" }}>
-              {formatCurrency(net)}
-            </span>
-          </div>
-        </div>
+        <ProfitabilityRow
+          variant="detail"
+          fee={fee}
+          mileageCost={mileageCost}
+          mileageDetail={`${miles.toFixed(1)} mi x $${irsRate.toFixed(2)}`}
+          netEarnings={net}
+        />
 
         {/* Details */}
         <span className="slbl">Details</span>

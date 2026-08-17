@@ -11,7 +11,7 @@ export const ROUTES = {
     JOURNAL: "/journal",
     REPORTS: "/reports",
     ACCOUNT: "/settings",
-    BILLING: "/settings/billing",
+    BILLING: "/settings?tab=billing",
     NOTIFICATIONS: "/notifications",
     IMPORT: "/import",
   },

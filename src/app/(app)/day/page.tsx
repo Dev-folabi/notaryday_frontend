@@ -4,39 +4,25 @@ import { useEffect, useState } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useTodayPlan, useGaps, useOptimise } from "@/hooks/usePlanner";
 import { useAuth } from "@/hooks/useAuth";
-import { toDateInputValue, formatCurrency, formatMiles } from "@/lib/utils";
+import { toDateInputValue, formatCurrency } from "@/lib/utils";
 import {
   Route,
-  Clock,
   MapPin,
-  Navigation,
-  Car,
   Scan,
   Sparkles,
   ArrowRight,
-  Zap,
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import DayMap from "@/components/map/DayMap";
 import DayBreakdownModal from "@/components/planner/DayBreakdownModal";
+import DaySummaryStrip from "@/components/planner/DaySummaryStrip";
+import RouteCalendar from "@/components/planner/RouteCalendar";
+import JobCard from "@/components/jobs/JobCard";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const HOUR_PX = 84;
-const PX_PER_MIN = HOUR_PX / 60;
-
-function minutesOfDay(d: Date): number {
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function hourLabel(hour: number): string {
-  if (hour === 0) return "12 AM";
-  if (hour === 12) return "12 PM";
-  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
-}
-
 export default function DayPage() {
   const { user } = useAuth();
   const { activeDate } = useUIStore();
@@ -54,50 +40,17 @@ export default function DayPage() {
   const summary = plan?.summary;
   const gapsWithCandidates = gaps.filter((g) => g.candidates.length > 0);
   const firstGap = gapsWithCandidates[0];
-  const bestCandidate = firstGap?.candidates[0];
 
   const driveMins = summary?.total_drive_mins ?? 0;
 
-  const parsedJobs = jobs.map((j) => {
-    const start = new Date(j.appointment_time);
-    const end = new Date(
-      j.scanback_ends_at ?? j.signing_ends_at ?? j.appointment_time,
-    );
-    return { job: j, start, end };
-  });
-
-  const gridStartHour = parsedJobs.length
-    ? Math.floor(
-        Math.min(...parsedJobs.map((p) => minutesOfDay(p.start))) / 60,
-      )
-    : 8;
-  const gridEndHour = parsedJobs.length
-    ? Math.max(
-        15,
-        Math.ceil(Math.max(...parsedJobs.map((p) => minutesOfDay(p.end))) / 60),
-      )
-    : 15;
-  const gridLabels = Array.from(
-    { length: gridEndHour - gridStartHour + 1 },
-    (_, i) => gridStartHour + i,
-  );
-  const offsetPx = (d: Date) =>
-    (minutesOfDay(d) - gridStartHour * 60) * PX_PER_MIN;
-
-  const isToday = date === toDateInputValue(new Date());
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);
-  const now = new Date(nowTick);
-  const nowMins = minutesOfDay(now);
-  const showNowMarker =
-    isToday && nowMins >= gridStartHour * 60 && nowMins < (gridEndHour + 1) * 60;
-
-  const firstSigning = parsedJobs.length
+  const firstSigning = jobs.length
     ? format(
-        new Date(Math.min(...parsedJobs.map((p) => p.start.getTime()))),
+        new Date(Math.min(...jobs.map((job) => new Date(job.appointment_time).getTime()))),
         "h:mm a",
       )
     : "—";
@@ -140,38 +93,16 @@ export default function DayPage() {
       </div>
 
       {/* Navy summary strip */}
-      <div className="dstrip" onClick={() => setBreakdownOpen(true)}>
-        <div className="ds">
-          <span className="ds-v">{jobs.length}</span>
-          <span className="ds-l">Signings</span>
-        </div>
-        <div className="ds-div" />
-        <div className="ds">
-          <span className="ds-v">{formatCurrency(totalNet)}</span>
-          <span className="ds-l">Est. net</span>
-        </div>
-        <div className="ds-div" />
-        <div className="ds">
-          <span className="ds-v">
-            {Math.floor(driveMins / 60)}h {driveMins % 60}m
-          </span>
-          <span className="ds-l">Drive time</span>
-        </div>
-        <div className="ds-div" />
-        <div className="ds">
-          <span className="ds-v">{firstSigning}</span>
-          <span className="ds-l">First signing</span>
-        </div>
-        <button
-          className="sday-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            setBreakdownOpen(true);
-          }}
-        >
-          <ArrowRight className="w-3.5 h-3.5" /> Start Day
-        </button>
-      </div>
+      <DaySummaryStrip
+        items={[
+          { value: jobs.length, label: "Signings" },
+          { value: formatCurrency(totalNet), label: "Est. net" },
+          { value: `${Math.floor(driveMins / 60)}h ${driveMins % 60}m`, label: "Drive time" },
+          { value: firstSigning, label: "First signing" },
+        ]}
+        onClick={() => setBreakdownOpen(true)}
+        action={{ label: "Start Day", icon: <ArrowRight className="w-3.5 h-3.5" />, onClick: () => setBreakdownOpen(true) }}
+      />
 
       <div
         style={{
@@ -272,214 +203,23 @@ export default function DayPage() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
-                <div className="tl-wrap" style={{ padding: "16px 16px 0" }}>
-                  <div className="tl-times">
-                    {gridLabels.map((h) => (
-                      <div key={h} className="tl-tr">
-                        <span className="tl-label">{hourLabel(h)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="tl-body">
-                    <div
-                      className="tl-grid"
-                      style={{ height: gridLabels.length * HOUR_PX }}
-                    >
-                      {gridLabels.map((_, i) => (
-                        <div key={i} className="tl-hour" />
-                      ))}
-
-                      {showNowMarker && (
-                        <div
-                          className="now-wrap"
-                          style={{
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            top: offsetPx(now),
-                            margin: 0,
-                          }}
-                        >
-                          <div className="now-dot" />
-                          <div className="now-line" />
-                          <span className="now-lbl">
-                            NOW {format(now, "h:mm a")}
-                          </span>
-                        </div>
-                      )}
-
-                      {parsedJobs.map(({ job: j, start }, idx) => (
-                        <div
-                          key={j.id}
-                          style={{
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            top: offsetPx(start),
-                          }}
-                        >
-                          <div
-                            className="tl-job"
-                            style={{
-                              borderLeftColor: j.route_sequence
-                                ? "#0F2C4E"
-                                : "#2563EB",
-                            }}
-                            onClick={() => router.push(`/jobs/${j.id}`)}
-                          >
-                            <div className="flex justify-between gap-2 mb-0.5 flex-wrap">
-                              <div className="text-[11px] font-bold text-primary-navy flex gap-1 items-center">
-                                <Clock className="w-3 h-3" />{" "}
-                                {format(parseISO(j.appointment_time), "h:mm a")}{" "}
-                                -{" "}
-                                {format(
-                                  parseISO(
-                                    j.signing_ends_at ?? j.appointment_time,
-                                  ),
-                                  "h:mm a",
-                                )}
-                              </div>
-                              <span
-                                className={cn(
-                                  "text-[12px] font-bold",
-                                  profitabilityColor(j.net_earnings),
-                                )}
-                              >
-                                {formatCurrency(j.net_earnings)}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-slate mb-1 flex gap-1 items-center">
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                                {j.address}
-                              </span>
-                            </div>
-                            <div className="flex justify-between gap-1.5 flex-wrap">
-                              <div className="flex gap-1 flex-wrap">
-                                <span
-                                  className={cn(
-                                    "chip",
-                                    getTypeChipClass(j.signing_type),
-                                  )}
-                                >
-                                  {formatSigningType(j.signing_type)}
-                                </span>
-                                {j.platform_name && (
-                                  <span className="chip c-plat">
-                                    {j.platform_name}
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                className="text-[10px] font-semibold text-blue flex gap-1 items-center cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(
-                                    `https://maps.google.com/?q=${encodeURIComponent(j.address)}`,
-                                    "_blank",
-                                  );
-                                }}
-                              >
-                                <Navigation className="w-3 h-3" /> Navigate
-                              </div>
-                            </div>
-                          </div>
-                          {j.scanback_duration_mins > 0 && (
-                            <>
-                              <div className="tl-sb">
-                                <div className="flex justify-between gap-2 flex-wrap">
-                                  <span className="text-[10px] italic text-amber flex gap-1 items-center">
-                                    <Scan className="w-3 h-3" /> Scanback Job{" "}
-                                    {idx + 1}
-                                  </span>
-                                  <span className="text-[9px] text-amber font-medium">
-                                    {format(
-                                      parseISO(j.appointment_time),
-                                      "h:mm a",
-                                    )}{" "}
-                                    to{" "}
-                                    {format(
-                                      parseISO(
-                                        j.scanback_ends_at ??
-                                          j.appointment_time,
-                                      ),
-                                      "h:mm a",
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="tl-drv">
-                                <Car className="w-3 h-3" />{" "}
-                                {j.drive_from_prev_mins ?? 0} min drive
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
-
-                      {firstGap && bestCandidate && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: 0,
-                            right: 0,
-                            top: offsetPx(new Date(firstGap.gap_start)),
-                          }}
-                        >
-                          <div className="flex gap-1.5 items-center py-1 px-0 text-[11px] font-semibold text-violet">
-                            <Sparkles className="w-3.5 h-3.5" /> Gap
-                            opportunity,{" "}
-                            {format(parseISO(firstGap.gap_start), "h:mm a")},{" "}
-                            {firstGap.gap_mins} min available
-                          </div>
-                          <div className="gap-card">
-                            <div className="text-[12px] font-semibold text-primary-navy mb-1">
-                              {bestCandidate.address}
-                            </div>
-                            <div className="text-[11px] text-slate-secondary mb-2 flex gap-1.5 flex-wrap">
-                              <span>
-                                Offered:{" "}
-                                <strong className="text-slate">
-                                  {formatCurrency(bestCandidate.fee)}
-                                </strong>
-                              </span>
-                              <span>
-                                Est. net:{" "}
-                                <strong className="text-teal">
-                                  {formatCurrency(bestCandidate.net_earnings)}
-                                </strong>
-                              </span>
-                              {bestCandidate.miles_from != null && (
-                                <span>
-                                  {formatMiles(bestCandidate.miles_from)} from{" "}
-                                  {bestCandidate.miles_from_label}
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              className="btn-sm"
-                              style={{
-                                borderColor: "#C4B5FD",
-                                color: "#7C3AED",
-                              }}
-                              onClick={() =>
-                                useUIStore.getState().openCITT({
-                                  address: bestCandidate.address,
-                                  time: bestCandidate.appointment_time,
-                                  fee: bestCandidate.fee,
-                                })
-                              }
-                            >
-                              <Zap className="w-3 h-3" /> Run CITT check
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <RouteCalendar
+                jobs={jobs}
+                date={date}
+                now={nowTick}
+                gap={firstGap}
+                onJobClick={(jobId) => router.push(`/jobs/${jobId}`)}
+                onGapClick={(gap) => {
+                  const candidate = gap.candidates[0];
+                  if (candidate) {
+                    useUIStore.getState().openCITT({
+                      address: candidate.address,
+                      time: candidate.appointment_time,
+                      fee: candidate.fee,
+                    });
+                  }
+                }}
+              />
             </>
           ) : tab === "list" ? (
             <div className="con">
@@ -488,47 +228,12 @@ export default function DayPage() {
                 {isPro ? "route optimised" : "route not optimised"}
               </span>
               {jobs.map((j) => (
-                <div
+                <JobCard
                   key={j.id}
-                  className="jcard"
+                  job={j}
+                  variant="day"
                   onClick={() => router.push(`/jobs/${j.id}`)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-bold text-primary-navy flex gap-1.5 items-center">
-                      <Clock className="w-3 h-3" />{" "}
-                      {format(parseISO(j.appointment_time), "h:mm a")} -{" "}
-                      {j.signing_duration_mins} min
-                    </div>
-                    <div className="text-[11px] text-slate mb-1.5 flex gap-1 items-center">
-                      <MapPin className="w-3 h-3 flex-shrink-0" /> {j.address}
-                    </div>
-                    <div className="flex gap-1 flex-wrap">
-                      <span
-                        className={cn("chip", getTypeChipClass(j.signing_type))}
-                      >
-                        {formatSigningType(j.signing_type)}
-                      </span>
-                      {j.platform_name && (
-                        <span className="chip c-plat">
-                          {j.platform_name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div
-                      className={cn(
-                        "text-[13px] font-bold",
-                        profitabilityColor(j.net_earnings),
-                      )}
-                    >
-                      {formatCurrency(j.net_earnings)}
-                    </div>
-                    <div className="text-[9px] text-slate-secondary">
-                      net after mileage
-                    </div>
-                  </div>
-                </div>
+                />
               ))}
 
               {!isPro && (
@@ -554,7 +259,7 @@ export default function DayPage() {
                     <button
                       className="btn-pro"
                       style={{ height: 38 }}
-                      onClick={() => router.push("/settings/billing")}
+                      onClick={() => router.push("/settings?tab=billing")}
                     >
                       <Sparkles className="w-3.5 h-3.5" /> Upgrade to Pro,
                       $19/month
@@ -623,37 +328,6 @@ export default function DayPage() {
       />
     </div>
   );
-}
-
-function profitabilityColor(net: number | string): string {
-  const n = typeof net === "string" ? parseFloat(net) || 0 : net;
-  if (n >= 30) return "text-teal";
-  if (n >= 10) return "text-amber";
-  return "text-red";
-}
-
-function getTypeChipClass(type: string): string {
-  const map: Record<string, string> = {
-    GENERAL: "c-gen",
-    LOAN_REFI: "c-loan",
-    HYBRID: "c-hyb",
-    PURCHASE_CLOSING: "c-loan",
-    FIELD_INSPECTION: "c-gen",
-    APOSTILLE: "c-gen",
-  };
-  return map[type] ?? "c-gen";
-}
-
-function formatSigningType(type: string): string {
-  const map: Record<string, string> = {
-    GENERAL: "General",
-    LOAN_REFI: "Loan Refi",
-    HYBRID: "Hybrid",
-    PURCHASE_CLOSING: "Purchase Closing",
-    FIELD_INSPECTION: "Field Inspection",
-    APOSTILLE: "Apostille",
-  };
-  return map[type] ?? type ?? "Job";
 }
 
 function Info({ className }: { className?: string }) {
