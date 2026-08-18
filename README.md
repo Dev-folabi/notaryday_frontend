@@ -1,5 +1,24 @@
 # Notary Day Frontend
 
+<div align="center">
+
+![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=000000)
+![TypeScript 5](https://img.shields.io/badge/TypeScript_5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![TanStack Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
+
+**A mobile-first workspace for scheduling, routing, profitability decisions, and business management for mobile notaries.**
+
+[Experience](#product-experience) · [Technology](#technology) · [Architecture](#frontend-architecture) · [Workflows](#implemented-workflows) · [Setup](#local-development)
+
+</div>
+
+---
+
+## Overview
+
 Notary Day is a mobile-first operations platform for mobile notaries and loan signing agents. This repository contains the Next.js application used to manage daily appointments, evaluate incoming work, plan travel, track business activity, and accept public booking requests.
 
 The primary workflow is built around the reality of field work. A notary needs to make fast decisions from a phone while moving between appointments, and loan signings often require a fixed scanback period after the signing. The interface makes those constraints visible and actionable.
