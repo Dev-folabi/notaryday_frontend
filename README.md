@@ -1,435 +1,141 @@
-# Notary Day — Frontend
-
-<div align="center">
-
-![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![React Query](https://img.shields.io/badge/React_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
-![Leaflet](https://img.shields.io/badge/Leaflet.js-199900?style=for-the-badge&logo=leaflet&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
-
-**Production-grade Next.js application — a smart scheduling and business OS for mobile loan signing agents in the United States.**
-
-[Architecture](#architecture) · [Design System](#design-system) · [Key Screens](#key-screens) · [Getting Started](#getting-started) · [Performance](#performance)
-
-</div>
-
----
-
-## What Is This?
-
-This is the frontend for **Notary Day** — a SaaS product that replaces three manual workflows for full-time mobile notaries: route planning in Google Maps, accounting in NotaryGadget, and scattered invoicing. The UI is built mobile-first as an installable PWA because notaries use this application on the road between signings on a phone.
-
-The interface is anchored around a single daily screen — the **Today View** — that shows a notary's confirmed signings in optimised geographic order, with scanback time blocks automatically inserted after qualifying signing types, and gap opportunities surfaced below. Every interaction is designed for one-handed operation on a phone while standing in a parking lot.
-
-**The core design problem:** How do you give a time-pressured professional — who makes 6–14 routing and financial decisions per day — an interface so clear and fast that the right decision is obvious in under 3 seconds?
-
----
-
-## Architecture
-
-### Application Structure
-
-```
-src/
-├── app/                              # Next.js App Router
-│   ├── layout.tsx                    # Root layout: fonts, providers, PWA meta
-│   ├── page.tsx                      # Landing page (SSG, public)
-│   │
-│   ├── (auth)/                       # Auth group — no nav chrome
-│   │   ├── login/
-│   │   ├── signup/
-│   │   ├── forgot-password/
-│   │   └── reset-password/
-│   │
-│   ├── (onboarding)/                 # Onboarding group — wizard chrome
-│   │   └── onboarding/
-│   │       ├── home/                 # Step 1: home base + username slug
-│   │       ├── mileage/              # Step 2: IRS rate + vehicle type
-│   │       ├── durations/            # Step 3: signing type duration defaults
-│   │       └── booking/             # Step 4: booking page setup (skippable)
-│   │
-│   ├── (app)/                        # Main app group — sidebar + bottom nav
-│   │   ├── layout.tsx                # Navigation chrome
-│   │   ├── page.tsx                  # Today view (/)
-│   │   ├── map/                      # Geographic day overview
-│   │   ├── jobs/                     # Job pipeline
-│   │   ├── bookings/                 # Client booking reviews (Pro)
-│   │   ├── earnings/                 # Business performance dashboard
-│   │   ├── expenses/                 # Expense tracking
-│   │   ├── reports/                  # Tax reports + exports
-│   │   ├── journal/                  # Notarial journal
-│   │   └── settings/                 # Account + billing + notifications
-│   │
-│   └── book/
-│       └── [username]/               # Public booking page (SSR, no auth)
-│
-├── components/
-│   ├── ui/                           # Base design system components
-│   ├── layout/                       # Navigation, CITT floating button
-│   ├── jobs/                         # Job cards, forms, status badges
-│   ├── citt/                         # CITT modal + verdict cards
-│   ├── planner/                      # Calendar, scanback blocks, gap finder
-│   ├── booking/                      # Booking setup + public booking form
-│   ├── map/                          # Leaflet map (dynamic import, no SSR)
-│   └── reports/                      # Charts, mileage log
-│
-├── hooks/                            # React Query data hooks
-├── lib/                              # axios client, query config, utilities
-├── store/                            # Zustand UI state
-├── styles/                           # Tailwind + CSS variables
-└── types/                            # Shared TypeScript interfaces
-```
-
-### Data Fetching Architecture
-
-**React Query** manages all server state. No Redux, no Context API for data — React Query handles caching, refetching, optimistic updates, and error boundaries.
-
-**Zustand** manages client-only UI state: modal open/close, active date selection, toast queue, CITT pre-fill data.
-
-```typescript
-// Query key conventions — consistent across the entire app
-["jobs", { date, status }][("job", id)][("planner", "today", date)][ // Job list // Single job // Optimised day view
-  ("planner", "gaps", date)
-][("citt", { address, time, type })][("booking-page", username, date)][ // Gap finder candidates // CITT result (5min stale) // Public slot availability
-  ("user", "me")
-][("reports", "earnings", { from, to })]; // Authenticated user profile
-```
-
-**Stale time strategy** — Jobs: 30s (change frequently during a working day). CITT results: 2 min (schedule changes). Reports: 5 min. User settings: 10 min.
-
-**Optimistic updates** — Job status changes (start signing, complete, etc.) update the UI immediately before the API confirms. On error, React Query automatically rolls back to the previous state and shows a toast.
-
-### Routing Architecture
-
-Three route groups with distinct layouts:
-
-- `(auth)` — Minimal layout, no navigation chrome. Full-viewport centred forms.
-- `(onboarding)` — Wizard layout with step indicator. Enforced sequential flow (steps 1–3 required, step 4 skippable).
-- `(app)` — Full application layout. Mobile: bottom navigation (60px, fixed). Desktop: sidebar (240px) + content area at ≥1024px breakpoint.
-
-**Route protection:** Middleware checks for a valid JWT in every `(app)` route. Unauthenticated → `/login`. Authenticated but onboarding incomplete → `/onboarding/home`. Pro-gated routes show an overlay, never redirect.
-
----
-
-## Design System
-
-The design system is implemented as a combination of Tailwind config extensions and CSS custom properties. All tokens are defined once and referenced everywhere — no raw hex values in component files.
-
-### Colour Palette
+# Notary Day Frontend
 
-| Token              | Hex       | Usage                                                      |
-| ------------------ | --------- | ---------------------------------------------------------- |
-| `primary-navy`     | `#0F2C4E` | Nav bar, headings, primary buttons, CITT button gradient   |
-| `navy-active`      | `#1A3D6B` | Hover and active states on navy elements                   |
-| `interactive-blue` | `#2563EB` | Links, checkboxes, focus rings                             |
-| `teal-success`     | `#0E7B6C` | CITT "Take It" verdict, positive earnings, complete status |
-| `amber-warning`    | `#D97706` | CITT "Risky" verdict, scanback blocks, conflict flags      |
-| `red-danger`       | `#C0392B` | CITT "Decline" verdict, destructive actions                |
-| `slate-body`       | `#475569` | Primary body text                                          |
-| `slate-secondary`  | `#64748B` | Labels, metadata, helper text                              |
-| `border`           | `#E2E8F0` | Card borders, dividers, input strokes                      |
-| `bg`               | `#F8FAFC` | Page canvas                                                |
-| `scanback-bg`      | `#FEF3C7` | Scanback time-block calendar background                    |
-| `gap-finder-bg`    | `#EDE9FE` | Gap opportunity card background                            |
-| `pro-gold`         | `#FBBF24` | Pro badge, upgrade prompts, annual plan highlight          |
+Notary Day is a mobile-first operations platform for mobile notaries and loan signing agents. This repository contains the Next.js application used to manage daily appointments, evaluate incoming work, plan travel, track business activity, and accept public booking requests.
 
-### Typography
+The primary workflow is built around the reality of field work. A notary needs to make fast decisions from a phone while moving between appointments, and loan signings often require a fixed scanback period after the signing. The interface makes those constraints visible and actionable.
 
-Two font families, three weights each. Loaded from Google Fonts CDN.
+## Product Experience
 
-- **Sora** (600, 700) — Headings. Confident and modern without feeling clinical.
-- **Inter** (400, 500, 600) — Body, labels, data values. Most legible UI font at 12–14px.
-- **JetBrains Mono** (400) — Import addresses, API keys, IDs, code snippets.
+- **Today and day views** provide the working schedule, appointment status, summaries, and day-level operational context.
+- **CITT, Can I Take This?** is available from the application navigation for rapid feasibility and profitability checks.
+- **Job operations** cover manual creation, editing, status updates, details, imports, and review workflows.
+- **Planner and gap workflows** surface route information, scanback blocks, and potential work that fits the remaining schedule.
+- **Map view** presents confirmed jobs geographically and provides navigation links for supported map applications.
+- **Public booking** gives each notary a client-facing page with server-calculated availability.
+- **Business tools** include earnings, expenses, reports, invoices, journal entries, notifications, email templates, account settings, and billing.
+- **Onboarding** captures the home base, scanback preferences, signing type defaults, and booking setup needed to personalize planning.
+- **PWA support** allows the application to be installed and used like a focused mobile app.
 
-```
-Display       Sora 700  32–48px   Landing page hero only
-H1 / Page     Sora 700  28px      One per screen
-H2 / Section  Sora 600  22px      Section headings, card titles
-H3 / Sub      Sora 600  18px      Modal titles, sub-sections
-Body          Inter 400 14px      All body copy
-Body Medium   Inter 500 14px      Form labels, emphasised copy
-Body Bold     Inter 600 14px      Fees, times, key data values
-Caption       Inter 400 12px      Metadata, timestamps, helper text
-Mono          JBM  400  13px      Addresses, IDs, import data
-Button        Inter 600 14px      Sentence case, never all-caps
-Nav Label     Inter 500 12px      Bottom nav, breadcrumbs
-Badge         Inter 600 11px      Status chips — ALL CAPS
-```
+## Technology
 
-### Component Patterns
+| Concern | Implementation |
+| --- | --- |
+| Framework | Next.js 16 App Router |
+| Language | TypeScript |
+| UI and styling | React 19 and Tailwind CSS 4 |
+| Server state | TanStack Query |
+| Client-only state | Zustand |
+| Forms and validation | React Hook Form and Zod |
+| HTTP | Axios with JWT Bearer authentication |
+| Maps | Leaflet and React Leaflet with OpenStreetMap tiles |
+| Icons | Lucide React |
+| PWA | next-pwa |
+| Utilities | date-fns and clsx |
 
-**Input pattern (strict — never use placeholders as labels):**
+## Frontend Architecture
 
-```tsx
-<div className="flex flex-col gap-1.5">
-  <label className="font-medium text-xs text-slate-body">{label}</label>
-  <input
-    className="bg-white border border-border rounded-input h-10 px-3
-                    text-sm focus:border-interactive-blue focus:ring-2
-                    focus:ring-blue-100 outline-none"
-  />
-  {error && <span className="text-red-danger text-xs mt-1">{error}</span>}
-</div>
-```
+The application uses the Next.js App Router and separates route-level concerns from reusable UI and data access code.
 
-**Pro feature gate (overlay, never redirect):**
+### Route Groups
 
-```tsx
-<div className="relative">
-  {children}
-  {!isPro && (
-    <div
-      className="absolute inset-0 bg-white/80 backdrop-blur-sm
-                    rounded-card flex flex-col items-center justify-center gap-3"
-    >
-      <LockIcon className="text-slate-secondary w-6 h-6" />
-      <p className="text-sm text-slate-body text-center max-w-[200px]">
-        {benefitText}
-      </p>
-      <Button variant="pro">Upgrade to Pro</Button>
-    </div>
-  )}
-</div>
-```
+- `(auth)` contains login, signup, password recovery, and password reset screens.
+- `(onboarding)` contains the multi-step setup flow for new users.
+- `(app)` contains the authenticated workspace, including today, day, jobs, bookings, imports, gap work, reports, invoices, expenses, journal, notifications, and settings.
+- `book/[username]` contains the public booking experience.
+- `offline` provides the offline state used by the PWA experience.
 
-**CITT floating button (fixed, always visible on all app screens):**
+The authenticated workspace uses a desktop sidebar and mobile bottom navigation. The CITT action remains available from the core application shell so a notary can evaluate a job without leaving the current workflow.
 
-```tsx
-// 56px circle, gradient navy→blue, elevated 8px above bottom nav
-// Shadow: 0 4px 16px rgba(15,44,78,0.4)
-// Centred at bottom of viewport regardless of screen content
-```
+### Data Access
 
----
+API modules under `src/api` provide focused access to authentication, users, jobs, CITT, planning, booking, accounting, invoices, notifications, and billing endpoints. Hooks under `src/hooks` expose those operations to screens and components.
 
-## Key Screens
+The Axios client reads `NEXT_PUBLIC_API_URL` and sends the token stored as `localStorage.auth_token` in the `Authorization` header. Requests use `withCredentials: false`, matching the backend's stateless JWT authentication model. API responses are normalized to work with the backend's standard success and error envelopes.
 
-### Today View — The Primary Daily Screen (`/`)
+TanStack Query owns server state, including jobs, planner data, CITT results, bookings, invoices, and account data. Zustand is reserved for local interface state such as the CITT modal, active date, navigation status, and toast notifications. This keeps cache invalidation and loading behavior close to the data that owns it.
 
-The most complex screen in the application. Renders differently based on plan tier and time of day.
+### Responsive and Map Rendering
 
-**Free tier:** Chronological job list with profitability indicators on each card. CITT button prominent. Optimise Day CTA locked behind Pro gate overlay.
+The workspace is designed for small phone screens first, with touch-friendly controls and a fixed mobile navigation bar. Larger screens use a persistent sidebar and wider content layouts.
 
-**Pro tier (before optimisation):** Same list + "Optimise Day" button at top. Gap between the first and last job shown with "Find work in this gap" prompt.
+Leaflet components are dynamically loaded on the client because the map library depends on browser APIs. The map view renders job markers, route context, and navigation actions without forcing Leaflet into server rendering.
 
-**Pro tier (after optimisation):** Timeline calendar view. Jobs rendered as cards at their time positions. Scanback blocks rendered immediately after qualifying jobs — amber background, non-interactive, "Scanback — Job #N" label. Drive time labels between each job. Gap Finder cards below the calendar when pending jobs fit open windows.
+## Implemented Workflows
 
-**Day Summary Strip:** Full-width navy header. Four data points: total signings, estimated net earnings, total drive time, first signing time. "Start Day" button right-aligned in amber-gold.
+### Daily Operations
 
-### CITT Modal — The Core Feature
+The Today and Day screens organize appointments and current work around the notary's active date. Job cards show core appointment and earnings context, while status controls support the operational lifecycle from pending work through completion.
 
-Accessible from every screen via the floating button. Slides up from the bottom on mobile, centred modal on desktop.
+### CITT
 
-**Entry state:** Three fields — address (with geocode preview on blur), appointment time, signing type (segmented control not a dropdown — one tap).
+The CITT modal collects an address, appointment time, signing type, and fee details. It presents the backend verdict with travel information, mileage impact, net earnings, effective hourly rate, and scanback conflict details. A result can be used to create or continue a job workflow.
 
-**Result state:** Verdict card fills the modal. Colour-coded by verdict (green/amber/red). Three columns: Offered Fee → Mileage Cost → Net Earnings. Effective hourly rate below. Scanback conflict detail if applicable. "Add as pending" and "Dismiss" actions.
+### Import Review
 
-**Performance:** The modal pre-connects to the ORS API on first app load. Geocoding fires on address field blur (not on submit), so drive time calculation starts while the user is still filling the time field. Target: result visible < 3 seconds from form submission.
+The import experience provides review and edit states for extracted job data. Imported information remains user-editable before it is accepted into the schedule, which is important when source emails or images are incomplete.
 
-### Public Booking Page (`/book/[username]`)
+### Public Booking
 
-Server-side rendered. No authentication required. Designed to be the notary's professional face to direct clients.
+The public route at `/book/[username]` is designed for clients rather than authenticated users. It displays the notary's service information and only the appointment slots returned as available by the backend. Internal appointment addresses, client information, and schedule details remain private.
 
-Renders the notary's name, credentials, bio, and service menu. Client selects service type and preferred date, enters their address, and sees a list of genuinely available time slots (computed server-side by the availability engine). Travel fee estimate shown per slot. Standard booking form on slot selection.
+### Financial and Administrative Tools
 
-**Privacy:** The notary's confirmed schedule is never exposed. The availability engine returns only `available: boolean` per slot. No job addresses, client names, or schedule details are rendered to the client.
+Authenticated users can review earnings, record expenses, maintain journal entries, generate and manage invoices, view notifications, customize email templates, and manage profile, operational, navigation, password, and billing settings.
 
-### Map View (`/map`)
+## Project Structure
 
-Dynamic import with `ssr: false` (Leaflet cannot run on the server). Loading state renders a skeleton card at the map dimensions.
+Key directories include:
 
-Numbered pins for each confirmed job in optimised sequence. Route polyline connecting jobs. Drive time label on each leg. Navigate button per pin — opens the notary's preferred navigation app (Google Maps / Apple Maps / Waze) with the job address pre-filled via URL scheme. No API key needed for navigation deep links.
+- `src/app`: route segments and page composition
+- `src/components`: reusable UI, layout, job, CITT, planner, booking, map, settings, and reporting components
+- `src/api`: backend API clients grouped by domain
+- `src/hooks`: query and mutation hooks used by screens
+- `src/store`: Zustand stores for local UI state
+- `src/lib`: Axios configuration and shared utilities
+- `src/types`: TypeScript domain types
+- `public`: static assets, PWA metadata, and service-worker output
 
----
+## Requirements
 
-## Getting Started
+- Node.js 20 or newer
+- The Notary Day backend available locally or at a configured deployment URL
 
-### Prerequisites
+## Local Development
 
-- Node.js 20+
-- The backend API running at `localhost:4000` (see backend README)
+1. Install dependencies with `npm install`.
+2. Create `.env.local` from `.env.local.example`.
+3. Set `NEXT_PUBLIC_API_URL` to the backend API base, such as `http://localhost:4000/api/v1`.
+4. Set `NEXT_PUBLIC_APP_URL` to the frontend origin, such as `http://localhost:3000`.
+5. Start the development server with `npm run dev`.
 
-### Installation
+The application is available at `http://localhost:3000` by default.
 
-```bash
-npm install
-```
+For a production-style run, use `npm run build` followed by `npm start`.
 
-### Environment Variables
+## Verification
 
-```bash
-cp .env.local.example .env.local
-```
+- `npm run lint` runs the configured ESLint checks.
+- `npm run build` validates the Next.js production build using the repository's Webpack build configuration.
+- `npm start` serves the compiled application.
 
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+There is currently no test runner configured in this repository. The main verification path is linting, production builds, and end-to-end validation against the backend API.
 
-### Running
+## Engineering Highlights
 
-```bash
-# Development
-npm run dev
-
-# Production build
-npm run build
-npm run start
-
-# Type check
-npm run type-check
-
-# Lint
-npm run lint
-```
-
-The application runs on `http://localhost:3000` by default.
-
----
-
-## Performance
-
-### Core Web Vitals Targets
-
-| Metric    | Target  | Strategy                                             |
-| --------- | ------- | ---------------------------------------------------- |
-| LCP       | < 2.5s  | SSG landing page, SSR booking page, lazy-loaded map  |
-| FID / INP | < 100ms | Optimistic updates, no blocking renders              |
-| CLS       | < 0.1   | Explicit dimensions on all images and map containers |
-
-### PWA & Mobile Performance
-
-The application is configured as an installable PWA with `next-pwa`. Notaries add it to their home screen and use it like a native app. Service worker caches the app shell for offline loading.
-
-```json
-{
-  "name": "Notary Day",
-  "short_name": "Notary Day",
-  "display": "standalone",
-  "theme_color": "#0F2C4E",
-  "background_color": "#F8FAFC",
-  "start_url": "/"
-}
-```
-
-### Code Splitting Strategy
-
-- The Leaflet map is dynamically imported (`ssr: false`) — adds ~40KB only when the map screen is visited
-- Heavy chart components (earnings dashboard) are dynamically imported
-- The public booking page is SSR — fully rendered on the server for client-facing performance
-- The landing page is SSG — built at compile time, served from CDN edge
-
-### Bundle Optimisation
-
-- No component library dependency — all UI built from scratch against the design system. Zero bloat from unused components.
-- Lucide React icons imported individually, not as a barrel import
-- React Query's `staleTime` configuration prevents waterfall refetches — data is fresh for the expected usage window before being quietly revalidated in the background
-
----
-
-## Mobile-First Implementation
-
-Primary use is a PWA on iPhone or Android, used between signings in a parking lot. Every design and interaction decision reflects this.
-
-**Touch targets** — Minimum 44×44px on all interactive elements. Padding added invisibly where visual size would be smaller.
-
-**Bottom navigation** — Fixed 60px bar. Five items: Today, Jobs, CITT (floating centre, elevated), Reports, Account. Active state: navy icon + navy label + indicator dot. iOS safe area respected via `env(safe-area-inset-bottom)`.
-
-**CITT floating button** — Fixed position, always visible across all app screens regardless of scroll position. 56px circle with gradient. Elevated 8px above the bottom nav. The single most important interaction in the product must always be one tap away.
-
-**Form inputs** — 40px height minimum. Numeric inputs use `inputmode="decimal"` to show the correct keyboard on mobile. Address inputs use `autocomplete` attributes.
-
-**Navigation deep links** — The "Navigate" button on each job card opens the notary's preferred navigation app directly with the address pre-filled. No copying and pasting. Implementation uses URL schemes with no API key requirement:
-
-```typescript
-const NAV_URLS = {
-  GOOGLE_MAPS: (addr: string) =>
-    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}&travelmode=driving`,
-  APPLE_MAPS: (addr: string) =>
-    `maps://maps.apple.com/?daddr=${encodeURIComponent(addr)}&dirflg=d`,
-  WAZE: (addr: string) =>
-    `https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`,
-};
-```
-
----
-
-## State Management Philosophy
-
-**No Redux.** The application uses two state tools, each with a clear domain:
-
-**React Query** — All data that lives on the server. Handles: caching, background refetching, loading states, error states, optimistic mutations. The query key conventions are strict and documented. Cache invalidation is intentional — adding or editing a job invalidates the planner cache for that date.
-
-**Zustand** — All state that is purely UI and never needs to be persisted. The store is small and flat:
-
-```typescript
-interface UIStore {
-  // CITT modal
-  isCITTOpen: boolean;
-  cITTPrefill: CITTPrefill | null;
-  openCITT: (prefill?: CITTPrefill) => void;
-  closeCITT: () => void;
-
-  // Date navigation
-  activeDate: string; // ISO date string
-  setActiveDate: (date: string) => void;
-
-  // Toast notifications
-  toasts: Toast[];
-  addToast: (toast: Omit<Toast, "id">) => void;
-  removeToast: (id: string) => void;
-}
-```
-
----
-
-## Accessibility
-
-- Semantic HTML throughout — `<nav>`, `<main>`, `<section>`, `<article>` used correctly
-- ARIA labels on icon-only buttons
-- Focus management in modals — focus trapped inside open modals, returned to trigger on close
-- Keyboard navigation for all interactive elements
-- Colour is never the only differentiator for status information — icons and text accompany all colour-coded states
-- CITT verdict cards use both colour and icon (✓ / ⚠ / ✕) for the verdict
-
----
-
-## Tech Stack
-
-| Concern        | Technology                                       |
-| -------------- | ------------------------------------------------ |
-| Framework      | Next.js 15 (App Router)                          |
-| Language       | TypeScript 5                                     |
-| Styling        | Tailwind CSS                                     |
-| Server State   | React Query (@tanstack/react-query)              |
-| Client State   | Zustand                                          |
-| Forms          | React Hook Form + Zod                            |
-| Maps           | Leaflet.js (react-leaflet) — OpenStreetMap tiles |
-| Icons          | Lucide React                                     |
-| HTTP Client    | axios (with JWT + auth interceptors)             |
-| Date Utilities | date-fns                                         |
-| PDF            | Handled by backend (pdfkit)                      |
-| PWA            | next-pwa                                         |
-| Testing        | Jest + React Testing Library                     |
-
----
+- The interface separates server data from local UI state, reducing unnecessary global state and making cache behavior predictable.
+- JWT authentication is implemented consistently with the backend API contract.
+- Public booking and authenticated operations are represented as separate route experiences.
+- Client-only map code is isolated from server rendering through dynamic loading.
+- Forms use typed validation and reusable field components.
+- The layout is responsive and optimized for repeated, one-handed actions in the field.
+- Pro functionality is presented through feature gates and upgrade surfaces while preserving navigation and existing user data.
 
 ## Deployment
 
-Designed for deployment on **Vercel** (ideal for Next.js) or **Railway**.
+The application can be deployed to platforms that support Next.js, including Vercel and Railway. Production configuration requires `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_APP_URL`, with the API configured to accept the deployed frontend origin.
 
-The public booking page (`/book/[username]`) uses SSR — runs server-side rendering at request time to compute live slot availability. All other app screens are client-side rendered after initial auth check.
+## License
 
-```bash
-# Environment variables required in production
-NEXT_PUBLIC_API_URL=https://api.notaryday.app/api/v1
-NEXT_PUBLIC_APP_URL=https://notaryday.app
-```
+This project is private and not licensed for redistribution.
 
----
-
-<div align="center">
-  <sub>Built by <a href="https://github.com/Dev-folabi">Yusuf Afolabi</a> · notaryday.app</sub>
-</div>
+Built by [Yusuf Afolabi](https://github.com/Dev-folabi) for [notaryday.app](https://notaryday.app).
