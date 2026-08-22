@@ -41,8 +41,9 @@ function ToastItem({
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
-    const exitTimer = setTimeout(() => setClosing(true), toast.duration);
-    const removeTimer = setTimeout(onRemove, toast.duration + EXIT_ANIM_MS);
+    const duration = toast.duration ?? 3600;
+    const exitTimer = setTimeout(() => setClosing(true), duration);
+    const removeTimer = setTimeout(onRemove, duration + EXIT_ANIM_MS);
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(removeTimer);
