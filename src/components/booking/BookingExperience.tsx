@@ -222,9 +222,18 @@ export default function BookingExperience({
     isError,
     error,
   } = useQuery({
-    queryKey: ["booking-page", username, date, serviceType],
+    queryKey: [
+      "booking-page",
+      preview ? `preview:${username}` : username,
+      date,
+      serviceType,
+    ],
     queryFn: async () =>
-      unwrap<SlotData>(await bookingApi.getSlots(username, date, serviceType)),
+      preview
+        ? unwrap<SlotData>(await bookingApi.previewSlots(date, serviceType))
+        : unwrap<SlotData>(
+            await bookingApi.getSlots(username, date, serviceType),
+          ),
     enabled: !!username && !!date,
     retry: false,
     placeholderData: keepPreviousData,

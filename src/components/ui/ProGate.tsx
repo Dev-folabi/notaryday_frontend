@@ -46,7 +46,7 @@ export default function ProGate({ children, feature }: ProGateProps) {
                 {feature ?? "This feature"} is a Pro feature
               </p>
               <p className="font-inter text-xs text-slate-secondary">
-                Look around freely — actions unlock when you upgrade.
+                Upgrade to Pro to get access to premium features
               </p>
             </div>
           </div>
