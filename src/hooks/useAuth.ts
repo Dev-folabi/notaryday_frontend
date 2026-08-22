@@ -70,6 +70,7 @@ export function useAuth() {
       password: string;
       username: string;
       fullName?: string;
+      state?: string;
     }) => authApi.register(data),
     onSuccess: async (data: any) => {
       const token = data?.data?.token;

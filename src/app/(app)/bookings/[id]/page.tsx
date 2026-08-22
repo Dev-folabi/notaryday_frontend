@@ -23,6 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import ProGate from "@/components/ui/ProGate";
+import { useAuth } from "@/hooks/useAuth";
 import type { CITCResult } from "@/hooks/useCITT";
 
 type BookingAnalysis = {
@@ -58,6 +59,8 @@ type ExtendedCITT = CITCResult & {
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const { addToast } = useUIStore();
   const qc = useQueryClient();
 
@@ -69,7 +72,7 @@ export default function BookingDetailPage() {
   const { data: booking, isLoading } = useQuery<Booking>({
     queryKey: queryKeys.bookings.detail(id),
     queryFn: async () => unwrap<Booking>(await bookingApi.get(id)),
-    enabled: !!id,
+    enabled: !!id && isPro,
   });
 
   const isPending = booking?.status === BookingStatus.PENDING_REVIEW;
@@ -489,7 +492,7 @@ export default function BookingDetailPage() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => approve.mutate()}
-                disabled={approve.isPending}
+                disabled={approve.isPending || !isPro}
                 className="btn-teal"
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -497,6 +500,7 @@ export default function BookingDetailPage() {
               </button>
               <button
                 onClick={() => setDeclineOpen(true)}
+                disabled={!isPro}
                 className="btn-gh"
                 style={{ color: "var(--red)" }}
               >
@@ -567,7 +571,7 @@ export default function BookingDetailPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => decline.mutate()}
-                  disabled={decline.isPending}
+                  disabled={decline.isPending || !isPro}
                   className="flex-1 btn-teal"
                   style={{ background: "var(--red)", borderColor: "var(--red)" }}
                 >
@@ -585,7 +589,7 @@ export default function BookingDetailPage() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => cancel.mutate()}
-                disabled={cancel.isPending}
+                disabled={cancel.isPending || !isPro}
                 className="btn-gh"
                 style={{ color: "var(--red)" }}
               >

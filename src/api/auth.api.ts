@@ -6,6 +6,7 @@ export const authApi = {
     password: string;
     username: string;
     fullName?: string;
+    state?: string;
   }) => api.post("/auth/register", data),
 
   login: (data: { email: string; password: string }) =>

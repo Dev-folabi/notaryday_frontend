@@ -29,6 +29,7 @@ const FILTERS: { key: FilterKey; label: string; status: BookingStatus | BookingS
 
 export default function BookingsPage() {
   const { user } = useAuth();
+  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const { addToast } = useUIStore();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<FilterKey>("pending");
@@ -36,6 +37,7 @@ export default function BookingsPage() {
 
   const { data: bookings = [], isLoading } = useQuery<Booking[]>({
     queryKey: queryKeys.bookings.all(),
+    enabled: isPro,
     queryFn: async () => unwrap<Booking[]>(await bookingApi.list()),
     select: (data) => {
       data.forEach((b) => {
@@ -94,15 +96,13 @@ export default function BookingsPage() {
               )}
               {copied ? "Copied" : "Copy link"}
             </button>
-            <a
-              href={bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/booking-preview"
               className="btn-sm"
               style={{ background: "var(--teal)", color: "#fff", borderColor: "var(--teal)" }}
             >
               <Link2 className="w-3.5 h-3.5" /> Preview
-            </a>
+            </Link>
           </div>
         </div>
 

@@ -968,3 +968,15 @@ textarea {
     min-width: 480px;
   }
 }
+
+/* Toast entrance, per the notaryday_complete_app.html prototype */
+@keyframes toast-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

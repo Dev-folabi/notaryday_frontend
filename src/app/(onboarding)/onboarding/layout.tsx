@@ -1,17 +1,14 @@
 "use client";
 
 import { useUIStore } from "@/store/uiStore";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MapPin, Scan, Briefcase, Sparkles } from "lucide-react";
-import { ROUTES } from "@/config/routes";
 
 export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const { onboardingStep } = useUIStore();
 
   const steps = [
@@ -27,12 +24,7 @@ export default function OnboardingLayout({
     <div className="min-h-screen bg-bg flex flex-col">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-border h-14 flex items-center justify-between px-4 safe-area-top">
-        <button
-          onClick={() => router.push(ROUTES.APP.TODAY)}
-          className="font-inter text-sm text-slate-secondary"
-        >
-          Skip for now
-        </button>
+        <span className="w-16" />
         <div className="flex items-center gap-1.5">
           {steps.map((s) => (
             <div

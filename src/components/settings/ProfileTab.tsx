@@ -8,18 +8,7 @@ import { usersApi } from "@/api/users.api";
 import { queryKeys } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Trash2, X, User, DollarSign } from "lucide-react";
-
-const US_STATES = [
-  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
-  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
-  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
-  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
-  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
-  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
-  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
-  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
-];
+import { US_STATES } from "@/lib/constants/usStates";
 
 type PaymentInfo = {
   zelle: string;
@@ -42,7 +31,7 @@ export default function ProfileTab() {
   const email = user?.email ?? "";
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [state, setState] = useState(
-    (user?.settings as { state?: string } | null)?.state ?? "California",
+    (user?.settings as { state?: string } | null)?.state ?? "",
   );
   const [bio, setBio] = useState(user?.bio ?? "");
   const [payment, setPayment] = useState<PaymentInfo>(() => {
@@ -74,7 +63,12 @@ export default function ProfileTab() {
   const saveProfile = async () => {
     setSavingProfile(true);
     try {
-      await usersApi.updateProfile({ fullName, phone, bio, state });
+      await usersApi.updateProfile({
+        fullName,
+        phone,
+        bio,
+        state: state || undefined,
+      });
       await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
       addToast({ type: "success", title: "Profile saved" });
     } catch {
@@ -124,7 +118,8 @@ export default function ProfileTab() {
           <div className="field"><label className="lbl">Phone number</label><input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           <div className="field"><label className="lbl">US state</label>
             <select className="sel" value={state} onChange={(e) => setState(e.target.value)}>
-              {US_STATES.map((s) => <option key={s}>{s}</option>)}
+              <option value="">Select your state…</option>
+              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>

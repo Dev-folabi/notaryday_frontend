@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { reportsApi, expensesApi } from "@/api/accounting.api";
 import { invoicesApi } from "@/api/invoices.api";
-import ProGate from "@/components/ui/ProGate";
+import ProGate, { useProGate } from "@/components/ui/ProGate";
 import ExpensesView from "@/components/reports/ExpensesView";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -164,7 +164,12 @@ export default function ReportsPage() {
       <div className="ph">
         <div className="ph-title">Reports</div>
         {tab !== "tax" && (
-          <button className="btn-sm" onClick={handleExport}>
+          <button
+            className="btn-sm"
+            onClick={handleExport}
+            disabled={!isPro}
+            title={isPro ? undefined : "Exporting reports is a Pro feature"}
+          >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
         )}
@@ -208,6 +213,7 @@ export default function ReportsPage() {
 /* ---------------- INCOME ---------------- */
 function IncomeTab() {
   const now = new Date();
+  const gated = useProGate();
   const [period, setPeriod] = useState<"month" | "ytd">("ytd");
 
   const range =
@@ -223,6 +229,7 @@ function IncomeTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-income", period],
+    enabled: !gated,
     queryFn: async () => {
       const res = await reportsApi.earnings(
         range.from,
@@ -480,6 +487,7 @@ function IncomeTab() {
 /* ---------------- TAX ---------------- */
 function TaxTab() {
   const year = new Date().getFullYear();
+  const gated = useProGate();
   const { addToast } = useUIStore();
   const { user } = useAuth();
   const [range, setRange] = useState({
@@ -693,7 +701,7 @@ function TaxTab() {
         </div>
         <button
           className="btn-p !w-auto px-4 !h-10"
-          disabled={isGenerating}
+          disabled={isGenerating || gated}
           onClick={generate}
         >
           <FileText className="w-4 h-4" />{" "}

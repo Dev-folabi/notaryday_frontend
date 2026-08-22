@@ -115,7 +115,7 @@ export function MobileDrawer({
             {NAV_SECTIONS.map((section) => (
               <div key={section.label}>
                 <div className="sb-section">{section.label}</div>
-                {section.items.map(({ href, icon: Icon, label, liveTag, proOnly, badgeKey }) => {
+                {section.items.map(({ href, icon: Icon, label, liveTag, badgeKey }) => {
                   const isActive =
                     pathname === href || (href !== "/" && pathname.startsWith(href));
                   const showNotifBadge = badgeKey === "notif" && notifCount > 0;
@@ -135,11 +135,6 @@ export function MobileDrawer({
                       {showLive && (
                         <span className="si-badge" style={{ background: "var(--amber-2)", color: "var(--amber)", border: "1px solid var(--amber-b)" }}>
                           Live
-                        </span>
-                      )}
-                      {proOnly && !isPro && (
-                        <span className="si-badge" style={{ background: "var(--gold)", color: "var(--navy)" }}>
-                          Pro
                         </span>
                       )}
                       {showGapBadge && (

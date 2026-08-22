@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Car, Check, Pencil, Trash2, X } from "lucide-react";
 import { reportsApi } from "@/api/accounting.api";
+import { useProGate } from "@/components/ui/ProGate";
 import { useUIStore } from "@/store/uiStore";
 import { cn, formatCurrency, unwrap } from "@/lib/utils";
 import type { MileageEntry, MileageReport } from "@/types/reports";
@@ -13,6 +14,7 @@ const PAGE_SIZE = 50;
 
 export default function MileageLog() {
   const year = new Date().getFullYear();
+  const gated = useProGate();
   const queryClient = useQueryClient();
   const { addToast } = useUIStore();
   const [form, setForm] = useState({
@@ -30,6 +32,7 @@ export default function MileageLog() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-mileage", year],
+    enabled: !gated,
     queryFn: async () => {
       const response = await reportsApi.mileage(year);
       return unwrap<MileageReport>(response);
@@ -170,7 +173,11 @@ export default function MileageLog() {
                 <div className="font-inter text-[11px] font-bold text-navy">{Number(entry.miles ?? 0).toFixed(1)} mi</div>
                 <div className="font-inter text-[10px] text-amber font-medium">{formatCurrency(entry.deduction ?? entry.cost ?? 0)}</div>
               </div>
-              <button className="p-1 text-slate-secondary flex-shrink-0 hover:text-navy" onClick={() => openEdit(entry)}>
+              <button
+                className="p-1 text-slate-secondary flex-shrink-0 hover:text-navy disabled:opacity-40 disabled:hover:text-slate-secondary"
+                disabled={gated}
+                onClick={() => openEdit(entry)}
+              >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -204,7 +211,7 @@ export default function MileageLog() {
         </div>
         <button
           className="btn-p mt-2.5 !h-[38px] !text-[12px]"
-          disabled={createEntry.isPending}
+          disabled={createEntry.isPending || gated}
           onClick={() => {
             if (!form.miles || parseFloat(form.miles) <= 0) {
               addToast({ title: "Enter miles", type: "error" });

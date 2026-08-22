@@ -23,7 +23,11 @@ export default function GapPage() {
   const date = activeDate || toDateInputValue(new Date());
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
 
-  const { data: gaps = [], isLoading: gapsLoading } = useGaps(date);
+  // Gaps endpoint is Pro-only; pass "" to keep the query disabled for free
+  // users so the interface renders without firing 403s.
+  const { data: gaps = [], isLoading: gapsLoading } = useGaps(
+    isPro ? date : "",
+  );
   const { data: plan, isLoading: planLoading } = useTodayPlan(date);
 
   const totalCandidates = gaps.reduce((s, g) => s + g.candidates.length, 0);
