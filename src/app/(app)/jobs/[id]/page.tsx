@@ -17,6 +17,7 @@ import {
 import { useJob, useUpdateJobStatus, useDeleteJob } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import type { JobStatus } from "@/types/job";
+import type { NavApp } from "@/types/user";
 import {
   formatTime,
   formatDate,
@@ -124,10 +125,7 @@ export default function JobDetailPage() {
     });
   };
 
-  const navApp = (user?.settings?.preferred_nav_app ?? "GOOGLE_MAPS").toLowerCase() as
-    | "google"
-    | "apple"
-    | "waze";
+  const navApp: NavApp = user?.settings?.preferred_nav_app ?? "GOOGLE_MAPS";
   const navOrigin = user?.settings?.home_base_address ?? null;
 
   if (isLoading) {

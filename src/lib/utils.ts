@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import type { NavApp } from "@/types/user";
 
 /**
  * Merge class names with clsx; drop-in for classnames
@@ -178,23 +179,25 @@ export function importEmailFor(username?: string | null): string {
 }
 
 /**
- * Open navigation deep link. `origin` is the notary's starting point (e.g. home
- * base address); Waze always starts from the device's current location.
+ * Open navigation deep link. `app` is the stored preference (`NavApp`);
+ * unknown values fall back to Google Maps. `origin` is the notary's starting
+ * point (e.g. home base address); Waze always starts from the device's current
+ * location.
  */
 export function openNavigation(
   address: string,
-  app: "google" | "apple" | "waze",
+  app: NavApp,
   origin?: string | null,
 ): void {
   const encoded = encodeURIComponent(address);
   const originParam = (param: string) =>
     origin ? `&${param}=${encodeURIComponent(origin)}` : "";
-  const urls: Record<string, string> = {
-    google: `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving${originParam("origin")}`,
-    apple: `maps://maps.apple.com/?daddr=${encoded}&dirflg=d${originParam("saddr")}`,
-    waze: `https://waze.com/ul?q=${encoded}&navigate=yes`,
+  const urlByApp: Record<NavApp, string> = {
+    GOOGLE_MAPS: `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving${originParam("origin")}`,
+    APPLE_MAPS: `maps://maps.apple.com/?daddr=${encoded}&dirflg=d${originParam("saddr")}`,
+    WAZE: `https://waze.com/ul?q=${encoded}&navigate=yes`,
   };
-  window.open(urls[app], "_blank", "noopener,noreferrer");
+  window.open(urlByApp[app] ?? urlByApp.GOOGLE_MAPS, "_blank", "noopener,noreferrer");
 }
 
 /**

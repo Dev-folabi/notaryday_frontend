@@ -161,7 +161,17 @@ export default function NewInvoicePage() {
   // generation (prototype: the draft always exists once a job is complete).
   const generateDraft = useMutation({
     mutationFn: (jid: string) => invoicesApi.generate(jid),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      // Show the assigned invoice number immediately instead of waiting for
+      // the list refetch below.
+      const created = unwrap<InvoiceRow>(res);
+      if (created?.id) {
+        qc.setQueryData<InvoiceRow[]>(["invoices", "all"], (prev) =>
+          prev?.some((i) => i.id === created.id)
+            ? prev.map((i) => (i.id === created.id ? created : i))
+            : [created, ...(prev ?? [])],
+        );
+      }
       qc.invalidateQueries({ queryKey: ["invoices"] });
     },
     onError: () => {
@@ -864,7 +874,7 @@ function InvoiceDraft({
               <label className="lbl">Invoice number</label>
               <input
                 className="inp"
-                value={invoice?.invoice_number ?? "Auto on send"}
+                value={invoice?.invoice_number ?? "Auto-generated"}
                 readOnly
               />
             </div>
