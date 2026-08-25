@@ -233,21 +233,19 @@ extend: {
 </div>
 ```
 
-### ProGate Component (locked overlay for Pro features)
+### ProGate Component (banner + disabled actions for Pro features)
 ```tsx
-// Semi-transparent overlay — never block navigation
-<div className="relative">
-  {children}
-  {!isPro && (
-    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-card flex flex-col items-center justify-center gap-3 z-10">
-      <LockIcon className="text-slate-secondary w-6 h-6" />
-      <p className="font-inter font-medium text-sm text-slate-body text-center">{benefitText}</p>
-      <button className="bg-pro-gold text-primary-navy font-semibold text-sm rounded-button h-9 px-4">
-        Upgrade to Pro
-      </button>
-    </div>
-  )}
-</div>
+<ProGate feature="Gap Finder">
+  {children /* rendered at full fidelity, no blur/overlay */}
+</ProGate>
+
+// Banner (rendered by ProGate itself): lock icon + "{feature} is a Pro
+// feature" + gold "Upgrade to Pro" button → /settings?tab=billing
+
+// Inside gated pages, disable the buttons that operate the feature:
+const gated = useProGate();
+<button disabled={saving || gated}>…</button>
+// Pro-endpoint queries also stay quiet: useQuery({ enabled: !gated })
 ```
 
 ### Job Card
@@ -315,7 +313,7 @@ extend: {
 **Routing rules:**
 - Unauthenticated users hitting any `(app)` route → redirect to `/login`
 - Users who have not completed onboarding (steps 1–3) → redirect to `/onboarding/home`
-- Free users hitting Pro-only routes → show ProGate overlay, do NOT redirect
+- Free users hitting Pro-only routes → show ProGate banner with disabled action buttons, do NOT redirect
 
 ---
 

@@ -46,6 +46,7 @@ function ReviewDeepLink({
 export default function ImportPage() {
   const { addToast } = useUIStore();
   const { user } = useAuth();
+  const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
   const router = useRouter();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
@@ -56,6 +57,7 @@ export default function ImportPage() {
 
   const { data: imports = [], isLoading } = useQuery({
     queryKey: ["imports"],
+    enabled: isPro,
     queryFn: async () => unwrap<JobImport[]>(await jobImportApi.list()),
     // Poll while any import is still queued/processing so the list reflects
     // the backend parse finishing without a manual refresh.
@@ -235,7 +237,13 @@ export default function ImportPage() {
                   Upload a screenshot of a signing order and Notary Day will
                   extract the details for review.
                 </div>
-                <label className="btn-sm inline-flex cursor-pointer">
+                <label
+                  className={
+                    isPro
+                      ? "btn-sm inline-flex cursor-pointer"
+                      : "btn-sm inline-flex cursor-not-allowed opacity-50"
+                  }
+                >
                   <Upload className="w-3.5 h-3.5" />
                   {uploading ? "Uploading..." : "Upload screenshot"}
                   <input
@@ -243,7 +251,7 @@ export default function ImportPage() {
                     accept="image/*,.pdf"
                     onChange={handleFileUpload}
                     className="hidden"
-                    disabled={uploading}
+                    disabled={uploading || !isPro}
                   />
                 </label>
               </div>
@@ -320,6 +328,7 @@ export default function ImportPage() {
                       <div className="flex gap-1.5 flex-wrap">
                         <button
                           onClick={() => openReview(imp)}
+                          disabled={!isPro}
                           className="btn-p"
                           style={{
                             width: "auto",
@@ -332,7 +341,7 @@ export default function ImportPage() {
                         </button>
                         <button
                           onClick={() => declineImport.mutate(imp.id)}
-                          disabled={declineImport.isPending}
+                          disabled={declineImport.isPending || !isPro}
                           className="btn-gh"
                           style={{ width: "auto", height: 32 }}
                         >

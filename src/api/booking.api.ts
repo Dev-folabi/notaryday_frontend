@@ -19,6 +19,11 @@ export const bookingApi = {
     api.post(`/book/${username}`, data),
   list: (status?: string) =>
     api.get("/bookings", { params: status ? { status } : undefined }),
+  // Owner review-mode slots: ignores plan/booking_page_enabled gates
+  previewSlots: (date: string, serviceType?: string) =>
+    api.get("/bookings/preview/slots", {
+      params: { date, service_type: serviceType },
+    }),
   get: (id: string) => api.get(`/bookings/${id}`),
   analyze: (id: string) => api.get(`/bookings/${id}/analysis`),
   approve: (id: string) => api.post(`/bookings/${id}/approve`),

@@ -100,17 +100,6 @@ export function useOnboarding() {
     },
   });
 
-  // Skip onboarding step
-  const skipStep = (currentStep: number) => {
-    const nextStep = currentStep + 1;
-    setOnboardingStep(nextStep);
-    if (nextStep === 2) router.push(ROUTES.ONBOARDING.SCANBACK);
-    else if (nextStep === 3) router.push(ROUTES.ONBOARDING.SIGNING_TYPES);
-    else {
-      router.push(ROUTES.APP.TODAY);
-    }
-  };
-
   const completeOnboarding = useMutation({
     mutationFn: () => usersApi.completeOnboarding(),
     onSuccess: (res) => {
@@ -134,6 +123,5 @@ export function useOnboarding() {
     saveScanback,
     saveSigningTypes,
     completeOnboarding,
-    skipStep,
   };
 }

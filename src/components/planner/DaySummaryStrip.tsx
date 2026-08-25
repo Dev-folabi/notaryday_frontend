@@ -1,36 +1,50 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils";
+import type { MouseEvent, ReactNode } from "react";
 
-interface DaySummaryStripProps {
-  totalJobs: number;
-  totalDriveMins: number;
-  totalEarnings: number;
-  totalMiles: number;
+interface SummaryItem {
+  value: ReactNode;
+  label: string;
 }
 
-export default function DaySummaryStrip({ totalJobs, totalDriveMins, totalEarnings, totalMiles }: DaySummaryStripProps) {
+interface DaySummaryStripProps {
+  items: SummaryItem[];
+  onClick?: () => void;
+  action?: {
+    label: string;
+    icon: ReactNode;
+    onClick: () => void;
+  };
+  cursor?: "default";
+}
+
+export default function DaySummaryStrip({
+  items,
+  onClick,
+  action,
+  cursor,
+}: DaySummaryStripProps) {
+  const handleAction = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    action?.onClick();
+  };
+
   return (
-    <div className="bg-primary-navy rounded-10px p-3 px-4 flex items-center gap-0">
-      <div className="flex-1 text-center">
-        <div className="font-sora text-[17px] font-bold text-white leading-none">{totalJobs}</div>
-        <div className="text-[10px] text-white/50 mt-1">Signings</div>
-      </div>
-      <div className="w-px h-7 bg-white/10" />
-      <div className="flex-1 text-center">
-        <div className="font-sora text-[17px] font-bold text-white leading-none">{formatCurrency(totalEarnings)}</div>
-        <div className="text-[10px] text-white/50 mt-1">Est. net</div>
-      </div>
-      <div className="w-px h-7 bg-white/10" />
-      <div className="flex-1 text-center">
-        <div className="font-sora text-[17px] font-bold text-white leading-none">{totalDriveMins}m</div>
-        <div className="text-[10px] text-white/50 mt-1">Drive</div>
-      </div>
-      <div className="w-px h-7 bg-white/10" />
-      <div className="flex-1 text-center">
-        <div className="font-sora text-[17px] font-bold text-white leading-none">{totalMiles.toFixed(1)}</div>
-        <div className="text-[10px] text-white/50 mt-1">Miles</div>
-      </div>
+    <div className="dstrip" style={cursor ? { cursor } : undefined} onClick={onClick}>
+      {items.map((item, index) => (
+        <div className="contents" key={item.label}>
+          {index > 0 && <div className="ds-div" />}
+          <div className="ds">
+            <span className="ds-v">{item.value}</span>
+            <span className="ds-l">{item.label}</span>
+          </div>
+        </div>
+      ))}
+      {action && (
+        <button className="sday-btn" onClick={handleAction}>
+          {action.icon} {action.label}
+        </button>
+      )}
     </div>
   );
 }

@@ -46,16 +46,6 @@ export default function OnboardingBookingPage() {
     }
   };
 
-  const skip = async () => {
-    setSaving(true);
-    try {
-      await completeOnboarding.mutateAsync();
-      router.push(ROUTES.APP.TODAY);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-4 py-10 bg-white lg:bg-bg overflow-y-auto">
       <div className="w-full max-w-[640px]">
@@ -160,14 +150,6 @@ export default function OnboardingBookingPage() {
           >
             <CheckCircle2 className="w-4 h-4" />
             {saving ? "Finishing…" : "Finish setup"}
-          </button>
-
-          <button
-            onClick={skip}
-            disabled={saving}
-            className="w-full h-[48px] border-[1.5px] border-[#0F2C4E] rounded-[8px] font-inter font-bold text-[14px] text-[#0F2C4E] bg-white hover:bg-slate-50 transition-colors"
-          >
-            Skip for now
           </button>
         </div>
 

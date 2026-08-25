@@ -10,15 +10,13 @@ import {
   formatCurrency,
   formatMiles,
   toDateInputValue,
-  profitabilityColor,
+  unwrap,
 } from "@/lib/utils";
 import {
   CalendarDays,
   Plus,
   Sparkles,
   Clock,
-  Car,
-  MapPin,
   ArrowRight,
   ChevronRight,
 } from "lucide-react";
@@ -34,6 +32,8 @@ import {
   isToday,
 } from "date-fns";
 import type { Job } from "@/types/job";
+import JobCard, { jobTypeLabel } from "@/components/jobs/JobCard";
+import DaySummaryStrip from "@/components/planner/DaySummaryStrip";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -58,16 +58,11 @@ export default function TodayPage() {
   });
 
   // Query jobs for the current active date
-  const {
-    data: jobs = [],
-    isLoading,
-    refetch: refetchJobs,
-  } = useQuery({
+  const { data: jobs = [] } = useQuery({
     queryKey: queryKeys.jobs.all({ date: activeDate }),
     queryFn: async () => {
       const res = await jobsApi.list({ date: activeDate, limit: 50 });
-      const payload = (res as any).data ?? res;
-      return (payload.data ?? payload) as Job[];
+      return unwrap<Job[]>(res);
     },
     enabled: !!activeDate,
   });
@@ -84,8 +79,7 @@ export default function TodayPage() {
         to: weekToIso,
         limit: 100,
       });
-      const payload = (res as any).data ?? res;
-      return (payload.data ?? payload) as Job[];
+      return unwrap<Job[]>(res);
     },
   });
   const weekJobs = (weekJobsQuery.data as Job[]) ?? [];
@@ -248,7 +242,7 @@ export default function TodayPage() {
                     Active signing in progress
                   </div>
                   <div className="text-[12px] font-semibold text-primary-navy">
-                    {formatSigningType(activeJob.signing_type)} ·{" "}
+                    {jobTypeLabel(activeJob.signing_type)} ·{" "}
                     {format(parseISO(activeJob.appointment_time), "h:mm a")} ·{" "}
                     {activeJob.address}
                   </div>
@@ -270,36 +264,18 @@ export default function TodayPage() {
               <span className="text-[11px] text-muted">{jobCount} jobs today</span>
             </div>
 
-            <div className="dstrip" onClick={() => router.push("/day")}>
-              <div className="ds">
-                <span className="ds-v">{jobCount}</span>
-                <span className="ds-l">Signings</span>
-              </div>
-              <div className="ds-div" />
-              <div className="ds">
-                <span className="ds-v">{formatCurrency(todayEarnings)}</span>
-                <span className="ds-l">Est. net</span>
-              </div>
-              <div className="ds-div" />
-              <div className="ds">
-                <span className="ds-v">
-                  {Math.floor(totalDriveMins / 60)}h {totalDriveMins % 60}m
-                </span>
-                <span className="ds-l">Drive</span>
-              </div>
-              <button
-                className="sday-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push("/day");
-                }}
-              >
-                <ArrowRight className="w-3.5 h-3.5" /> Start
-              </button>
-            </div>
+            <DaySummaryStrip
+              items={[
+                { value: jobCount, label: "Signings" },
+                { value: formatCurrency(todayEarnings), label: "Est. net" },
+                { value: `${Math.floor(totalDriveMins / 60)}h ${totalDriveMins % 60}m`, label: "Drive" },
+              ]}
+              onClick={() => router.push("/day")}
+              action={{ label: "Start", icon: <ArrowRight className="w-3.5 h-3.5" />, onClick: () => router.push("/day") }}
+            />
 
             {jobs.slice(0, 4).map((job) => (
-              <JobCardItem key={job.id} job={job} />
+              <JobCard key={job.id} job={job} variant="today" onClick={() => router.push(`/jobs/${job.id}`)} />
             ))}
 
             {isPro && firstGap && bestCandidate && (
@@ -416,7 +392,7 @@ export default function TodayPage() {
                   You are on Free plan.{" "}
                   <span
                     className="text-blue font-medium cursor-pointer"
-                    onClick={() => router.push("/settings/billing")}
+                    onClick={() => router.push("/settings?tab=billing")}
                   >
                     Upgrade to Pro
                   </span>{" "}
@@ -429,74 +405,6 @@ export default function TodayPage() {
       </div>
     </div>
   );
-}
-
-function JobCardItem({ job }: { job: Job }) {
-  const net = parseFloat(job.net_earnings ?? job.fee ?? "0") || 0;
-  const startTime = job.appointment_time
-    ? format(parseISO(job.appointment_time), "h:mm a")
-    : "—";
-  const isAnchored = (job as any).anchored;
-  return (
-    <Link href={`/jobs/${job.id}`} className="jcard">
-      <div className="flex-1 min-w-0">
-        <div className="text-[12px] font-semibold text-primary-navy mb-0.5 flex gap-1.5 items-center flex-wrap">
-          {startTime} · {job.signing_duration_mins ?? 30} min
-          {isAnchored && (
-            <span className="chip" style={{ background: "#DBEAFE", color: "#1D4ED8", fontSize: 8 }}>
-              Anchored
-            </span>
-          )}
-        </div>
-        <div className="text-[11px] text-slate-secondary whitespace-nowrap overflow-hidden text-ellipsis flex gap-1 items-center">
-          <MapPin className="w-3 h-3 flex-shrink-0" /> {job.address || "No address"}
-        </div>
-        <div className="flex gap-1 mt-1.5 flex-wrap">
-          <span className={cn("chip", getTypeChipClass(job.signing_type))}>
-            {formatSigningType(job.signing_type)}
-          </span>
-          {job.platform_name && (
-            <span className="chip c-plat">{job.platform_name}</span>
-          )}
-        </div>
-      </div>
-      <div className="text-right flex-shrink-0">
-        <div className={cn("text-[13px] font-bold", profitabilityColor(net))}>
-          {formatCurrency(net)}
-        </div>
-        <span
-          className={cn("chip mt-1", getTypeChipClass(job.signing_type))}
-          style={{ fontSize: 8 }}
-        >
-          {formatSigningType(job.signing_type)}
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function getTypeChipClass(type: string): string {
-  const map: Record<string, string> = {
-    GENERAL: "c-gen",
-    LOAN_REFI: "c-loan",
-    HYBRID: "c-hyb",
-    PURCHASE_CLOSING: "c-loan",
-    FIELD_INSPECTION: "c-gen",
-    APOSTILLE: "c-gen",
-  };
-  return map[type] ?? "c-gen";
-}
-
-function formatSigningType(type: string): string {
-  const map: Record<string, string> = {
-    GENERAL: "General",
-    LOAN_REFI: "Loan Refi",
-    HYBRID: "Hybrid",
-    PURCHASE_CLOSING: "Purchase Closing",
-    FIELD_INSPECTION: "Field Inspection",
-    APOSTILLE: "Apostille",
-  };
-  return map[type] ?? type ?? "Job";
 }
 
 interface WeekDayItem {

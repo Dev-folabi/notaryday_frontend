@@ -14,6 +14,7 @@ import { Sparkles, Info, ChevronLeft, Zap } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import DaySummaryStrip from "@/components/planner/DaySummaryStrip";
 
 export default function GapPage() {
   const { user } = useAuth();
@@ -22,7 +23,11 @@ export default function GapPage() {
   const date = activeDate || toDateInputValue(new Date());
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
 
-  const { data: gaps = [], isLoading: gapsLoading } = useGaps(date);
+  // Gaps endpoint is Pro-only; pass "" to keep the query disabled for free
+  // users so the interface renders without firing 403s.
+  const { data: gaps = [], isLoading: gapsLoading } = useGaps(
+    isPro ? date : "",
+  );
   const { data: plan, isLoading: planLoading } = useTodayPlan(date);
 
   const totalCandidates = gaps.reduce((s, g) => s + g.candidates.length, 0);
@@ -236,24 +241,14 @@ function GapDayStrip({ plan }: { plan: TodayPlan }) {
   const s = plan.summary ?? {};
   const driveMins = s.total_drive_mins ?? 0;
   return (
-    <div className="dstrip" style={{ cursor: "default" }}>
-      <div className="ds">
-        <span className="ds-v">{s.total_jobs ?? 0}</span>
-        <span className="ds-l">Signings</span>
-      </div>
-      <div className="ds-div" />
-      <div className="ds">
-        <span className="ds-v">{formatCurrency(s.total_earnings ?? 0)}</span>
-        <span className="ds-l">Est. net</span>
-      </div>
-      <div className="ds-div" />
-      <div className="ds">
-        <span className="ds-v">
-          {Math.floor(driveMins / 60)}h {driveMins % 60}m
-        </span>
-        <span className="ds-l">Drive time</span>
-      </div>
-    </div>
+    <DaySummaryStrip
+      items={[
+        { value: s.total_jobs ?? 0, label: "Signings" },
+        { value: formatCurrency(s.total_earnings ?? 0), label: "Est. net" },
+        { value: `${Math.floor(driveMins / 60)}h ${driveMins % 60}m`, label: "Drive time" },
+      ]}
+      cursor="default"
+    />
   );
 }
 

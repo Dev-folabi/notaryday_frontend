@@ -1,23 +1,17 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, startOfYear } from "date-fns";
 import {
   Download,
-  BarChart2,
-  Car,
   Info,
   FileText,
-  Pencil,
-  Check,
-  X,
-  Trash2,
   RefreshCw,
 } from "lucide-react";
 import { reportsApi, expensesApi } from "@/api/accounting.api";
 import { invoicesApi } from "@/api/invoices.api";
-import ProGate from "@/components/ui/ProGate";
+import ProGate, { useProGate } from "@/components/ui/ProGate";
 import ExpensesView from "@/components/reports/ExpensesView";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,13 +21,13 @@ import type {
   PeriodBar,
   TypeBreakdown,
   MileageReport,
-  MileageEntry,
   TaxReport,
 } from "@/types/reports";
+import EarningsChart from "@/components/reports/EarningsChart";
+import MileageLog from "@/components/reports/MileageLog";
 
 type Tab = "income" | "mileage" | "tax" | "expenses";
 const TABS: Tab[] = ["income", "mileage", "tax", "expenses"];
-const PAGE_SIZE = 50;
 
 const TYPE_CHIP: Record<string, string> = {
   loan_refi: "c-loan",
@@ -170,7 +164,12 @@ export default function ReportsPage() {
       <div className="ph">
         <div className="ph-title">Reports</div>
         {tab !== "tax" && (
-          <button className="btn-sm" onClick={handleExport}>
+          <button
+            className="btn-sm"
+            onClick={handleExport}
+            disabled={!isPro}
+            title={isPro ? undefined : "Exporting reports is a Pro feature"}
+          >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
         )}
@@ -197,7 +196,7 @@ export default function ReportsPage() {
         )}
         {tab === "mileage" && (
           <ProGate feature="Mileage reports are a Pro feature">
-            <MileageTab />
+            <MileageLog />
           </ProGate>
         )}
         {tab === "tax" && (
@@ -214,6 +213,7 @@ export default function ReportsPage() {
 /* ---------------- INCOME ---------------- */
 function IncomeTab() {
   const now = new Date();
+  const gated = useProGate();
   const [period, setPeriod] = useState<"month" | "ytd">("ytd");
 
   const range =
@@ -229,6 +229,7 @@ function IncomeTab() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reports-income", period],
+    enabled: !gated,
     queryFn: async () => {
       const res = await reportsApi.earnings(
         range.from,
@@ -252,11 +253,6 @@ function IncomeTab() {
   const summary = data?.summary ?? {};
   const periods: PeriodBar[] = useMemo(() => data?.periods ?? [], [data]);
   const byType: TypeBreakdown[] = data?.byType ?? data?.bySigningType ?? [];
-  const maxBar = useMemo(
-    () => Math.max(...periods.map((p) => Number(p.net ?? p.gross ?? 0)), 1),
-    [periods],
-  );
-
   const yoyPct = data?.yoy?.netPct;
   const avgNetPerSigning =
     (summary.signings ?? 0) > 0
@@ -343,69 +339,7 @@ function IncomeTab() {
         </div>
       </div>
 
-      <div className="card p-4 mb-4">
-        <div className="flex justify-between mb-2.5 flex-wrap gap-1.5">
-          <div className="font-inter text-[12px] font-semibold text-navy">
-            Monthly net income
-          </div>
-          <div className="font-inter text-[11px] text-teal font-medium flex gap-1 items-center">
-            <BarChart2 className="w-3.5 h-3.5" />
-            {yoyPct != null ? (
-              <span>
-                {yoyPct >= 0 ? "+" : ""}
-                {yoyPct}% vs last year
-              </span>
-            ) : (
-              "Net over time"
-            )}
-          </div>
-        </div>
-        {periods.length === 0 ? (
-          <div className="h-16 flex items-center justify-center font-inter text-[11px] text-slate-secondary">
-            No data for this period
-          </div>
-        ) : (
-          <div className="bar-wrap">
-            {periods.map((b, i) => {
-              const val = Number(b.net ?? b.gross ?? 0);
-              const h = Math.max((val / maxBar) * 56, 4);
-              const isLast = i === periods.length - 1;
-              return (
-                <div
-                  key={i}
-                  className="flex-1 flex flex-col items-center gap-[3px]"
-                >
-                  <span
-                    className={cn(
-                      "text-[9px]",
-                      isLast
-                        ? "text-navy font-semibold"
-                        : "text-slate-secondary",
-                    )}
-                  >
-                    {val > 0 ? formatCurrency(val) : ""}
-                  </span>
-                  <div
-                    className={cn(
-                      "bar w-full",
-                      isLast ? "active" : val > 0 ? "has" : "",
-                    )}
-                    style={{ height: `${h}px` }}
-                  />
-                  <span
-                    className={cn(
-                      "text-[9px]",
-                      isLast ? "text-navy font-semibold" : "text-muted",
-                    )}
-                  >
-                    {b.period ?? b.label ?? ""}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <EarningsChart periods={periods} yoyPct={yoyPct} />
 
       <div className="g2 mb-4 !grid-cols-1 lg:!grid-cols-2">
         <div className="card p-3">
@@ -550,365 +484,10 @@ function IncomeTab() {
   );
 }
 
-/* ---------------- MILEAGE ---------------- */
-function MileageTab() {
-  const year = new Date().getFullYear();
-  const qc = useQueryClient();
-  const { addToast } = useUIStore();
-  const [form, setForm] = useState({
-    miles_date: format(new Date(), "yyyy-MM-dd"),
-    miles: "",
-    description: "",
-  });
-  const [editing, setEditing] = useState<MileageEntry | null>(null);
-  const [editForm, setEditForm] = useState({
-    miles_date: "",
-    miles: "",
-    description: "",
-  });
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["reports-mileage", year],
-    queryFn: async () => {
-      const res = await reportsApi.mileage(year);
-      return unwrap<MileageReport>(res);
-    },
-  });
-
-  const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["reports-mileage", year] });
-
-  const createEntry = useMutation({
-    mutationFn: () =>
-      reportsApi.createMileageEntry({
-        miles_date: form.miles_date,
-        miles: parseFloat(form.miles),
-        description: form.description || "Manual entry",
-      }),
-    onSuccess: () => {
-      invalidate();
-      setForm({
-        miles_date: format(new Date(), "yyyy-MM-dd"),
-        miles: "",
-        description: "",
-      });
-      addToast({ title: "Mileage entry added", type: "success" });
-    },
-    onError: () =>
-      addToast({ title: "Failed to add mileage entry", type: "error" }),
-  });
-
-  const updateEntry = useMutation({
-    mutationFn: () => {
-      const payload = {
-        miles_date: editForm.miles_date,
-        miles: parseFloat(editForm.miles),
-        description: editForm.description,
-      };
-      return editing?.jobId
-        ? reportsApi.updateJobMileage(editing.jobId, payload)
-        : reportsApi.updateMileageEntry(editing?.id ?? "", payload);
-    },
-    onSuccess: () => {
-      invalidate();
-      setEditing(null);
-      addToast({ title: "Mileage entry updated", type: "success" });
-    },
-    onError: () =>
-      addToast({ title: "Failed to update mileage entry", type: "error" }),
-  });
-
-  const deleteEntry = useMutation({
-    mutationFn: (id: string) => reportsApi.deleteMileageEntry(id),
-    onSuccess: () => {
-      invalidate();
-      setEditing(null);
-      addToast({ title: "Mileage entry deleted", type: "info" });
-    },
-    onError: () =>
-      addToast({ title: "Failed to delete mileage entry", type: "error" }),
-  });
-
-  const entries: MileageEntry[] = data?.entries ?? [];
-  const totalMiles = data?.totalMiles ?? 0;
-  const totalDeduction = data?.totalDeduction ?? 0;
-  const irsRate = data?.irsRate ?? 0.72;
-  const visibleEntries = entries.slice(0, visibleCount);
-
-  const openEdit = (e: MileageEntry) => {
-    setEditing(e);
-    setEditForm({
-      miles_date: e.date
-        ? e.date.slice(0, 10)
-        : format(new Date(), "yyyy-MM-dd"),
-      miles: String(e.miles ?? 0),
-      description: e.job ?? "",
-    });
-  };
-
-  if (isLoading)
-    return (
-      <div className="flex justify-center py-16">
-        <div className="w-6 h-6 border-2 border-border border-t-blue rounded-full animate-spin" />
-      </div>
-    );
-
-  return (
-    <>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 mb-3.5">
-        <div className="mcard">
-          <span className="mc-v text-navy !text-[18px]">
-            {Number(totalMiles).toFixed(0)} mi
-          </span>
-          <span className="mc-l">Total miles, YTD</span>
-        </div>
-        <div className="mcard">
-          <span className="mc-v text-amber !text-[18px]">
-            {formatCurrency(totalDeduction)}
-          </span>
-          <span className="mc-l">Deduction value</span>
-        </div>
-        <div className="mcard">
-          <span className="mc-v !text-[18px]">${irsRate}/mi</span>
-          <span className="mc-l">IRS rate, {year}</span>
-        </div>
-      </div>
-
-      <div className="alert al-teal mb-3.5">
-        <span>
-          <Car className="w-4 h-4" />
-        </span>
-        <div>
-          <div className="font-inter text-[12px] font-semibold mb-0.5">
-            Auto tracking is on
-          </div>
-          <div className="font-inter text-[11px] text-slate-secondary leading-relaxed">
-            Mileage is recorded automatically when you tap Navigate. You can
-            edit any manual entry here.
-          </div>
-        </div>
-      </div>
-
-      <span className="slbl">{format(new Date(), "MMMM yyyy")}</span>
-      {entries.length === 0 ? (
-        <div className="empty-box mb-4">
-          <p className="font-inter text-sm text-slate-secondary">
-            No mileage entries for this year.
-          </p>
-        </div>
-      ) : (
-        <div className="card px-3 py-0 mb-4">
-          {visibleEntries.map((r: MileageEntry, i: number) => (
-            <div
-              key={r.id ?? i}
-              className="flex items-center py-2.5 border-b border-border last:border-b-0 gap-2"
-            >
-              <div className="w-[52px] flex-shrink-0">
-                <div className="font-inter text-[11px] font-semibold text-navy">
-                  {r.date ? format(new Date(r.date), "MMM dd") : ""}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-inter text-[11px] font-medium text-slate truncate">
-                  {r.job ?? r.address ?? "Signing"}
-                </div>
-                <div className="font-inter text-[10px] text-muted mt-px">
-                  <span
-                    className={cn(
-                      "text-[8px] font-semibold px-1 py-px rounded-[3px]",
-                      (r.method ?? "auto") === "auto"
-                        ? "bg-teal-bg text-teal"
-                        : "bg-background text-slate-secondary",
-                    )}
-                  >
-                    {(r.method ?? "AUTO").toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <div className="font-inter text-[11px] font-bold text-navy">
-                  {Number(r.miles ?? 0).toFixed(1)} mi
-                </div>
-                <div className="font-inter text-[10px] text-amber font-medium">
-                  {formatCurrency(r.deduction ?? r.cost ?? 0)}
-                </div>
-              </div>
-              <button
-                className="p-1 text-slate-secondary flex-shrink-0 hover:text-navy"
-                onClick={() => openEdit(r)}
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {entries.length > visibleEntries.length && (
-        <div className="flex justify-center mb-4">
-          <button
-            className="btn-gh !w-auto px-4"
-            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-          >
-            Show more ({entries.length - visibleEntries.length} remaining)
-          </button>
-        </div>
-      )}
-
-      <span className="slbl">Add manual entry</span>
-      <div className="card p-3 mb-4">
-        <div className="g2 gap-2">
-          <div className="field">
-            <label className="lbl">Date</label>
-            <input
-              className="inp"
-              type="date"
-              value={form.miles_date}
-              onChange={(e) => setForm({ ...form, miles_date: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label className="lbl">Miles driven</label>
-            <input
-              className="inp"
-              placeholder="0.0"
-              type="number"
-              step="0.1"
-              value={form.miles}
-              onChange={(e) => setForm({ ...form, miles: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className="field">
-          <label className="lbl">Description</label>
-          <input
-            className="inp"
-            placeholder="Job description"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-        </div>
-        <button
-          className="btn-p mt-2.5 !h-[38px] !text-[12px]"
-          disabled={createEntry.isPending}
-          onClick={() => {
-            if (!form.miles || parseFloat(form.miles) <= 0) {
-              addToast({ title: "Enter miles", type: "error" });
-              return;
-            }
-            createEntry.mutate();
-          }}
-        >
-          <Check className="w-4 h-4" /> Add entry
-        </button>
-      </div>
-
-      {editing && (
-        <div className="modal-overlay" onClick={() => setEditing(null)}>
-          <div
-            className="modal"
-            style={{ maxWidth: 440 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-hdr">
-              <div className="modal-title">Edit mileage entry</div>
-              <button className="modal-close" onClick={() => setEditing(null)}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="flex flex-col gap-3">
-                <div className="field">
-                  <label className="lbl">Date</label>
-                  <input
-                    className="inp"
-                    type="date"
-                    value={editForm.miles_date}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, miles_date: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="field">
-                  <label className="lbl">Job description</label>
-                  <input
-                    className="inp"
-                    value={editForm.description}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, description: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="g2">
-                  <div className="field">
-                    <label className="lbl">Miles</label>
-                    <input
-                      className="inp"
-                      type="number"
-                      step="0.1"
-                      value={editForm.miles}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, miles: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="lbl">Cost</label>
-                    <input
-                      className="inp"
-                      readOnly
-                      value={formatCurrency(
-                        (parseFloat(editForm.miles) || 0) * irsRate,
-                      )}
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label className="lbl">Method</label>
-                  <select
-                    className="sel"
-                    disabled
-                    value={
-                      (editing?.method ?? "auto") === "auto" ? "auto" : "manual"
-                    }
-                  >
-                    <option value="auto">auto</option>
-                    <option value="manual">manual</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="modal-foot">
-              {!editing?.jobId && (
-                <button
-                  className="btn-danger-gh"
-                  onClick={() => editing.id && deleteEntry.mutate(editing.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                className="btn-p"
-                disabled={updateEntry.isPending}
-                onClick={() => updateEntry.mutate()}
-              >
-                <Check className="w-4 h-4" /> Save changes
-              </button>
-              <button className="btn-gh" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 /* ---------------- TAX ---------------- */
 function TaxTab() {
   const year = new Date().getFullYear();
+  const gated = useProGate();
   const { addToast } = useUIStore();
   const { user } = useAuth();
   const [range, setRange] = useState({
@@ -1122,7 +701,7 @@ function TaxTab() {
         </div>
         <button
           className="btn-p !w-auto px-4 !h-10"
-          disabled={isGenerating}
+          disabled={isGenerating || gated}
           onClick={generate}
         >
           <FileText className="w-4 h-4" />{" "}

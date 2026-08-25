@@ -11,6 +11,7 @@ import type { CITTCheckResponse } from "@/types/citt";
 import { useAuth } from "@/hooks/useAuth";
 import { acceptedSigningTypes } from "@/lib/booking";
 import type { SigningType } from "@/types/user";
+import ProfitabilityRow from "@/components/jobs/ProfitabilityRow";
 
 const PENDING_STATUSES = ["QUEUED", "PROCESSING"];
 
@@ -78,7 +79,6 @@ export function ImportReviewModal({
   });
 
   const net = citt?.net_earnings ?? 0;
-  const netColorCls = net >= 30 ? "text-teal" : net >= 10 ? "text-amber" : "text-red";
   const netIconBgCls = net >= 30 ? "bg-teal-bg text-teal" : net >= 10 ? "bg-amber-bg text-amber" : "bg-red-bg text-red";
 
   const verdict = citt
@@ -204,43 +204,14 @@ export function ImportReviewModal({
           <div className="p-5">
             {/* EARNINGS BREAKDOWN */}
             <span className="slbl">Earnings breakdown</span>
-            <div className="grid grid-cols-3 gap-px border border-border rounded-[10px] overflow-hidden bg-border mb-2">
-              <div className="bg-white p-3.5 text-center flex flex-col">
-                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
-                  Offered fee
-                </span>
-                <span className="font-sora text-[18px] font-bold text-slate leading-none">
-                  {formatCurrency(fee)}
-                </span>
-                <span className="text-[10px] text-slate-secondary mt-1.5">
-                  gross
-                </span>
-              </div>
-              <div className="bg-white p-3.5 text-center flex flex-col border-l border-border">
-                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
-                  Mileage cost
-                </span>
-                <span className="font-sora text-[18px] font-bold text-amber leading-none">
-                  -{formatCurrency(citt.mileage_cost)}
-                </span>
-                <span className="text-[10px] text-slate-secondary mt-1.5">
-                  {citt.drive_distance_miles?.toFixed(1) ?? "0"} mi rt
-                </span>
-              </div>
-              <div className="bg-white p-3.5 text-center flex flex-col border-l border-border">
-                <span className="text-[10px] font-semibold text-slate-secondary uppercase tracking-[0.4px] mb-1.5">
-                  Net earnings
-                </span>
-                <span
-                  className={`font-sora text-[18px] font-bold leading-none ${netColorCls}`}
-                >
-                  {formatCurrency(net)}
-                </span>
-                <span className="text-[10px] text-slate-secondary mt-1.5">
-                  ${citt.effective_hourly?.toFixed(0) ?? "0"}/hr eff.
-                </span>
-              </div>
-            </div>
+            <ProfitabilityRow
+              variant="review"
+              fee={fee}
+              mileageCost={citt.mileage_cost}
+              mileageDetail={`${citt.drive_distance_miles?.toFixed(1) ?? "0"} mi rt`}
+              netEarnings={net}
+              netDetail={`$${citt.effective_hourly?.toFixed(0) ?? "0"}/hr eff.`}
+            />
             <div className="text-[12px] text-slate-secondary text-center mb-1">
               {citt.drive_distance_miles?.toFixed(1) ?? "0"} mi round trip ·{" "}
               {citt.total_job_mins || 45} min signing ·{" "}
@@ -350,31 +321,7 @@ export function ImportReviewModal({
               </div>
             </div>
           </div>
-          <div
-            className="grid grid-cols-3 gap-px border border-border rounded-lg overflow-hidden"
-            style={{ background: "var(--border)" }}
-          >
-            <div className="bg-white p-2 text-center">
-              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-                Offered fee
-              </div>
-              <div className="font-sora text-[13px] font-bold text-slate">
-                {formatCurrency(fee)}
-              </div>
-            </div>
-            <div className="bg-white p-2 text-center border-l border-border">
-              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-                Mileage cost
-              </div>
-              <div className="font-sora text-[13px] font-bold text-amber">—</div>
-            </div>
-            <div className="bg-white p-2 text-center border-l border-border">
-              <div className="text-[9px] font-semibold text-slate-secondary uppercase mb-1">
-                Net earnings
-              </div>
-              <div className="font-sora text-[13px] font-bold text-teal">—</div>
-            </div>
-          </div>
+          <ProfitabilityRow variant="placeholder" fee={fee} />
         </div>
       )}
 

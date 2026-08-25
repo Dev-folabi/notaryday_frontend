@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/uiStore";
-import { Copy, Check, Link2 } from "lucide-react";
+import { Copy, Check, Link2, ExternalLink } from "lucide-react";
 import { cn, unwrap, getBookingUrl } from "@/lib/utils";
 import api from "@/lib/api";
 import {
@@ -31,6 +32,7 @@ interface DayHours {
 
 export default function BookingSetupForm() {
   const { user } = useAuth();
+  const router = useRouter();
   const { addToast } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -166,8 +168,15 @@ export default function BookingSetupForm() {
           </button>
           <button
             className="btn-sm"
-            style={{ background: "var(--teal)", color: "#fff", borderColor: "var(--teal)" }}
+            title="Open your live booking page in a new tab"
             onClick={() => window.open(bookingUrl, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink className="w-3.5 h-3.5" /> Live page
+          </button>
+          <button
+            className="btn-sm"
+            style={{ background: "var(--teal)", color: "#fff", borderColor: "var(--teal)" }}
+            onClick={() => router.push("/booking-preview")}
           >
             <Link2 className="w-3.5 h-3.5" /> Preview
           </button>

@@ -1,127 +1,203 @@
 "use client";
 
+import { Car, Clock, MapPin, Navigation, Sparkles, Zap } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { formatCurrency } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import { MapPin, Navigation, Car } from "lucide-react";
+import { cn, formatCurrency, formatMiles, profitabilityColor } from "@/lib/utils";
+import type { GapCandidate, PlannerJob } from "@/hooks/usePlanner";
+import { jobTypeChipClass, jobTypeLabel } from "@/components/jobs/JobCard";
 import ScanbackBlock from "./ScanbackBlock";
-import type {
-  PlannerJob,
-  ScanbackBlock as ScanbackBlockType,
-} from "@/hooks/usePlanner";
+
+const HOUR_PX = 84;
+const PX_PER_MIN = HOUR_PX / 60;
+
+function minutesOfDay(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function hourLabel(hour: number): string {
+  if (hour === 0) return "12 AM";
+  if (hour === 12) return "12 PM";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
 
 interface RouteCalendarProps {
   jobs: PlannerJob[];
-  scanbackBlocks: ScanbackBlockType[];
-  optimised: boolean;
-  origin?: string | null;
+  date: string;
+  now: number;
+  gap?: GapCandidate;
+  onJobClick: (jobId: string) => void;
+  onGapClick: (gap: GapCandidate) => void;
 }
 
 export default function RouteCalendar({
   jobs,
-  scanbackBlocks,
-  optimised,
-  origin,
+  date,
+  now,
+  gap,
+  onJobClick,
+  onGapClick,
 }: RouteCalendarProps) {
-  // Build timeline items interleaving jobs, drive segments, and scanback blocks
-  const getBlockForJob = (jobId: string) =>
-    scanbackBlocks.find((b) => b.jobId === jobId);
+  const parsedJobs = jobs.map((job) => {
+    const start = new Date(job.appointment_time);
+    const end = new Date(
+      job.scanback_ends_at ?? job.signing_ends_at ?? job.appointment_time,
+    );
+    return { job, start, end };
+  });
+  const gridStartHour = parsedJobs.length
+    ? Math.floor(Math.min(...parsedJobs.map(({ start }) => minutesOfDay(start))) / 60)
+    : 8;
+  const gridEndHour = parsedJobs.length
+    ? Math.max(
+        15,
+        Math.ceil(Math.max(...parsedJobs.map(({ end }) => minutesOfDay(end))) / 60),
+      )
+    : 15;
+  const gridLabels = Array.from(
+    { length: gridEndHour - gridStartHour + 1 },
+    (_, index) => gridStartHour + index,
+  );
+  const offsetPx = (value: Date) =>
+    (minutesOfDay(value) - gridStartHour * 60) * PX_PER_MIN;
+  const currentTime = new Date(now);
+  const nowMins = minutesOfDay(currentTime);
+  const showNowMarker =
+    date === format(currentTime, "yyyy-MM-dd") &&
+    nowMins >= gridStartHour * 60 &&
+    nowMins < (gridEndHour + 1) * 60;
+  const bestCandidate = gap?.candidates[0];
 
   return (
-    <div className="relative">
-      {/* Optimised badge */}
-      {optimised && (
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-bg text-teal-success rounded text-[10px] font-bold">
-            ✓ Route optimised
-          </span>
+    <div className="flex-1 overflow-y-auto">
+      <div className="tl-wrap" style={{ padding: "16px 16px 0" }}>
+        <div className="tl-times">
+          {gridLabels.map((hour) => (
+            <div key={hour} className="tl-tr">
+              <span className="tl-label">{hourLabel(hour)}</span>
+            </div>
+          ))}
         </div>
-      )}
+        <div className="tl-body">
+          <div className="tl-grid" style={{ height: gridLabels.length * HOUR_PX }}>
+            {gridLabels.map((_, index) => (
+              <div key={index} className="tl-hour" />
+            ))}
 
-      {/* Timeline */}
-      <div className="relative pl-6">
-        {/* Vertical line */}
-        <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
+            {showNowMarker && (
+              <div
+                className="now-wrap"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: offsetPx(currentTime),
+                  margin: 0,
+                }}
+              >
+                <div className="now-dot" />
+                <div className="now-line" />
+                <span className="now-lbl">NOW {format(currentTime, "h:mm a")}</span>
+              </div>
+            )}
 
-        {jobs.map((job, i) => {
-          const scanback = getBlockForJob(job.id);
-          const statusColor =
-            job.status === "IN_PROGRESS" || job.status === "SCANNING"
-              ? "border-amber-warning bg-amber-bg/30"
-              : "border-teal-success/50 bg-white";
-
-          return (
-            <div key={job.id}>
-              {/* Drive segment */}
-              {job.drive_from_prev_mins != null &&
-                job.drive_from_prev_mins > 0 && (
-                  <div className="relative flex items-center gap-2 py-1.5 ml-2">
-                    <div className="absolute -left-[19px] w-4 h-4 rounded-full bg-bg border border-border flex items-center justify-center">
-                      <Car className="w-2.5 h-2.5 text-slate-secondary" />
+            {parsedJobs.map(({ job, start }, index) => (
+              <div
+                key={job.id}
+                style={{ position: "absolute", left: 0, right: 0, top: offsetPx(start) }}
+              >
+                <div
+                  className="tl-job"
+                  style={{ borderLeftColor: job.route_sequence ? "#0F2C4E" : "#2563EB" }}
+                  onClick={() => onJobClick(job.id)}
+                >
+                  <div className="flex justify-between gap-2 mb-0.5 flex-wrap">
+                    <div className="text-[11px] font-bold text-primary-navy flex gap-1 items-center">
+                      <Clock className="w-3 h-3" /> {format(parseISO(job.appointment_time), "h:mm a")} -{" "}
+                      {format(parseISO(job.signing_ends_at ?? job.appointment_time), "h:mm a")}
                     </div>
-                    <span className="font-inter text-[10px] text-muted italic">
-                      {job.drive_from_prev_mins} min drive
-                      {job.drive_from_prev_miles
-                        ? ` · ${job.drive_from_prev_miles.toFixed(1)} mi`
-                        : ""}
+                    <span className={cn("text-[12px] font-bold", profitabilityColor(job.net_earnings))}>
+                      {formatCurrency(job.net_earnings)}
                     </span>
                   </div>
-                )}
-
-              {/* Job block */}
-              <div className="relative mb-1">
-                {/* Timeline dot */}
-                <div className="absolute -left-[19px] w-5 h-5 rounded-full bg-primary-navy text-white text-[10px] font-bold flex items-center justify-center">
-                  {job.route_sequence ?? i + 1}
-                </div>
-
-                <div
-                  className={cn("border rounded-10px p-3 ml-2", statusColor)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-inter text-xs font-semibold text-primary-navy">
-                          {format(parseISO(job.appointment_time), "h:mm a")}
-                        </span>
-                        <span className="font-inter text-[10px] text-muted">
-                          {job.signing_duration_mins} min
-                        </span>
-                      </div>
-                      <div className="font-inter text-[11px] text-slate-secondary flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{job.address}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="font-sora text-sm font-bold text-teal-success">
-                        {formatCurrency(job.net_earnings)}
+                  <div className="text-[11px] text-slate mb-1 flex gap-1 items-center">
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="whitespace-nowrap overflow-hidden text-ellipsis">{job.address}</span>
+                  </div>
+                  <div className="flex justify-between gap-1.5 flex-wrap">
+                    <div className="flex gap-1 flex-wrap">
+                      <span className={cn("chip", jobTypeChipClass(job.signing_type))}>
+                        {jobTypeLabel(job.signing_type)}
                       </span>
-                      <button
-                        onClick={() =>
-                          window.open(
-                            `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.address)}&travelmode=driving${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`,
-                            "_blank",
-                          )
-                        }
-                        className="w-7 h-7 rounded-full bg-primary-navy text-white flex items-center justify-center"
-                      >
-                        <Navigation className="w-3 h-3" />
-                      </button>
+                      {job.platform_name && <span className="chip c-plat">{job.platform_name}</span>}
+                    </div>
+                    <div
+                      className="text-[10px] font-semibold text-blue flex gap-1 items-center cursor-pointer"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        window.open(
+                          `https://maps.google.com/?q=${encodeURIComponent(job.address)}`,
+                          "_blank",
+                        );
+                      }}
+                    >
+                      <Navigation className="w-3 h-3" /> Navigate
                     </div>
                   </div>
                 </div>
+                {job.scanback_duration_mins > 0 && (
+                  <>
+                    <ScanbackBlock job={job} sequence={index + 1} />
+                    <div className="tl-drv">
+                      <Car className="w-3 h-3" /> {job.drive_from_prev_mins ?? 0} min drive
+                    </div>
+                  </>
+                )}
               </div>
+            ))}
 
-              {/* Scanback block */}
-              {scanback && (
-                <div className="ml-2 mb-1">
-                  <ScanbackBlock block={scanback} />
+            {gap && bestCandidate && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: offsetPx(new Date(gap.gap_start)),
+                }}
+              >
+                <div className="flex gap-1.5 items-center py-1 px-0 text-[11px] font-semibold text-violet">
+                  <Sparkles className="w-3.5 h-3.5" /> Gap opportunity,{" "}
+                  {format(parseISO(gap.gap_start), "h:mm a")}, {gap.gap_mins} min available
                 </div>
-              )}
-            </div>
-          );
-        })}
+                <div className="gap-card">
+                  <div className="text-[12px] font-semibold text-primary-navy mb-1">
+                    {bestCandidate.address}
+                  </div>
+                  <div className="text-[11px] text-slate-secondary mb-2 flex gap-1.5 flex-wrap">
+                    <span>
+                      Offered: <strong className="text-slate">{formatCurrency(bestCandidate.fee)}</strong>
+                    </span>
+                    <span>
+                      Est. net:{" "}
+                      <strong className="text-teal">{formatCurrency(bestCandidate.net_earnings)}</strong>
+                    </span>
+                    {bestCandidate.miles_from != null && (
+                      <span>
+                        {formatMiles(bestCandidate.miles_from)} from {bestCandidate.miles_from_label}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    className="btn-sm"
+                    style={{ borderColor: "#C4B5FD", color: "#7C3AED" }}
+                    onClick={() => onGapClick(gap)}
+                  >
+                    <Zap className="w-3 h-3" /> Run CITT check
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

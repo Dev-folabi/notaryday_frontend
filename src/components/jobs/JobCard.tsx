@@ -1,106 +1,212 @@
-import React from "react";
-import { Clock, MapPin, Navigation } from "lucide-react";
-import { format } from "date-fns";
+"use client";
+
+import type { MouseEvent } from "react";
+import { Clock, MapPin } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import JobStatusBadge from "@/components/jobs/JobStatusBadge";
+import { cn, formatCurrency, formatTime, profitabilityColor } from "@/lib/utils";
+import type { PlannerJob } from "@/hooks/usePlanner";
 import type { Job } from "@/types/job";
 
+type JobCardJob = Job | PlannerJob;
+
 interface JobCardProps {
-  job: Job;
-  showNav?: boolean;
-  origin?: string | null;
+  job: JobCardJob;
+  variant: "today" | "jobs" | "day";
+  onClick: () => void;
+  onResume?: () => void;
 }
 
-function getTypeChipClasses(type: string) {
-  const t = type.toUpperCase();
-  if (t === "LOAN_REFI") return "bg-blue-100 text-blue-700";
-  if (t === "GENERAL") return "bg-emerald-100 text-emerald-800";
-  if (t === "HYBRID") return "bg-violet-100 text-violet-700";
-  return "bg-slate-100 text-slate-500";
+function typeKey(signingType: string): "gen" | "loan" | "hyb" {
+  const type = signingType.toUpperCase();
+  if (type === "LOAN_REFI" || type === "PURCHASE_CLOSING") return "loan";
+  if (type === "HYBRID") return "hyb";
+  return "gen";
 }
 
-function getTypeLabel(type: string) {
-  const t = type.toUpperCase();
-  if (t === "LOAN_REFI") return "Loan Refi";
-  if (t === "GENERAL") return "General";
-  if (t === "HYBRID") return "Hybrid";
-  if (t === "PURCHASE_CLOSING") return "Purchase";
-  if (t === "FIELD_INSPECTION") return "Field Inspection";
-  if (t === "APOSTILLE") return "Apostille";
-  return type;
+export function jobTypeChipClass(signingType: string): string {
+  const key = typeKey(signingType);
+  if (key === "loan") return "c-loan";
+  if (key === "hyb") return "c-hyb";
+  return "c-gen";
 }
 
-export default function JobCard({ job, showNav = true, origin }: JobCardProps) {
-  const time = new Date(job.appointment_time);
-  const formattedTime = format(time, "h:mm a");
+export function jobTypeLabel(signingType: string): string {
+  const type = signingType.toUpperCase();
+  if (type === "LOAN_REFI") return "Loan Refi";
+  if (type === "GENERAL") return "General";
+  if (type === "HYBRID") return "Hybrid";
+  if (type === "PURCHASE_CLOSING") return "Purchase Closing";
+  if (type === "FIELD_INSPECTION") return "Field Inspection";
+  if (type === "APOSTILLE") return "Apostille";
+  return signingType || "Job";
+}
 
-  const net = parseFloat(job.net_earnings ?? "0") || 0;
-  let feeColorClass = "text-slate-body";
-  if (net >= 30) feeColorClass = "text-teal-success";
-  else if (net >= 10) feeColorClass = "text-amber-warning";
-  else if (net < 10) feeColorClass = "text-red-danger";
+export default function JobCard({
+  job,
+  variant,
+  onClick,
+  onResume,
+}: JobCardProps) {
+  const net = Number(job.net_earnings ?? ("fee" in job ? job.fee : 0)) || 0;
 
-  const handleNav = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const encoded = encodeURIComponent(job.address);
-    // Prefer Google Maps by default if user setting not passed
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`,
-      "_blank",
+  if (variant === "today") {
+    const anchored = "anchored" in job && Boolean(job.anchored);
+    return (
+      <div className="jcard cursor-pointer" onClick={onClick}>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-semibold text-primary-navy mb-0.5 flex gap-1.5 items-center flex-wrap">
+            {job.appointment_time
+              ? format(parseISO(job.appointment_time), "h:mm a")
+              : "—"} · {job.signing_duration_mins ?? 30} min
+            {anchored && (
+              <span
+                className="chip"
+                style={{ background: "#DBEAFE", color: "#1D4ED8", fontSize: 8 }}
+              >
+                Anchored
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-slate-secondary whitespace-nowrap overflow-hidden text-ellipsis flex gap-1 items-center">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            {job.address || "No address"}
+          </div>
+          <div className="flex gap-1 mt-1.5 flex-wrap">
+            <span className={cn("chip", jobTypeChipClass(job.signing_type))}>
+              {jobTypeLabel(job.signing_type)}
+            </span>
+            {job.platform_name && (
+              <span className="chip c-plat">{job.platform_name}</span>
+            )}
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className={cn("text-[13px] font-bold", profitabilityColor(net))}>
+            {formatCurrency(net)}
+          </div>
+          <span
+            className={cn("chip mt-1", jobTypeChipClass(job.signing_type))}
+            style={{ fontSize: 8 }}
+          >
+            {jobTypeLabel(job.signing_type)}
+          </span>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const needsScanback =
-    job.signing_type === "LOAN_REFI" ||
-    job.signing_type === "HYBRID" ||
-    job.signing_type === "PURCHASE_CLOSING";
+  if (variant === "jobs" && "status" in job) {
+    const isLive = job.status === "IN_PROGRESS";
+    const handleResume = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      onResume?.();
+    };
+    return (
+      <div
+        className="jcard"
+        style={{
+          border: isLive ? "2px solid #D97706" : undefined,
+          background: isLive ? "#FFFBEB" : undefined,
+          cursor: "pointer",
+        }}
+        onClick={onClick}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              marginBottom: 4,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#0F2C4E" }}>
+              {formatTime(job.appointment_time)}
+            </span>
+            <JobStatusBadge status={job.status as Job["status"]} />
+            {isLive && (
+              <span
+                className="chip"
+                style={{ background: "#D97706", color: "#fff", fontSize: 8 }}
+              >
+                LIVE - Tap to resume
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: "#64748B",
+              display: "flex",
+              gap: 4,
+              alignItems: "center",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{job.address}</span>
+          </div>
+          <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
+            <span className={`chip ${jobTypeChipClass(job.signing_type)}`}>
+              {jobTypeLabel(job.signing_type)}
+            </span>
+            <span className="chip c-plat">{job.platform_name || "Direct"}</span>
+          </div>
+          {isLive && (
+            <button
+              style={{
+                marginTop: 8,
+                background: "#D97706",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                padding: "6px 10px",
+                fontSize: 10,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+              onClick={handleResume}
+            >
+              <Clock className="w-3 h-3 inline" /> Open Active Signing
+            </button>
+          )}
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div className={`text-[14px] font-bold ${profitabilityColor(net)}`}>
+            {formatCurrency(net)}
+          </div>
+          <div style={{ fontSize: 9, color: "#64748B" }}>net</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white border border-border rounded-[12px] shadow-sm p-3.5 px-4 mb-2.5 flex items-start justify-between gap-3 w-full text-left">
+    <div className="jcard" onClick={onClick}>
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-bold text-primary-navy flex items-center gap-1.5 mb-1">
-          <Clock className="w-3 h-3 text-primary-navy" />
-          <span>
-            {formattedTime} &middot; {job.signing_duration_mins} min
-          </span>
+        <div className="text-[12px] font-bold text-primary-navy flex gap-1.5 items-center">
+          <Clock className="w-3 h-3" /> {format(parseISO(job.appointment_time), "h:mm a")} -{" "}
+          {job.signing_duration_mins} min
         </div>
-        <div className="text-[12px] font-medium text-slate-body whitespace-nowrap overflow-hidden text-ellipsis mb-[7px] flex items-center gap-1">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{job.address}</span>
+        <div className="text-[11px] text-slate mb-1.5 flex gap-1 items-center">
+          <MapPin className="w-3 h-3 flex-shrink-0" /> {job.address}
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span
-            className={`inline-flex items-center gap-[3px] px-[7px] py-[3px] rounded bg-opacity-20 text-[10px] font-semibold tracking-[0.2px] uppercase whitespace-nowrap ${getTypeChipClasses(job.signing_type)}`}
-          >
-            {getTypeLabel(job.signing_type)}
+        <div className="flex gap-1 flex-wrap">
+          <span className={cn("chip", jobTypeChipClass(job.signing_type))}>
+            {jobTypeLabel(job.signing_type)}
           </span>
-          {job.platform_name && (
-            <span className="inline-flex items-center gap-[3px] px-[7px] py-[3px] rounded bg-slate-100 text-slate-500 text-[10px] font-semibold tracking-[0.2px] uppercase whitespace-nowrap">
-              {job.platform_name}
-            </span>
-          )}
-          {needsScanback && (
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-amber-warning inline-block"
-              title="Scanback required"
-            />
-          )}
+          {job.platform_name && <span className="chip c-plat">{job.platform_name}</span>}
         </div>
       </div>
       <div className="text-right flex-shrink-0">
-        <div className={`text-[15px] font-bold mb-[1px] ${feeColorClass}`}>
-          ${net.toFixed(2)}
+        <div className={cn("text-[13px] font-bold", profitabilityColor(net))}>
+          {formatCurrency(net)}
         </div>
-        <div className="text-[10px] text-slate-secondary mb-[7px]">
-          net after mileage
-        </div>
-        {showNav && (
-          <div
-            onClick={handleNav}
-            className="flex items-center gap-[3px] text-[11px] font-semibold text-interactive-blue cursor-pointer justify-end"
-          >
-            <Navigation className="w-3 h-3" />
-            <span>Navigate</span>
-          </div>
-        )}
+        <div className="text-[9px] text-slate-secondary">net after mileage</div>
       </div>
     </div>
   );

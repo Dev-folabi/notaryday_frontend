@@ -81,7 +81,7 @@ export const useUIStore = create<UIState>()(
         set((state) => ({
           toasts: [
             ...state.toasts,
-            { ...toast, id: crypto.randomUUID(), duration: toast.duration ?? 4000 },
+            { ...toast, id: crypto.randomUUID(), duration: toast.duration ?? 3600 },
           ],
         })),
       removeToast: (id) =>
