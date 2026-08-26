@@ -6,6 +6,8 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { PostHogProvider } from "posthog-js/react";
+import { getPostHog } from "@/lib/posthog";
 
 export function Providers({ children }: { children: ReactNode }) {
   // Ensure a single QueryClient instance per app lifecycle
@@ -25,12 +27,17 @@ export function Providers({ children }: { children: ReactNode }) {
       })
   );
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
+  // Initialize PostHog once on mount (client-side only)
+  const [posthogClient] = useState(() => getPostHog());
 
-      {/* Devtools (only in development) */}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+  return (
+    <PostHogProvider client={posthogClient}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+
+        {/* Devtools (only in development) */}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </PostHogProvider>
   );
 }

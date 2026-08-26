@@ -55,6 +55,16 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  async rewrites() {
+    const posthogHost =
+      process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+    return [
+      {
+        source: "/ingest/:path*",
+        destination: `${posthogHost}/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

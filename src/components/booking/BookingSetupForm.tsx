@@ -211,7 +211,7 @@ export default function BookingSetupForm() {
         <input
           className="inp"
           readOnly
-          value={`${user?.full_name ?? "Your name"}, NNA Certified Loan Signing Agent`}
+          value={user?.full_name ?? "Your name"}
         />
       </div>
       <div className="field mb-5">
