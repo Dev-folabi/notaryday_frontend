@@ -9,6 +9,7 @@ import type { User, SessionUser } from "@/types/user";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/routes";
 import { disablePushNotifications } from "@/lib/push";
+import { identifyUser, resetUser } from "@/lib/posthog";
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -60,6 +61,8 @@ export function useAuth() {
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+      const me = queryClient.getQueryData<{ id: string; email: string; plan: string }>(queryKeys.auth.me);
+      if (me) identifyUser(me.id, { email: me.email, plan: me.plan });
     },
   });
 
@@ -79,6 +82,8 @@ export function useAuth() {
         document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Strict`;
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+      const me = queryClient.getQueryData<{ id: string; email: string; plan: string }>(queryKeys.auth.me);
+      if (me) identifyUser(me.id, { email: me.email, plan: me.plan });
     },
   });
 
@@ -94,6 +99,7 @@ export function useAuth() {
       localStorage.removeItem("auth_token");
       // Also clear the cookie
       document.cookie = "auth_token=; path=/; max-age=0; SameSite=Strict";
+      resetUser();
       queryClient.clear();
       router.push(ROUTES.AUTH.LOGIN);
     },
