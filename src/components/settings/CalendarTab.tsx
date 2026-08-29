@@ -23,6 +23,7 @@ export default function CalendarTab() {
 
   const [copied, setCopied] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const { data: feed } = useQuery({
     queryKey: ["calendar", "feed-token"],
@@ -38,9 +39,21 @@ export default function CalendarTab() {
     ? `${API_BASE}/calendar/${feed.token}/feed.ics`
     : "";
 
-  const connect = () => {
+  const connect = async () => {
     if (gated) return;
-    window.location.href = `${API_BASE}/calendar/auth/google`;
+    setConnecting(true);
+    try {
+      const res = await calendarApi.getGoogleAuthUrl();
+      const data = unwrap<{ url: string }>(res);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        addToast({ type: "error", title: "Could not start calendar connection" });
+      }
+    } catch {
+      addToast({ type: "error", title: "Could not start calendar connection" });
+      setConnecting(false);
+    }
   };
 
   const copyFeedUrl = async () => {
@@ -123,10 +136,15 @@ export default function CalendarTab() {
             <button
               className="btn-p"
               onClick={connect}
-              disabled={gated}
-              style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}
+              disabled={gated || connecting}
+              style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px", opacity: connecting ? 0.7 : 1 }}
             >
-              <Link2 className="w-4 h-4" /> Connect Google Calendar
+              {connecting ? (
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+              ) : (
+                <Link2 className="w-4 h-4" />
+              )}{" "}
+              {connecting ? "Connecting…" : "Connect Google Calendar"}
             </button>
           )}
         </div>
@@ -142,19 +160,26 @@ export default function CalendarTab() {
             your car via CarPlay.
           </p>
           {feedUrl ? (
-            <div className="flex items-center gap-2">
-              <code className="flex-1 min-w-0 px-3 py-2 bg-background border border-border rounded-[8px] text-[11px] text-slate-secondary truncate">
-                {feedUrl}
-              </code>
-              <button
-                className="btn-gh"
-                onClick={copyFeedUrl}
-                disabled={gated}
-                style={{ flexShrink: 0 }}
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
+            <div className="flex flex-col gap-1.5">
+              <span className="font-inter text-[10px] text-muted font-medium">Subscription URL</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={feedUrl}
+                  className="flex-1 min-w-0 px-3 py-2 bg-white border border-border rounded-[8px] text-[11px] text-slate-secondary font-mono focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-interactive-blue select-all"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  className="btn-gh"
+                  onClick={copyFeedUrl}
+                  disabled={gated}
+                  style={{ flexShrink: 0, height: 36, padding: "0 12px" }}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
             </div>
           ) : (
             <p className="font-inter text-[11px] text-slate-secondary">
