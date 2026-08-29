@@ -6,13 +6,7 @@ import { useUpdateJobStatus } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import { jobsApi } from "@/api/jobs.api";
 import { unwrap, formatCurrency, toDateInputValue } from "@/lib/utils";
-import {
-  Clock,
-  MapPin,
-  Check,
-  ChevronLeft,
-  Info,
-} from "lucide-react";
+import { Clock, MapPin, Check, ChevronLeft, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
@@ -460,7 +454,11 @@ function formatSigningType(type: string): string {
   return map[type] ?? type ?? "Job";
 }
 
-function getScanbackEnd(job: { scanback_ends_at?: string | null; scanning_started_at?: string | null; scanback_duration_mins?: number | null }): number | null {
+function getScanbackEnd(job: {
+  scanback_ends_at?: string | null;
+  scanning_started_at?: string | null;
+  scanback_duration_mins?: number | null;
+}): number | null {
   if (job.scanback_ends_at) return new Date(job.scanback_ends_at).getTime();
   if (job.scanning_started_at && job.scanback_duration_mins) {
     return (
@@ -514,7 +512,8 @@ function CountdownCard({
   const totalLabel = `${String(Math.floor(totalMs / 60_000)).padStart(2, "0")}:${String(Math.floor((totalMs % 60_000) / 1000)).padStart(2, "0")}`;
 
   const remainingMs = end ? Math.max(end - now, 0) : 0;
-  const pct = totalMs > 0 ? Math.min(100, ((totalMs - remainingMs) / totalMs) * 100) : 0;
+  const pct =
+    totalMs > 0 ? Math.min(100, ((totalMs - remainingMs) / totalMs) * 100) : 0;
 
   const mm = Math.floor(remainingMs / 60_000);
   const ss = Math.floor((remainingMs % 60_000) / 1000);
@@ -529,9 +528,7 @@ function CountdownCard({
         borderLeft: "4px solid #D97706",
       }}
     >
-      <div className="text-[11px] font-semibold text-amber mb-1">
-        {label}
-      </div>
+      <div className="text-[11px] font-semibold text-amber mb-1">{label}</div>
       <div className="font-sora text-[32px] font-bold text-primary-navy mb-0.5">
         {remainingLabel}
       </div>
@@ -567,7 +564,11 @@ function ScanbackCountdown({
   onDone,
   isPending,
 }: {
-  job: { scanback_ends_at?: string | null; scanning_started_at?: string | null; scanback_duration_mins?: number | null };
+  job: {
+    scanback_ends_at?: string | null;
+    scanning_started_at?: string | null;
+    scanback_duration_mins?: number | null;
+  };
   onDone: () => void;
   isPending: boolean;
 }) {
@@ -616,7 +617,11 @@ function SigningCountdown({
       label="SIGNING IN PROGRESS"
       end={end}
       totalMs={totalMs}
-      actionLabel={needsScanback ? "Signing done - start scanback" : "Signing done - complete"}
+      actionLabel={
+        needsScanback
+          ? "Signing done - start scanback"
+          : "Signing done - complete"
+      }
       onAction={onDone}
       isPending={isPending}
     />
