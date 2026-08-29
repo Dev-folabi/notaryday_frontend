@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUpdateJobStatus } from "@/hooks/useJobs";
 import { useUIStore } from "@/store/uiStore";
 import { jobsApi } from "@/api/jobs.api";
-import { formatCurrency, toDateInputValue } from "@/lib/utils";
+import { unwrap, formatCurrency, toDateInputValue } from "@/lib/utils";
 import {
   Clock,
   MapPin,
@@ -49,26 +49,35 @@ export default function ActiveSigningPage() {
   const [manualOverride, setManualOverride] = useState<number | null>(null);
   const [justCompleted, setJustCompleted] = useState<Job | null>(null);
 
-  const { data: jobs = [], isLoading } = useQuery({
+  const { data: activeJobs = [], isLoading: isLoadingActive } = useQuery({
+    queryKey: ["jobs", "active", "IN_PROGRESS,SCANNING"],
+    queryFn: async () => {
+      const res = await jobsApi.list({ status: "IN_PROGRESS,SCANNING" });
+      return unwrap<Job[]>(res) ?? [];
+    },
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+
+  const { data: todayJobs = [], isLoading: isLoadingToday } = useQuery({
     queryKey: ["jobs", "active-today", today],
     queryFn: async () => {
       const res = await jobsApi.list({ date: today });
-      const payload = (res as any).data ?? res;
-      return (payload.data ?? payload) as Job[];
+      return unwrap<Job[]>(res) ?? [];
     },
     refetchInterval: 30_000,
     staleTime: 10_000,
   });
 
   const activeJob =
-    jobs.find((j) => j.status === "IN_PROGRESS") ||
-    jobs.find((j) => j.status === "SCANNING") ||
+    activeJobs.find((j) => j.status === "IN_PROGRESS") ||
+    activeJobs.find((j) => j.status === "SCANNING") ||
     justCompleted;
 
   const progress =
     manualOverride ?? progressFromStatus(activeJob?.status ?? "CONFIRMED");
 
-  if (isLoading) {
+  if (isLoadingActive || isLoadingToday) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="w-6 h-6 border-2 border-border border-t-amber rounded-full animate-spin" />
@@ -116,7 +125,7 @@ export default function ActiveSigningPage() {
   const startedTime = activeJob.started_at
     ? format(parseISO(activeJob.started_at), "h:mm a")
     : null;
-  const nextJob = jobs
+  const nextJob = todayJobs
     .filter(
       (j) =>
         j.status === "CONFIRMED" &&
@@ -132,6 +141,9 @@ export default function ActiveSigningPage() {
     try {
       await updateStatus.mutateAsync({ id: activeJob.id, status: next });
       setManualOverride(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["jobs", "active", "IN_PROGRESS,SCANNING"],
+      });
       await queryClient.invalidateQueries({
         queryKey: ["jobs", "active-today", today],
       });
@@ -163,6 +175,9 @@ export default function ActiveSigningPage() {
         });
       }
       setManualOverride(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["jobs", "active", "IN_PROGRESS,SCANNING"],
+      });
       await queryClient.invalidateQueries({
         queryKey: ["jobs", "active-today", today],
       });
