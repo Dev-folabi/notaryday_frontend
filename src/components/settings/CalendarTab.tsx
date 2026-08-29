@@ -1,0 +1,168 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useUIStore } from "@/store/uiStore";
+import { calendarApi } from "@/api/calendar.api";
+import { queryKeys } from "@/lib/queryClient";
+import { unwrap } from "@/lib/utils";
+import ProGate, { useProGate } from "@/components/ui/ProGate";
+import { CalendarDays, Check, Copy, ExternalLink, Link2, Unlink } from "lucide-react";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+
+export default function CalendarTab() {
+  const { user } = useAuth();
+  const { addToast } = useUIStore();
+  const qc = useQueryClient();
+  const gated = useProGate();
+
+  const isConnected = user?.settings?.google_calendar_connected === true;
+
+  const [copied, setCopied] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const { data: feed } = useQuery({
+    queryKey: ["calendar", "feed-token"],
+    queryFn: async () => {
+      const res = await calendarApi.getFeedToken();
+      return unwrap<{ token: string; url: string }>(res);
+    },
+    staleTime: 10 * 60 * 1000,
+    enabled: !!user,
+  });
+
+  const feedUrl = feed?.token
+    ? `${API_BASE}/calendar/${feed.token}/feed.ics`
+    : "";
+
+  const connect = () => {
+    if (gated) return;
+    window.location.href = `${API_BASE}/calendar/auth/google`;
+  };
+
+  const copyFeedUrl = async () => {
+    if (!feedUrl) return;
+    try {
+      await navigator.clipboard.writeText(feedUrl);
+      setCopied(true);
+      addToast({ type: "success", title: "Calendar link copied" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      addToast({ type: "error", title: "Could not copy link" });
+    }
+  };
+
+  const disconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await calendarApi.disconnect();
+      await qc.invalidateQueries({ queryKey: queryKeys.auth.me });
+      addToast({ type: "success", title: "Google Calendar disconnected" });
+    } catch {
+      addToast({ type: "error", title: "Could not disconnect calendar" });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <ProGate feature="Calendar sync">
+      <div className="flex flex-col gap-4">
+        {/* Google Calendar */}
+        <div className="card p-4">
+          <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center">
+            <CalendarDays className="w-4 h-4" /> Google Calendar
+          </div>
+          <p className="font-inter text-[11px] text-slate-secondary mb-3 leading-[1.4]">
+            When you confirm a job, it is pushed to your Google Calendar as an
+            event with the address, fee, duration and scanback block.
+          </p>
+
+          {isConnected ? (
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="chip"
+                style={{
+                  background: "var(--teal-bg)",
+                  color: "#0E7B6C",
+                  border: "1px solid var(--teal-border)",
+                }}
+              >
+                <Check className="w-3 h-3" /> Connected
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="chip"
+                style={{
+                  background: "var(--bg)",
+                  color: "var(--slate2)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                Not connected
+              </span>
+            </div>
+          )}
+
+          {isConnected ? (
+            <button
+              className="btn-gh"
+              onClick={disconnect}
+              disabled={disconnecting || gated}
+              style={{ opacity: disconnecting ? 0.7 : 1 }}
+            >
+              <Unlink className="w-4 h-4" />
+              {disconnecting ? "Disconnecting…" : "Disconnect Google Calendar"}
+            </button>
+          ) : (
+            <button
+              className="btn-p"
+              onClick={connect}
+              disabled={gated}
+              style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}
+            >
+              <Link2 className="w-4 h-4" /> Connect Google Calendar
+            </button>
+          )}
+        </div>
+
+        {/* ICS subscription URL */}
+        <div className="card p-4">
+          <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center">
+            <ExternalLink className="w-4 h-4" /> Calendar subscription link (.ics)
+          </div>
+          <p className="font-inter text-[11px] text-slate-secondary mb-3 leading-[1.4]">
+            Add this link to Apple Calendar, Google Calendar or Outlook to see
+            your jobs as a read-only calendar. Polls every ~15 minutes. Works in
+            your car via CarPlay.
+          </p>
+          {feedUrl ? (
+            <div className="flex items-center gap-2">
+              <code className="flex-1 min-w-0 px-3 py-2 bg-background border border-border rounded-[8px] text-[11px] text-slate-secondary truncate">
+                {feedUrl}
+              </code>
+              <button
+                className="btn-gh"
+                onClick={copyFeedUrl}
+                disabled={gated}
+                style={{ flexShrink: 0 }}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          ) : (
+            <p className="font-inter text-[11px] text-slate-secondary">
+              Loading your calendar link…
+            </p>
+          )}
+        </div>
+      </div>
+    </ProGate>
+  );
+}

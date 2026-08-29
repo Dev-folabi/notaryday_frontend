@@ -28,6 +28,8 @@ export interface UserSettings {
   client_eta_enabled: boolean;
   preferred_nav_app: NavApp;
   ics_feed_token: string;
+  google_calendar_connected?: boolean;
+  google_calendar_id?: string | null;
   scanback_duration_mins?: number | null;
   state?: string | null;
   notification_prefs?: Record<string, boolean> | null;

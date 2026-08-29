@@ -10,7 +10,8 @@ export type TabKey =
   | "notifications"
   | "billing"
   | "booking"
-  | "emails";
+  | "emails"
+  | "calendar";
 
 export const TAB_KEYS: TabKey[] = [
   "profile",
@@ -21,6 +22,7 @@ export const TAB_KEYS: TabKey[] = [
   "billing",
   "booking",
   "emails",
+  "calendar",
 ];
 
 const TAB_LABELS: Record<TabKey, string> = {
@@ -32,6 +34,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   billing: "Billing",
   booking: "Booking",
   emails: "Emails",
+  calendar: "Calendar",
 };
 
 export default function SettingsTabs({
