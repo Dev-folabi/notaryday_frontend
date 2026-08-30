@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CreditCard, Bell, Calendar, X } from "lucide-react";
+import {
+  CreditCard,
+  Bell,
+  Calendar,
+  X,
+  CircleCheck,
+  ArrowRight,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { usersApi } from "@/api/users.api";
@@ -94,41 +101,46 @@ export default function SetupChecklist() {
   };
 
   return (
-    <div className="bg-white border border-border rounded-[14px] px-4 py-3 mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="font-inter text-sm font-semibold text-primary-navy">
+    <div className="relative bg-gradient-to-br from-white via-[#f8fafc] to-[#f0f7ff] border border-border border-l-[3px] border-l-interactive-blue rounded-xl px-4 py-4 mb-4 shadow-sm">
+      <button
+        onClick={dismiss}
+        disabled={dismissing}
+        className="absolute top-3 right-3 p-1 rounded-lg hover:bg-black/5 transition-colors text-slate-secondary hover:text-primary-navy"
+        aria-label="Dismiss"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-interactive-blue/10 flex items-center justify-center">
+          <CircleCheck className="w-4 h-4 text-interactive-blue" />
+        </div>
+        <p className="font-sora text-[14px] font-semibold text-primary-navy">
           Finish setting up
         </p>
-        <button
-          onClick={dismiss}
-          disabled={dismissing}
-          className="p-1 rounded hover:bg-bg transition-colors"
-          aria-label="Dismiss"
-        >
-          <X className="w-4 h-4 text-slate-secondary" />
-        </button>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         {incompleteItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.key}
               href={item.href}
-              className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-bg transition-colors group"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-white/80 transition-all group"
             >
-              <div className="w-8 h-8 rounded-full bg-amber-bg border border-amber-b flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-amber/10 flex items-center justify-center flex-shrink-0 group-hover:bg-amber/15 transition-colors">
                 <Icon className="w-4 h-4 text-amber" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-inter text-sm font-medium text-primary-navy group-hover:text-interactive-blue transition-colors">
+                <p className="font-inter text-[13px] font-medium text-primary-navy group-hover:text-interactive-blue transition-colors">
                   {item.label}
                 </p>
-                <p className="font-inter text-xs text-slate-secondary">
+                <p className="font-inter text-[11px] text-slate-secondary leading-snug">
                   {item.description}
                 </p>
               </div>
+              <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-interactive-blue transition-colors flex-shrink-0" />
             </Link>
           );
         })}
