@@ -36,26 +36,24 @@ export default function ProGate({ children, feature }: ProGateProps) {
   return (
     <ProGateContext.Provider value={true}>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3 bg-white border border-border rounded-[14px] px-4 py-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-amber-bg border border-amber-b flex items-center justify-center flex-shrink-0">
-              <Lock className="w-4 h-4 text-amber-warning" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-inter text-sm font-semibold text-primary-navy truncate">
-                {feature ?? "This feature"} is a Pro feature
-              </p>
-              <p className="font-inter text-xs text-slate-secondary">
-                Upgrade to Pro to get access to premium features
-              </p>
-            </div>
+        <div className="relative flex items-center gap-3.5 bg-gradient-to-r from-[#fffdf5] to-[#fffbeb] border border-amber-border border-l-[3px] border-l-pro-gold rounded-xl px-4 py-3.5 shadow-sm">
+          <div className="flex-shrink-0 w-9 h-9 rounded-full bg-pro-gold/15 flex items-center justify-center">
+            <Lock className="w-4 h-4 text-amber" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-inter text-[13px] font-semibold text-primary-navy">
+              {feature ?? "This feature"} is a Pro feature
+            </p>
+            <p className="font-inter text-[12px] text-slate-secondary mt-0.5">
+              Upgrade to unlock premium features
+            </p>
           </div>
           <Link
             href="/settings?tab=billing"
-            className="inline-flex items-center gap-1.5 bg-pro-gold text-primary-navy font-inter font-bold text-xs rounded-button h-9 px-4 flex-shrink-0"
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-pro-gold to-[#f59e0b] text-primary-navy font-inter font-bold text-[12px] rounded-lg h-9 px-4 flex-shrink-0 shadow-sm hover:shadow-md transition-shadow"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            Upgrade to Pro
+            Upgrade
           </Link>
         </div>
         {children}

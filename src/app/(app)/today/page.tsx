@@ -208,37 +208,12 @@ export default function TodayPage() {
             </div>
 
             {activeJob && (
-              <div
-                className="al-amber"
-                style={{
-                  border: "2px solid",
-                  borderRadius: 12,
-                  padding: 14,
-                  marginBottom: 14,
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  boxShadow: "0 2px 8px rgba(217,119,6,.15)",
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "#D97706",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    flexShrink: 0,
-                  }}
-                >
+              <div className="flex items-center gap-3 bg-gradient-to-r from-[#fffbeb] to-[#fffdf5] border border-l-[3px] border-l-[#d97706] border-[#fde68a] rounded-xl px-4 py-3.5 mb-3.5 shadow-sm flex-wrap">
+                <div className="w-10 h-10 rounded-full bg-[#d97706] flex items-center justify-center text-white flex-shrink-0">
                   <Clock className="w-[18px] h-[18px]" />
                 </div>
                 <div className="flex-1 min-w-[180px]">
-                  <div className="text-[12px] font-bold text-amber mb-0.5">
+                  <div className="text-[12px] font-bold text-[#d97706] mb-0.5">
                     Active signing in progress
                   </div>
                   <div className="text-[12px] font-semibold text-primary-navy">
@@ -251,7 +226,7 @@ export default function TodayPage() {
                     complete
                   </div>
                 </div>
-                <Link href="/active" className="btn-p" style={{ width: "auto", height: 36, padding: "0 14px", fontSize: 11, background: "#D97706" }}>
+                <Link href="/active" className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d97706] to-[#b45309] text-white font-inter font-semibold text-[11px] rounded-lg h-9 px-3.5 flex-shrink-0 shadow-sm hover:shadow-md transition-shadow">
                   <Clock className="w-3.5 h-3.5" /> Resume Signing
                 </Link>
               </div>

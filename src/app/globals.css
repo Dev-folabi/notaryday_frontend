@@ -419,32 +419,32 @@ textarea {
 
 /* Alerts */
 .alert {
-  @apply rounded-[10px] p-3 flex items-start gap-2 font-inter text-[12px] leading-[1.5] flex-wrap;
+  @apply relative flex items-start gap-3 rounded-xl border-l-[3px] px-4 py-3 font-inter text-[13px] leading-relaxed shadow-sm;
 }
 .al-blue {
-  background: theme("colors.blue-bg");
-  border: 1px solid theme("colors.blue-border");
-  color: #1d4ed8;
+  background: #f0f7ff;
+  border-left: 3px solid #2563eb;
+  color: #1e40af;
 }
 .al-amber {
-  background: theme("colors.amber-bg");
-  border: 1px solid theme("colors.amber-border");
-  color: theme("colors.amber");
+  background: #fffbeb;
+  border-left: 3px solid #d97706;
+  color: #92400e;
 }
 .al-teal {
-  background: theme("colors.teal-bg");
-  border: 1px solid theme("colors.teal-border");
-  color: theme("colors.teal");
+  background: #f0fdf4;
+  border-left: 3px solid #16a34a;
+  color: #166534;
 }
 .al-red {
-  background: theme("colors.red-bg");
-  border: 1px solid theme("colors.red-border");
-  color: theme("colors.red");
+  background: #fef2f2;
+  border-left: 3px solid #dc2626;
+  color: #991b1b;
 }
 .al-violet {
-  background: theme("colors.violet-bg");
-  border: 1px solid theme("colors.violet-border");
-  color: theme("colors.violet");
+  background: #f5f3ff;
+  border-left: 3px solid #7c3aed;
+  color: #5b21b6;
 }
 
 /* Forms */

@@ -12,6 +12,7 @@ import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import CITTModal from "@/components/citt/CITTModal";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import SetupChecklist from "@/components/SetupChecklist";
 import { useNavStatus } from "@/hooks/useNavStatus";
 import { LOGO_URL } from "@/lib/logo";
 
@@ -27,7 +28,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { setOnboardingStep } = useUIStore();
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
-  const { hasActiveSigning, unreadCount, gapCount } = useNavStatus(isPro);
+  const { hasActiveSigning, unreadCount, gapCount, importCount, bookingCount } =
+    useNavStatus(isPro);
 
   // Redirect to onboarding if authenticated but onboarding not complete
   useEffect(() => {
@@ -81,6 +83,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
         gapCount={gapCount}
+        importCount={importCount}
+        bookingCount={bookingCount}
       />
 
       {/* Mobile drawer (hamburger menu) */}
@@ -90,15 +94,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
         gapCount={gapCount}
+        importCount={importCount}
+        bookingCount={bookingCount}
       />
 
       {/* Main content area */}
-      <main className="flex-1 min-w-0 flex flex-col lg:ml-0">
+      <main className="flex-1 min-w-0 flex flex-col lg:ml-[256px]">
         {/* Mobile top bar: 56px height per prototype */}
         <TopNav isPro={isPro} initials={initials} />
 
         {/* Page content */}
         <div className="flex-1 min-h-0 pb-[calc(72px+env(safe-area-inset-bottom))] lg:pb-0">
+          <div className="px-4 pt-3 lg:px-6 lg:pt-4">
+            <SetupChecklist />
+          </div>
           {children}
         </div>
 

@@ -18,13 +18,31 @@ const iconMap = {
   warning: AlertTriangle,
 };
 
-// Tinted toast skins matching the notaryday_complete_app.html prototype:
-// {bg}-{type}-bg, 1px {type}-border border, {type} text on all copies.
 const skinMap = {
-  success: "bg-teal-bg border-teal-border text-teal",
-  error: "bg-red-bg border-red-border text-red",
-  info: "bg-blue-bg border-blue-border text-blue",
-  warning: "bg-amber-bg border-amber-border text-amber",
+  success: {
+    bg: "bg-[#f0fdf4]",
+    border: "border-l-[#16a34a]",
+    text: "text-[#166534]",
+    icon: "text-[#16a34a]",
+  },
+  error: {
+    bg: "bg-[#fef2f2]",
+    border: "border-l-[#dc2626]",
+    text: "text-[#991b1b]",
+    icon: "text-[#dc2626]",
+  },
+  info: {
+    bg: "bg-[#f0f7ff]",
+    border: "border-l-[#2563eb]",
+    text: "text-[#1e40af]",
+    icon: "text-[#2563eb]",
+  },
+  warning: {
+    bg: "bg-[#fffbeb]",
+    border: "border-l-[#d97706]",
+    text: "text-[#92400e]",
+    icon: "text-[#d97706]",
+  },
 };
 
 const EXIT_ANIM_MS = 200;
@@ -53,16 +71,17 @@ function ToastItem({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 px-3.5 py-[11px] rounded-[10px] border font-inter text-[13px] font-medium",
-        "shadow-[0_8px_24px_rgba(0,0,0,0.16)] w-full break-words",
+        "flex items-center gap-3 px-4 py-3 rounded-xl border-l-[3px] font-inter text-[13px] font-medium shadow-lg w-full break-words",
         "transition-[opacity,transform] duration-200 ease-out",
-        skin,
+        skin.bg,
+        skin.border,
+        skin.text,
         closing
           ? "opacity-0 translate-y-2"
           : "animate-[toast-in_0.22s_ease]",
       )}
     >
-      <Icon className="h-4 w-4 flex-shrink-0" />
+      <Icon className={cn("h-4 w-4 flex-shrink-0", skin.icon)} />
       <div className="flex-1">
         {toast.title}
         {toast.message && (

@@ -196,9 +196,9 @@ export default function SignupPage() {
           </div>
 
           {registerMutation.isSuccess && (
-            <div className="mb-5 bg-blue-50 border border-blue-200 rounded-[10px] p-4 flex items-start gap-3">
-              <Mail className="h-4 w-4 text-blue mt-0.5" />
-              <div className="text-[12px] text-blue leading-[1.5]">
+            <div className="mb-5 flex items-start gap-3 bg-[#f0f7ff] border border-l-[3px] border-l-[#2563eb] border-[#bfdbfe] rounded-xl px-4 py-3 shadow-sm">
+              <Mail className="h-4 w-4 text-[#2563eb] mt-0.5 flex-shrink-0" />
+              <div className="text-[13px] text-[#1e40af] leading-relaxed">
                 Check your email to verify your account. You can still explore
                 while you wait.{" "}
                 <span className="font-semibold cursor-pointer underline">

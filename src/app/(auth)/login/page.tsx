@@ -11,7 +11,7 @@ import { useUIStore } from "@/store/uiStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2, Mail, AlertTriangle } from "lucide-react";
 import { setAuthCookie } from "@/lib/utils";
 import { ROUTES } from "@/config/routes";
 
@@ -146,9 +146,9 @@ export default function LoginPage() {
 
           {/* Error Alert */}
           {loginMutation.isError && (
-            <div className="mb-6 bg-amber-bg border border-amber-border rounded-[10px] p-4 flex items-start gap-3">
-              <span className="text-amber mt-0.5">⚠️</span>
-              <div className="text-xs text-amber leading-relaxed">
+            <div className="mb-6 flex items-start gap-3 bg-[#fffbeb] border border-l-[3px] border-l-[#d97706] border-[#fde68a] rounded-xl px-4 py-3 shadow-sm">
+              <AlertTriangle className="h-4 w-4 text-[#d97706] mt-0.5 flex-shrink-0" />
+              <div className="text-[13px] text-[#92400e] leading-relaxed">
                 {(loginMutation.error as any)?.response?.status === 429 ? (
                   <>
                     Too many attempts. Try again in 15 minutes or{" "}

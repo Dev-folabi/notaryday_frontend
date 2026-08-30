@@ -156,23 +156,23 @@ export default function DayPage() {
         <>
           {tab === "timeline" ? (
             <>
-              <div className="flex-shrink-0 bg-teal-bg border-b border-teal-border px-4 py-2.5">
+              <div className="flex-shrink-0 bg-gradient-to-r from-[#f0fdf4] to-[#ecfdf5] border-b border-[#6ee7b7] border-l-[3px] border-l-[#16a34a] px-4 py-2.5">
                 <div className="flex items-center gap-2.5 w-full">
-                  <div className="w-8 h-8 rounded-full bg-white border border-teal-border flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Route className="w-4 h-4 text-teal" />
+                  <div className="w-8 h-8 rounded-lg bg-[#16a34a]/10 flex items-center justify-center flex-shrink-0">
+                    <Route className="w-4 h-4 text-[#16a34a]" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11.5px] font-bold text-teal">
+                      <span className="text-[11.5px] font-bold text-[#166534]">
                         {isPro ? "Route optimised" : "Today's plan"}
                       </span>
                       {savedMin != null && savedMin >= 1 && (
-                        <span className="text-[9px] font-semibold text-teal bg-white border border-teal-border rounded-full px-1.5 py-[1px]">
+                        <span className="text-[9px] font-semibold text-[#16a34a] bg-white border border-[#6ee7b7] rounded-full px-1.5 py-[1px]">
                           saved {Math.round(savedMin)} min
                         </span>
                       )}
                     </div>
-                    <p className="text-[10.5px] text-slate-secondary leading-snug mt-0.5">
+                    <p className="text-[10.5px] text-[#166534]/70 leading-snug mt-0.5">
                       {isPro
                         ? `Reordered ${jobs.length} jobs for less driving. Best order for today.`
                         : `${jobs.length} signing${jobs.length === 1 ? "" : "s"} today — upgrade to Pro to optimise the route`}
@@ -192,7 +192,7 @@ export default function DayPage() {
                         });
                       }}
                       disabled={optimiseMutation.isPending}
-                      className="flex-shrink-0 ml-auto flex items-center gap-1 text-[10px] font-semibold text-slate-secondary bg-white border border-border rounded-full px-2 py-1.5 cursor-pointer hover:border-teal hover:text-teal transition-colors disabled:opacity-60 disabled:cursor-default"
+                      className="flex-shrink-0 ml-auto flex items-center gap-1 text-[10px] font-semibold text-[#166534]/70 bg-white border border-[#6ee7b7] rounded-full px-2 py-1.5 cursor-pointer hover:border-[#16a34a] hover:text-[#16a34a] transition-colors disabled:opacity-60 disabled:cursor-default"
                     >
                       <RefreshCw
                         className={`w-3 h-3 ${optimiseMutation.isPending ? "animate-spin" : ""}`}
