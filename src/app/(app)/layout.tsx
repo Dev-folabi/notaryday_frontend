@@ -99,7 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main content area */}
-      <main className="flex-1 min-w-0 flex flex-col lg:ml-0">
+      <main className="flex-1 min-w-0 flex flex-col lg:ml-[256px]">
         {/* Mobile top bar: 56px height per prototype */}
         <TopNav isPro={isPro} initials={initials} />
 

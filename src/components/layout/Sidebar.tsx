@@ -97,7 +97,7 @@ export function Sidebar({
       : "ND";
 
   return (
-    <aside className="hidden lg:flex flex-col w-[256px] bg-white border-r border-border h-screen sticky top-0 shrink-0 overflow-hidden">
+    <aside className="hidden lg:flex flex-col w-[256px] bg-white border-r border-border h-screen fixed top-0 left-0 shrink-0 overflow-hidden z-30">
       {/* Logo + plan badge */}
       <div className="sidebar-header">
         <div className="flex items-center gap-2.5">
