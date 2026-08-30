@@ -33,6 +33,7 @@ export interface UserSettings {
   scanback_duration_mins?: number | null;
   state?: string | null;
   notification_prefs?: Record<string, boolean> | null;
+  setup_checklist_dismissed?: boolean;
 }
 
 export interface BookingPageService {

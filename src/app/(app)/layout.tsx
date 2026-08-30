@@ -12,6 +12,7 @@ import { useUIStore } from "@/store/uiStore";
 import { ROUTES } from "@/config/routes";
 import CITTModal from "@/components/citt/CITTModal";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import SetupChecklist from "@/components/SetupChecklist";
 import { useNavStatus } from "@/hooks/useNavStatus";
 import { LOGO_URL } from "@/lib/logo";
 
@@ -104,6 +105,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Page content */}
         <div className="flex-1 min-h-0 pb-[calc(72px+env(safe-area-inset-bottom))] lg:pb-0">
+          <div className="px-4 pt-3 lg:px-6 lg:pt-4">
+            <SetupChecklist />
+          </div>
           {children}
         </div>
 
