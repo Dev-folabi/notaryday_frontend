@@ -26,5 +26,16 @@ export const ROUTES = {
     SIGNUP: "/signup",
     FORGOT_PASSWORD: "/forgot-password",
   },
+  MARKETING: {
+    HOME: "/",
+    FEATURES: "/features",
+    PRICING: "/pricing",
+    HOW_IT_WORKS: "/how-it-works",
+    FAQ: "/faq",
+    ABOUT: "/about",
+    CONTACT: "/contact",
+    PRIVACY: "/privacy",
+    TERMS: "/terms",
+  },
   HOME: "/",
 };

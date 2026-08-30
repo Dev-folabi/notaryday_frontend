@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ROUTES } from "@/config/routes";
+import { cta } from "@/config/marketing";
 
-export function FinalCTA() {
+export function CTABand() {
   const { isAuthenticated, user, isLoadingUser } = useAuth();
 
   const getDashboardRoute = () => {
@@ -17,17 +18,16 @@ export function FinalCTA() {
     if (user.onboarding_step === 4) return ROUTES.ONBOARDING.PLAN;
     return ROUTES.ONBOARDING.HOME;
   };
+
   return (
     <div className="bg-navy px-6 py-[72px] text-center md:px-12">
       <div className="mb-3.5 font-sora text-3xl md:text-3xl lg:text-4xl font-bold leading-[1.2] tracking-[-0.5px] text-white">
-        Stop leaving money on the table.
+        {cta.titleA}
         <br />
-        Start planning your day with data.
+        {cta.titleB}
       </div>
       <p className="mx-auto mb-8 max-w-[480px] text-base leading-[1.7] text-white/60">
-        Every day you drive without Notary Day, you&apos;re estimating.
-        That&apos;s fine. But you&apos;re also leaving $100–$200 on the table.
-        The free plan costs nothing. The CITT check takes 15 seconds.
+        {cta.subtitle}
       </p>
       <div className="flex flex-wrap justify-center gap-3">
         {!isLoadingUser && isAuthenticated ? (
@@ -42,22 +42,22 @@ export function FinalCTA() {
           </Link>
         ) : (
           <>
-            <Link href={ROUTES.AUTH.SIGNUP}>
+            <Link href={cta.primary.href}>
               <Button
                 variant="secondary"
                 className="h-[52px] rounded-[10px] bg-white px-7 text-[15px] hover:bg-white/90"
               >
                 <ArrowRight className="h-4 w-4 text-navy" />
-                <span className="text-navy">Create free account</span>
+                <span className="text-navy">{cta.primary.label}</span>
               </Button>
             </Link>
-            <Link href={ROUTES.AUTH.SIGNUP}>
+            <Link href={cta.secondary.href}>
               <Button
                 variant="pro"
                 className="h-[52px] rounded-[10px] bg-amber-500 px-6 text-[15px] hover:bg-amber-600"
               >
                 <Sparkles className="h-4 w-4 text-navy" />
-                <span className="text-navy">Start Pro at $19/mo</span>
+                <span className="text-navy">{cta.secondary.label}</span>
               </Button>
             </Link>
           </>
