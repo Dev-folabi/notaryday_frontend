@@ -160,27 +160,15 @@ export default function CalendarTab() {
             your car via CarPlay.
           </p>
           {feedUrl ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="font-inter text-[10px] text-muted font-medium">Subscription URL</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={feedUrl}
-                  className="flex-1 min-w-0 px-3 py-2 bg-white border border-border rounded-[8px] text-[11px] text-slate-secondary font-mono focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-interactive-blue select-all"
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                />
-                <button
-                  className="btn-gh"
-                  onClick={copyFeedUrl}
-                  disabled={gated}
-                  style={{ flexShrink: 0, height: 36, padding: "0 12px" }}
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-            </div>
+            <button
+              className="btn-p"
+              onClick={copyFeedUrl}
+              disabled={gated}
+              style={{ width: "auto", height: 36, fontSize: 12, padding: "0 16px" }}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? "Link copied" : "Copy calendar link"}
+            </button>
           ) : (
             <p className="font-inter text-[11px] text-slate-secondary">
               Loading your calendar link…

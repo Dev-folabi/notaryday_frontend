@@ -39,7 +39,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
       { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
       { href: ROUTES.APP.ACTIVE, icon: Clock, label: "Active Signing", liveTag: true },
       { href: ROUTES.APP.JOBS, icon: Briefcase, label: "My Jobs" },
-      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true },
+      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true, badgeKey: "import" },
       { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true, badgeKey: "gap" },
     ],
   },
@@ -47,7 +47,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Grow and Track",
     items: [
       { href: ROUTES.APP.JOURNAL, icon: BookOpen, label: "Journal" },
-      { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings" },
+      { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings", badgeKey: "booking" },
       { href: ROUTES.APP.INVOICES, icon: FileText, label: "Invoices" },
       { href: ROUTES.APP.REPORTS, icon: BarChart2, label: "Reports" },
     ],
@@ -67,6 +67,8 @@ interface MobileDrawerProps {
   notifCount?: number;
   hasActiveSigning?: boolean;
   gapCount?: number;
+  importCount?: number;
+  bookingCount?: number;
 }
 
 export function MobileDrawer({
@@ -75,6 +77,8 @@ export function MobileDrawer({
   notifCount = 0,
   hasActiveSigning = false,
   gapCount = 0,
+  importCount = 0,
+  bookingCount = 0,
 }: MobileDrawerProps) {
   const pathname = usePathname();
   const isOpen = useUIStore((s) => s.isMobileMenuOpen);
@@ -121,6 +125,9 @@ export function MobileDrawer({
                   const showNotifBadge = badgeKey === "notif" && notifCount > 0;
                   const showGapBadge = badgeKey === "gap" && gapCount > 0;
                   const showLive = liveTag && hasActiveSigning;
+                  const showImportBadge = badgeKey === "import" && importCount > 0;
+                  const showBookingBadge =
+                    badgeKey === "booking" && bookingCount > 0;
 
                   return (
                     <Link
@@ -136,6 +143,12 @@ export function MobileDrawer({
                         <span className="si-badge" style={{ background: "var(--amber-2)", color: "var(--amber)", border: "1px solid var(--amber-b)" }}>
                           Live
                         </span>
+                      )}
+                      {showImportBadge && (
+                        <span className="si-badge">{importCount}</span>
+                      )}
+                      {showBookingBadge && (
+                        <span className="si-badge">{bookingCount}</span>
                       )}
                       {showGapBadge && (
                         <span className="si-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", border: "1px solid var(--violet-border)" }}>

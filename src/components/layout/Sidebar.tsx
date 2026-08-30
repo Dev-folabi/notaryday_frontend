@@ -30,6 +30,8 @@ interface SidebarProps {
   notifCount?: number;
   hasActiveSigning?: boolean;
   gapCount?: number;
+  importCount?: number;
+  bookingCount?: number;
 }
 
 interface NavItem {
@@ -48,7 +50,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
       { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
       { href: ROUTES.APP.ACTIVE, icon: Clock, label: "Active Signing", liveTag: true },
       { href: ROUTES.APP.JOBS, icon: Briefcase, label: "My Jobs" },
-      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true },
+      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true, badgeKey: "import" },
       { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true, badgeKey: "gap" },
     ],
   },
@@ -56,7 +58,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Grow and Track",
     items: [
       { href: ROUTES.APP.JOURNAL, icon: BookOpen, label: "Journal" },
-      { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings" },
+      { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings", badgeKey: "booking" },
       { href: ROUTES.APP.INVOICES, icon: FileText, label: "Invoices" },
       { href: ROUTES.APP.REPORTS, icon: BarChart2, label: "Reports" },
     ],
@@ -77,6 +79,8 @@ export function Sidebar({
   notifCount = 0,
   hasActiveSigning = false,
   gapCount = 0,
+  importCount = 0,
+  bookingCount = 0,
 }: SidebarProps) {
   const pathname = usePathname();
   const openCITT = useUIStore((s) => s.openCITT);
@@ -127,6 +131,9 @@ export function Sidebar({
               const showLive = liveTag && hasActiveSigning;
               const showNotifBadge = badgeKey === "notif" && notifCount > 0;
               const showGapBadge = badgeKey === "gap" && gapCount > 0;
+              const showImportBadge = badgeKey === "import" && importCount > 0;
+              const showBookingBadge =
+                badgeKey === "booking" && bookingCount > 0;
 
               return (
                 <Link
@@ -141,6 +148,14 @@ export function Sidebar({
                     <span className="si-badge" style={{ background: "var(--amber-2)", color: "var(--amber)", border: "1px solid var(--amber-b)" }}>
                       Live
                     </span>
+                  )}
+
+                  {showImportBadge && (
+                    <span className="si-badge">{importCount}</span>
+                  )}
+
+                  {showBookingBadge && (
+                    <span className="si-badge">{bookingCount}</span>
                   )}
 
                   {showGapBadge && (

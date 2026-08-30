@@ -27,7 +27,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { setOnboardingStep } = useUIStore();
   const isPro = user?.plan === "PRO" || user?.plan === "PRO_ANNUAL";
-  const { hasActiveSigning, unreadCount, gapCount } = useNavStatus(isPro);
+  const { hasActiveSigning, unreadCount, gapCount, importCount, bookingCount } =
+    useNavStatus(isPro);
 
   // Redirect to onboarding if authenticated but onboarding not complete
   useEffect(() => {
@@ -81,6 +82,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
         gapCount={gapCount}
+        importCount={importCount}
+        bookingCount={bookingCount}
       />
 
       {/* Mobile drawer (hamburger menu) */}
@@ -90,6 +93,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         notifCount={unreadCount}
         hasActiveSigning={hasActiveSigning}
         gapCount={gapCount}
+        importCount={importCount}
+        bookingCount={bookingCount}
       />
 
       {/* Main content area */}
