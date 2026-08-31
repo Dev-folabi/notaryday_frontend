@@ -5,10 +5,10 @@ import Link from "next/link";
 import {
   CreditCard,
   Bell,
-  Calendar,
   X,
   CircleCheck,
   ArrowRight,
+  // Calendar, // Hidden for now (calendar sync)
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,14 +42,15 @@ const SETUP_ITEMS: SetupItem[] = [
     icon: Bell,
     proOnly: false,
   },
-  {
-    key: "calendar",
-    label: "Connect Google Calendar",
-    description: "Sync confirmed jobs to your calendar",
-    href: "/settings?tab=calendar",
-    icon: Calendar,
-    proOnly: true,
-  },
+  // Calendar sync hidden for now — re-enable when ready.
+  // {
+  //   key: "calendar",
+  //   label: "Connect Google Calendar",
+  //   description: "Sync confirmed jobs to your calendar",
+  //   href: "/settings?tab=calendar",
+  //   icon: Calendar,
+  //   proOnly: true,
+  // },
 ];
 
 function isPaymentInfoSet(paymentInfo: unknown): boolean {
@@ -80,7 +81,7 @@ export default function SetupChecklist() {
   const completed: Record<string, boolean> = {
     payment: isPaymentInfoSet(settings?.payment_info),
     notifications: isPushEnabled(settings?.notification_prefs),
-    calendar: isPro && settings?.google_calendar_connected === true,
+    // calendar: isPro && settings?.google_calendar_connected === true, // Hidden for now (calendar sync)
   };
 
   const incompleteItems = SETUP_ITEMS.filter((item) => {

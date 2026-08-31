@@ -2,18 +2,22 @@
 
 import { useSyncExternalStore, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import SettingsTabs, { TAB_KEYS, type TabKey } from "@/components/settings/SettingsTabs";
+import SettingsTabs, {
+  TAB_KEYS,
+  type TabKey,
+} from "@/components/settings/SettingsTabs";
 import ProfileTab from "@/components/settings/ProfileTab";
 import OperationalTab from "@/components/settings/OperationalTab";
 import NavigationTab from "@/components/settings/NavigationTab";
 import PasswordTab from "@/components/settings/PasswordTab";
 import NotificationsTab from "@/components/settings/NotificationsTab";
 import BillingTab from "@/components/settings/BillingTab";
-import CalendarTab from "@/components/settings/CalendarTab";
 import BookingSetupForm from "@/components/booking/BookingSetupForm";
 import EmailTemplatesManager from "@/components/settings/EmailTemplatesManager";
-import { useUIStore } from "@/store/uiStore";
-import { useEffect, useRef } from "react";
+// Calendar sync hidden for now — re-enable when ready.
+// import CalendarTab from "@/components/settings/CalendarTab";
+// import { useUIStore } from "@/store/uiStore";
+// import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
 
 const subscribeTabStore = (cb: () => void) => {
@@ -30,7 +34,8 @@ const getTabServerSnapshot = (): TabKey | null => null;
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const { addToast } = useUIStore();
+  // Calendar sync hidden for now — re-enable when ready.
+  // const { addToast } = useUIStore();
   const urlTab = useSyncExternalStore(
     subscribeTabStore,
     getTabSnapshot,
@@ -39,37 +44,38 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<TabKey>("profile");
   const activeTab = urlTab ?? tab;
   const userKey = user?.email ?? "anonymous";
-  const handledCalendarParam = useRef(false);
+  // const handledCalendarParam = useRef(false);
 
-  useEffect(() => {
-    if (handledCalendarParam.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("calendar");
-    if (!status) return;
-    handledCalendarParam.current = true;
-
-    if (status === "connected") {
-      window.history.replaceState(null, "", `?tab=calendar`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      addToast({
-        type: "success",
-        title: "Google Calendar connected",
-        message: "Confirmed jobs will now sync to your Google Calendar.",
-      });
-    } else if (status === "error") {
-      const reason = params.get("reason");
-      addToast({
-        type: "error",
-        title: "Calendar sync not connected",
-        message:
-          reason === "csrf"
-            ? "Security check failed. Try again."
-            : reason === "expired"
-              ? "Connection request expired. Try again."
-              : "Google Calendar OAuth was denied. Jobs won't sync to Google Calendar.",
-      });
-    }
-  }, [addToast]);
+  // Calendar sync hidden for now — re-enable when ready.
+  // useEffect(() => {
+  //   if (handledCalendarParam.current) return;
+  //   const params = new URLSearchParams(window.location.search);
+  //   const status = params.get("calendar");
+  //   if (!status) return;
+  //   handledCalendarParam.current = true;
+  //
+  //   if (status === "connected") {
+  //     window.history.replaceState(null, "", `?tab=calendar`);
+  //     window.dispatchEvent(new PopStateEvent("popstate"));
+  //     addToast({
+  //       type: "success",
+  //       title: "Google Calendar connected",
+  //       message: "Confirmed jobs will now sync to your Google Calendar.",
+  //     });
+  //   } else if (status === "error") {
+  //     const reason = params.get("reason");
+  //     addToast({
+  //       type: "error",
+  //       title: "Calendar sync not connected",
+  //       message:
+  //         reason === "csrf"
+  //           ? "Security check failed. Try again."
+  //           : reason === "expired"
+  //             ? "Connection request expired. Try again."
+  //             : "Google Calendar OAuth was denied. Jobs won't sync to Google Calendar.",
+  //     });
+  //   }
+  // }, [addToast]);
 
   const handleTabChange = (key: TabKey) => {
     setTab(key);
@@ -91,12 +97,18 @@ export default function SettingsPage() {
         {activeTab === "password" && <PasswordTab />}
         {activeTab === "notifications" && <NotificationsTab key={userKey} />}
         {activeTab === "billing" && <BillingTab />}
-        {activeTab === "calendar" && <CalendarTab />}
+        {/* Calendar sync hidden for now — re-enable when ready. */}
+        {/* {activeTab === "calendar" && <CalendarTab />} */}
         {activeTab === "booking" && <BookingSetupForm />}
         {activeTab === "emails" && (
           <div className="card p-4 mb-4">
-            <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center"><FileText className="w-4 h-4" /> Email templates</div>
-            <p className="font-inter text-[11px] text-slate-secondary mb-2.5 leading-[1.4]">These are the emails your clients receive automatically. Content like name, address, fee is populated from your job data.</p>
+            <div className="font-inter text-[12px] font-semibold text-navy mb-2.5 flex gap-1.5 items-center">
+              <FileText className="w-4 h-4" /> Email templates
+            </div>
+            <p className="font-inter text-[11px] text-slate-secondary mb-2.5 leading-[1.4]">
+              These are the emails your clients receive automatically. Content
+              like name, address, fee is populated from your job data.
+            </p>
             <EmailTemplatesManager embedded />
           </div>
         )}

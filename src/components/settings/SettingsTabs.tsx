@@ -10,8 +10,8 @@ export type TabKey =
   | "notifications"
   | "billing"
   | "booking"
-  | "emails"
-  | "calendar";
+  | "emails";
+// | "calendar"; // Hidden for now (calendar sync)
 
 export const TAB_KEYS: TabKey[] = [
   "profile",
@@ -22,7 +22,7 @@ export const TAB_KEYS: TabKey[] = [
   "billing",
   "booking",
   "emails",
-  "calendar",
+  // "calendar", // Hidden for now (calendar sync)
 ];
 
 const TAB_LABELS: Record<TabKey, string> = {
@@ -34,7 +34,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   billing: "Billing",
   booking: "Booking",
   emails: "Emails",
-  calendar: "Calendar",
+  // calendar: "Calendar", // Hidden for now (calendar sync)
 };
 
 export default function SettingsTabs({
