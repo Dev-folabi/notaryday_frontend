@@ -173,11 +173,12 @@ export const moreFeatures = [
     title: "Tax report export",
     desc: "An IRS Schedule C-ready summary of your income, mileage, and expenses. Export it and hand it to your accountant in minutes.",
   },
-  {
-    icon: "sync",
-    title: "Calendar sync",
-    desc: "Your day stays in sync with Google Calendar and a private .ics feed, so your schedule is where you already look.",
-  },
+  // Calendar sync hidden for now — re-enable when ready.
+  // {
+  //   icon: "sync",
+  //   title: "Calendar sync",
+  //   desc: "Your day stays in sync with Google Calendar and a private .ics feed, so your schedule is where you already look.",
+  // },
   {
     icon: "bell",
     title: "Appointment reminders",
@@ -317,21 +318,21 @@ export const testimonials = {
   items: [
     {
       quote:
-        "\"After mileage I sometimes made almost nothing on a signing. I had no way to know that before accepting. I needed the number before I committed.\"",
+        '"After mileage I sometimes made almost nothing on a signing. I had no way to know that before accepting. I needed the number before I committed."',
       name: "Carline S.",
       role: "LSA · Anaheim, CA · 8–10 signings/day",
       init: "CS",
     },
     {
       quote:
-        "\"I screenshot the address, drop it in Maps, estimate the drive, multiply by 67 cents, do the subtraction in my head. Every single job. There has to be a better way.\"",
+        '"I screenshot the address, drop it in Maps, estimate the drive, multiply by 67 cents, do the subtraction in my head. Every single job. There has to be a better way."',
       name: "Sarah G.",
       role: "LSA · Houston, TX · 5–6 signings/day",
       init: "SG",
     },
     {
       quote:
-        "\"I do 14 signings on a good day. By signing 6 I have no idea if I'm even making money. I need something that tells me the route and the number at the same time.\"",
+        '"I do 14 signings on a good day. By signing 6 I have no idea if I\'m even making money. I need something that tells me the route and the number at the same time."',
       name: "Anonymous",
       role: "LSA · Los Angeles metro · 12–14 signings/day",
       init: "LA",
@@ -527,7 +528,7 @@ export const legal = {
     title: "Privacy Policy",
     updated: "Last updated: August 2026",
     intro:
-      "Notary Day (\"we\", \"our\", \"us\") operates notaryday.app and its companion apps. This policy explains what information we collect when you use the service, how we use it, and the choices you have.",
+      'Notary Day ("we", "our", "us") operates notaryday.app and its companion apps. This policy explains what information we collect when you use the service, how we use it, and the choices you have.',
     sections: [
       {
         heading: "Information we collect",
@@ -567,7 +568,7 @@ export const legal = {
     title: "Terms of Service",
     updated: "Last updated: August 2026",
     intro:
-      "These Terms of Service (\"Terms\") govern your use of the Notary Day service operated by Notary Day at notaryday.app. By creating an account or using the service, you agree to these Terms.",
+      'These Terms of Service ("Terms") govern your use of the Notary Day service operated by Notary Day at notaryday.app. By creating an account or using the service, you agree to these Terms.',
     sections: [
       {
         heading: "1. The service",
@@ -599,7 +600,7 @@ export const legal = {
       },
       {
         heading: "8. Limitation of liability",
-        body: "The service is provided \"as is\" and \"as available\". To the maximum extent permitted by law, Notary Day is not liable for indirect, incidental, or consequential damages, or for any decisions you make based on information in the service.",
+        body: 'The service is provided "as is" and "as available". To the maximum extent permitted by law, Notary Day is not liable for indirect, incidental, or consequential damages, or for any decisions you make based on information in the service.',
       },
       {
         heading: "9. Changes to the service or Terms",
