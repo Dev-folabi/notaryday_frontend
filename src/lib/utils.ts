@@ -51,6 +51,28 @@ export function formatCurrency(amount: number | string): string {
 }
 
 /**
+ * Format a timestamp as compact relative time ("Just now", "5m ago", "3h ago",
+ * "2d ago"), falling back to a short date for anything older than a week.
+ */
+export function timeAgo(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  }).format(d);
+}
+
+/**
  * Format a date string to a readable date
  */
 export function formatDate(date: string | Date): string {
