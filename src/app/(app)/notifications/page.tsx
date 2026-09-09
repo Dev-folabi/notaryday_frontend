@@ -3,10 +3,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "@/api/notifications.api";
 import { useUIStore } from "@/store/uiStore";
-import { Bell, Mail, DollarSign, Sparkles, ScanLine } from "lucide-react";
+import { Bell, Mail, DollarSign, Sparkles, ScanLine, Gift } from "lucide-react";
 import api from "@/lib/api";
+import { timeAgo } from "@/lib/utils";
 
-const CATEGORY: Record<string, "payment" | "import" | "gap" | "scanback"> = {
+const CATEGORY: Record<
+  string,
+  "payment" | "import" | "gap" | "scanback" | "welcome"
+> = {
+  WELCOME: "welcome",
   PAYMENT_RECEIVED: "payment",
   INVOICE_PAID: "payment",
   PAYMENT_FAILED: "payment",
@@ -19,11 +24,35 @@ const CATEGORY: Record<string, "payment" | "import" | "gap" | "scanback"> = {
   BOOKING_CONFIRMED: "import",
 };
 
-const CATEGORY_STYLE: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
-  payment: { bg: "var(--teal-bg)", color: "var(--teal)", icon: <DollarSign className="w-4 h-4" /> },
-  import: { bg: "var(--blue-bg)", color: "var(--blue)", icon: <Mail className="w-4 h-4" /> },
-  gap: { bg: "var(--violet-bg)", color: "var(--violet)", icon: <Sparkles className="w-4 h-4" /> },
-  scanback: { bg: "var(--amber-bg)", color: "var(--amber)", icon: <ScanLine className="w-4 h-4" /> },
+const CATEGORY_STYLE: Record<
+  string,
+  { bg: string; color: string; icon: React.ReactNode }
+> = {
+  payment: {
+    bg: "var(--teal-bg)",
+    color: "var(--teal)",
+    icon: <DollarSign className="w-4 h-4" />,
+  },
+  import: {
+    bg: "var(--blue-bg)",
+    color: "var(--blue)",
+    icon: <Mail className="w-4 h-4" />,
+  },
+  gap: {
+    bg: "var(--violet-bg)",
+    color: "var(--violet)",
+    icon: <Sparkles className="w-4 h-4" />,
+  },
+  scanback: {
+    bg: "var(--amber-bg)",
+    color: "var(--amber)",
+    icon: <ScanLine className="w-4 h-4" />,
+  },
+  welcome: {
+    bg: "var(--amber-bg)",
+    color: "var(--amber)",
+    icon: <Gift className="w-4 h-4" />,
+  },
 };
 
 export default function NotificationsPage() {
@@ -85,7 +114,9 @@ export default function NotificationsPage() {
         ) : (notifications as any[]).length === 0 ? (
           <div className="empty-box">
             <Bell className="w-9 h-9 text-slate-secondary mx-auto mb-2" />
-            <p className="font-inter text-sm text-slate-secondary">No notifications yet</p>
+            <p className="font-inter text-sm text-slate-secondary">
+              No notifications yet
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-2 mb-2">
@@ -111,8 +142,12 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between gap-2 mb-0.5 flex-wrap">
-                      <span className="font-inter text-[12px] font-semibold text-primary-navy">{n.title}</span>
-                      <span className="font-inter text-[10px] text-muted whitespace-nowrap">{n.time_ago ?? n.created_at}</span>
+                      <span className="font-inter text-[12px] font-semibold text-primary-navy">
+                        {n.title}
+                      </span>
+                      <span className="font-inter text-[10px] text-muted whitespace-nowrap">
+                        {n.time_ago ?? timeAgo(n.created_at)}
+                      </span>
                     </div>
                     <div className="font-inter text-[11px] text-slate-secondary leading-[1.4] mb-1.5 break-words">
                       {n.body}

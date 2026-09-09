@@ -48,17 +48,39 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
     label: "Plan my day",
     items: [
       { href: ROUTES.APP.TODAY, icon: CalendarDays, label: "Today" },
-      { href: ROUTES.APP.ACTIVE, icon: Clock, label: "Active Signing", liveTag: true },
+      {
+        href: ROUTES.APP.ACTIVE,
+        icon: Clock,
+        label: "Active Signing",
+        liveTag: true,
+      },
       { href: ROUTES.APP.JOBS, icon: Briefcase, label: "My Jobs" },
-      { href: ROUTES.APP.IMPORT, icon: Mail, label: "Job Import", proOnly: true, badgeKey: "import" },
-      { href: ROUTES.APP.GAP, icon: Sparkles, label: "Gap Finder", proOnly: true, badgeKey: "gap" },
+      {
+        href: ROUTES.APP.IMPORT,
+        icon: Mail,
+        label: "Job Import",
+        proOnly: true,
+        badgeKey: "import",
+      },
+      {
+        href: ROUTES.APP.GAP,
+        icon: Sparkles,
+        label: "Gap Finder",
+        proOnly: true,
+        badgeKey: "gap",
+      },
     ],
   },
   {
     label: "Grow and Track",
     items: [
       { href: ROUTES.APP.JOURNAL, icon: BookOpen, label: "Journal" },
-      { href: ROUTES.APP.BOOKINGS, icon: Link2, label: "Bookings", badgeKey: "booking" },
+      {
+        href: ROUTES.APP.BOOKINGS,
+        icon: Link2,
+        label: "Bookings",
+        badgeKey: "booking",
+      },
       { href: ROUTES.APP.INVOICES, icon: FileText, label: "Invoices" },
       { href: ROUTES.APP.REPORTS, icon: BarChart2, label: "Reports" },
     ],
@@ -66,7 +88,12 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "System",
     items: [
-      { href: ROUTES.APP.NOTIFICATIONS, icon: Bell, label: "Notifications", badgeKey: "notif" },
+      {
+        href: ROUTES.APP.NOTIFICATIONS,
+        icon: Bell,
+        label: "Notifications",
+        badgeKey: "notif",
+      },
       { href: ROUTES.APP.ACCOUNT, icon: User, label: "Account" },
     ],
   },
@@ -114,9 +141,15 @@ export function Sidebar({
             <span className="sb-tag">Smart scheduling for notaries</span>
           </div>
         </div>
-        <span className={cn("chip", isPro ? "c-pro" : "c-free")}>
-          {isPro ? "Pro" : "Free"}
-        </span>
+        <Link
+          href={ROUTES.APP.BILLING}
+          aria-label="View plan and billing"
+          title="View plan and billing"
+        >
+          <span className={cn("chip", isPro ? "c-pro" : "c-free")}>
+            {isPro ? "Pro" : "Free"}
+          </span>
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -124,52 +157,73 @@ export function Sidebar({
         {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
             <div className="sb-section">{section.label}</div>
-            {section.items.map(({ href, icon: Icon, label, liveTag, badgeKey }) => {
-              const isActive =
-                pathname === href || (href !== "/" && pathname.startsWith(href));
+            {section.items.map(
+              ({ href, icon: Icon, label, liveTag, badgeKey }) => {
+                const isActive =
+                  pathname === href ||
+                  (href !== "/" && pathname.startsWith(href));
 
-              const showLive = liveTag && hasActiveSigning;
-              const showNotifBadge = badgeKey === "notif" && notifCount > 0;
-              const showGapBadge = badgeKey === "gap" && gapCount > 0;
-              const showImportBadge = badgeKey === "import" && importCount > 0;
-              const showBookingBadge =
-                badgeKey === "booking" && bookingCount > 0;
+                const showLive = liveTag && hasActiveSigning;
+                const showNotifBadge = badgeKey === "notif" && notifCount > 0;
+                const showGapBadge = badgeKey === "gap" && gapCount > 0;
+                const showImportBadge =
+                  badgeKey === "import" && importCount > 0;
+                const showBookingBadge =
+                  badgeKey === "booking" && bookingCount > 0;
 
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn("si", isActive && "on")}
-                >
-                  <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={isActive ? 2.5 : 2} />
-                  <span className="flex-1 truncate">{label}</span>
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn("si", isActive && "on")}
+                  >
+                    <Icon
+                      className="h-[18px] w-[18px] flex-shrink-0"
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                    <span className="flex-1 truncate">{label}</span>
 
-                  {showLive && (
-                    <span className="si-badge" style={{ background: "var(--amber-2)", color: "var(--amber)", border: "1px solid var(--amber-b)" }}>
-                      Live
-                    </span>
-                  )}
+                    {showLive && (
+                      <span
+                        className="si-badge"
+                        style={{
+                          background: "var(--amber-2)",
+                          color: "var(--amber)",
+                          border: "1px solid var(--amber-b)",
+                        }}
+                      >
+                        Live
+                      </span>
+                    )}
 
-                  {showImportBadge && (
-                    <span className="si-badge">{importCount}</span>
-                  )}
+                    {showImportBadge && (
+                      <span className="si-badge">{importCount}</span>
+                    )}
 
-                  {showBookingBadge && (
-                    <span className="si-badge">{bookingCount}</span>
-                  )}
+                    {showBookingBadge && (
+                      <span className="si-badge">{bookingCount}</span>
+                    )}
 
-                  {showGapBadge && (
-                    <span className="si-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", border: "1px solid var(--violet-border)" }}>
-                      {gapCount}
-                    </span>
-                  )}
+                    {showGapBadge && (
+                      <span
+                        className="si-badge"
+                        style={{
+                          background: "var(--violet-bg)",
+                          color: "var(--violet)",
+                          border: "1px solid var(--violet-border)",
+                        }}
+                      >
+                        {gapCount}
+                      </span>
+                    )}
 
-                  {showNotifBadge && (
-                    <span className="si-badge">{notifCount}</span>
-                  )}
-                </Link>
-              );
-            })}
+                    {showNotifBadge && (
+                      <span className="si-badge">{notifCount}</span>
+                    )}
+                  </Link>
+                );
+              },
+            )}
           </div>
         ))}
       </nav>
@@ -183,13 +237,31 @@ export function Sidebar({
           </button>
         </div>
         <div className="sb-user">
-          <div className="av">{displayInitials}</div>
-          <div className="overflow-hidden">
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)" }}>{username || "Notary"}</div>
-            <div style={{ fontSize: 10, color: "var(--muted)" }}>{isPro ? "Pro plan" : "Free plan"}</div>
-          </div>
+          <Link
+            href={ROUTES.APP.PROFILE}
+            className="flex items-center gap-2.5 min-w-0 flex-1"
+            aria-label="View profile"
+            title="View profile"
+          >
+            <div className="av">{displayInitials}</div>
+            <div className="overflow-hidden">
+              <div
+                style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)" }}
+              >
+                {username || "Notary"}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                {isPro ? "Pro plan" : "Free plan"}
+              </div>
+            </div>
+          </Link>
           <span
-            style={{ marginLeft: "auto", fontSize: 12, color: "var(--slate2)", cursor: "pointer" }}
+            style={{
+              marginLeft: "auto",
+              fontSize: 12,
+              color: "var(--slate2)",
+              cursor: "pointer",
+            }}
             onClick={handleLogout}
           >
             Logout

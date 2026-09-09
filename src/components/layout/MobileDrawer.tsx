@@ -107,9 +107,16 @@ export function MobileDrawer({
               <div className="sb-wordmark">Notary Day</div>
               <span className="sb-tag">Smart scheduling for notaries</span>
             </div>
-            <span className={cn("chip", isPro ? "c-pro" : "c-free")}>
-              {isPro ? "Pro" : "Free"}
-            </span>
+            <Link
+              href={ROUTES.APP.BILLING}
+              onClick={() => setOpen(false)}
+              aria-label="View plan and billing"
+              title="View plan and billing"
+            >
+              <span className={cn("chip", isPro ? "c-pro" : "c-free")}>
+                {isPro ? "Pro" : "Free"}
+              </span>
+            </Link>
             <button className="modal-close ml-2" onClick={() => setOpen(false)} aria-label="Close menu">
               <X className="w-4 h-4" />
             </button>
@@ -169,11 +176,19 @@ export function MobileDrawer({
               Can I Take This
             </button>
             <div className="sb-user">
-              <div className="av">{displayInitials}</div>
-              <div className="overflow-hidden">
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)" }}>{username || "Notary"}</div>
-                <div style={{ fontSize: 10, color: "var(--muted)" }}>{isPro ? "Pro plan" : "Free plan"}</div>
-              </div>
+              <Link
+                href={ROUTES.APP.PROFILE}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 min-w-0 flex-1"
+                aria-label="View profile"
+                title="View profile"
+              >
+                <div className="av">{displayInitials}</div>
+                <div className="overflow-hidden">
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--navy)" }}>{username || "Notary"}</div>
+                  <div style={{ fontSize: 10, color: "var(--muted)" }}>{isPro ? "Pro plan" : "Free plan"}</div>
+                </div>
+              </Link>
               <button
                 className="flex items-center gap-1 ml-auto text-[12px] text-slate-secondary"
                 onClick={() => logoutMutation.mutate()}
