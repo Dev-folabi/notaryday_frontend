@@ -67,6 +67,7 @@ export interface User {
   username: string;
   full_name: string | null;
   phone: string | null;
+  role?: "USER" | "ADMIN";
   plan: PlanTier;
   plan_expires_at: string | null;
   onboarding_completed: boolean;
