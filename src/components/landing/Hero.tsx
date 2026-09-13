@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { ArrowRight, Check } from "lucide-react";
 import { hero } from "@/config/marketing";
 import { DotGrid } from "@/components/landing/backgrounds/DotGrid";
-import { HalftoneGradient } from "@/components/landing/backgrounds/HalftoneGradient";
 import { AnimateIn } from "@/components/landing/animations/AnimateIn";
 import { StaggerContainer } from "@/components/landing/animations/StaggerContainer";
 
@@ -14,20 +13,18 @@ export function Hero() {
     <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-slate-50/40 px-6 md:px-12 pt-16 md:pt-[72px] pb-10 md:pb-[60px] text-center">
       {/* Dot grid background */}
       <DotGrid className="opacity-30" dotSpacing={24} />
-      
-      {/* Halftone gradient background - more visible */}
-      <HalftoneGradient
-        fromColor="#2563EB"
-        toColor="#3B82F6"
-        opacity={0.06}
-        direction="to-br"
-      />
-      
+
       {/* Holographic gradient orbs - more prominent */}
-      <div className="absolute -top-40 left-1/4 w-[700px] h-[700px] bg-gradient-to-br from-blue/12 via-blue/8 to-transparent rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: "4s" }} />
-      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-bl from-amber/10 via-amber/6 to-transparent rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: "5s", animationDelay: "1s" }} />
+      <div
+        className="absolute -top-40 left-1/4 w-[700px] h-[700px] bg-gradient-to-br from-blue/12 via-blue/8 to-transparent rounded-full blur-[140px] pointer-events-none animate-pulse"
+        style={{ animationDuration: "4s" }}
+      />
+      <div
+        className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-bl from-amber/10 via-amber/6 to-transparent rounded-full blur-[120px] pointer-events-none animate-pulse"
+        style={{ animationDuration: "5s", animationDelay: "1s" }}
+      />
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-t from-blue/8 via-blue/4 to-transparent rounded-full blur-[100px] pointer-events-none" />
-      
+
       {/* Radial gradient overlay for depth */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.08),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(217,119,6,0.06),transparent_50%)]" />
