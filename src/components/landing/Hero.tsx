@@ -41,7 +41,7 @@ export function Hero() {
           <h1 className="mb-5 font-sora text-[36px] md:text-[52px] font-extrabold leading-[1.1] tracking-[-1.5px] text-navy">
             {hero.titleA}
             <br />
-            <em className="font-sora not-italic bg-gradient-to-r from-blue to-blue-hover bg-clip-text text-transparent">
+            <em className="font-sora not-italic text-blue-600">
               {hero.titleB}
             </em>
           </h1>
