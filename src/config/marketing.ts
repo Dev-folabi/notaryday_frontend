@@ -4,7 +4,7 @@ export const site = {
   tagline: "Everything you already do manually, done automatically.",
   description:
     "The scheduling tool built for how mobile notaries actually work: signings, mandatory scanbacks, mileage costs, and all. Know your real earnings before you accept any job.",
-  supportEmail: "support@notaryday.app",
+  supportEmail: "hello@notaryday.app",
 };
 
 export const navLinks = [
@@ -526,88 +526,123 @@ export const footer = {
 export const legal = {
   privacy: {
     title: "Privacy Policy",
-    updated: "Last updated: August 2026",
+    updated: "Last updated: September 2026",
     intro:
-      'Notary Day ("we", "our", "us") operates notaryday.app and its companion apps. This policy explains what information we collect when you use the service, how we use it, and the choices you have.',
+      'Notary Day ("we", "our", "us") operates notaryday.app and its companion apps. This Privacy Policy explains what information we collect, how we use and protect it, when we share it with service providers, and the choices available to you when you use the service.',
+
     sections: [
       {
         heading: "Information we collect",
-        body: "Account information you provide when signing up, such as your name and email address. Scheduling information you enter, such as your home base, jobs, appointments, mileage, and expenses. Usage information such as device type and browser, collected for reliability and analytics. Payment information is processed by our payment provider (Stripe) and is never stored on our servers.",
+        body: "We collect information you provide when creating and using your Notary Day account, including your name, email address, phone number, business or notary information, and account credentials. Depending on the features you use, you may also enter job and scheduling information such as signing addresses, home base, appointments, mileage, expenses, profitability information, client or signer names, contact details, and notarial journal information, including identification details. You may also provide information through documents, notes, or other content you choose to store in the service. We collect limited technical information such as device type, browser, IP address, and service activity for security, reliability, and analytics. Payment information is processed by our payment provider, Stripe, and full payment card details are not stored on Notary Day servers.",
       },
       {
         heading: "How we use your information",
-        body: "To provide and improve the service: scheduling your day, running CITT checks, generating invoices and reports, and delivering reminders. We use your data only for the purposes you would reasonably expect when using the product.",
+        body: "We use information to provide, operate, maintain, and improve Notary Day, including scheduling jobs, calculating mileage and profitability, running CITT checks, route planning, generating invoices and reports, providing reminders, maintaining records, and supporting your use of the service. We may also use information to secure the service, prevent abuse or fraud, troubleshoot technical issues, communicate with you about your account or the service, comply with legal obligations, and enforce our Terms. We use information for purposes reasonably related to providing and operating the product and do not sell your personal information.",
       },
       {
-        heading: "What we share",
-        body: "We do not sell your personal information. We share data only with the service providers required to run the product (hosting, email delivery, geocoding and routing, AI parsing, payment processing), and only to the extent needed to provide those services.",
+        heading: "Service providers and data sharing",
+        body: "We do not sell your personal information. We may share information with service providers that help us operate Notary Day, such as hosting and infrastructure providers, email delivery providers, geocoding and routing providers, payment processors, analytics providers, and AI or document-processing providers. These providers receive only the information reasonably necessary for the service they provide and may process information on our behalf according to their own terms and privacy practices. We may also disclose information when required by law, legal process, or to protect the security, rights, or property of Notary Day, our users, or others.",
+      },
+      {
+        heading: "Data hosting and processing",
+        body: "Notary Day's production application and primary database are hosted on infrastructure located in the United States. Because Notary Day uses third-party service providers to operate certain features, some information may also be processed by those providers in other locations depending on their infrastructure and services. We aim to use only the information necessary for each service.",
       },
       {
         heading: "Booking page privacy",
-        body: "Public booking pages never expose your confirmed job addresses, client names, or full schedule. Clients only see whether a time slot is available.",
+        body: "Public booking pages are designed to expose only information necessary for clients to book with you. They do not expose your confirmed job addresses, client names, or full schedule. Clients generally see your public profile information and available booking times rather than your private job records.",
       },
       {
         heading: "Data security",
-        body: "Passwords are hashed with bcrypt and never stored in plain text. Connections are encrypted in transit. Data is hosted with automated backups. While no system is perfectly secure, we apply industry-standard safeguards to protect your information.",
+        body: "We use reasonable technical and organizational safeguards designed to protect your information. Passwords are hashed using bcrypt and are not stored in plain text. Connections to the service are encrypted in transit using HTTPS/TLS. Production infrastructure is protected by access controls and firewall rules, and sensitive credentials and API keys are kept outside the application source code. We maintain backups to support service reliability and recovery. However, no method of transmitting or storing information can be guaranteed to be completely secure.",
       },
       {
-        heading: "Data retention & deletion",
-        body: "You may delete your account at any time, which removes your personal data from our systems. Where we must retain data to comply with legal obligations, we do so in line with those requirements.",
+        heading: "Data retention and deletion",
+        body: "We retain information for as long as reasonably necessary to provide the service, maintain your account, meet legitimate business and security needs, resolve disputes, and comply with applicable legal obligations. When you request account deletion, your account is placed into a soft-deleted state and is no longer available for normal use. Deleted accounts and associated data are retained for up to 90 days before permanent deletion from our active systems. This 90-day period allows for account recovery and protects against accidental or unauthorized deletion. After the 90-day period, the account and associated personal data are permanently deleted, subject to information we are required or permitted to retain for legal, security, billing, dispute-resolution, or other legitimate purposes. Information remaining in backups may persist temporarily until those backups are rotated or overwritten.",
       },
       {
-        heading: "Your rights",
-        body: "You may access, correct, export, or delete your personal information at any time from your account settings, or by emailing us at the address below.",
+        heading: "Your rights and choices",
+        body: "Depending on where you live and applicable law, you may have rights to access, correct, export, or delete your personal information. You may manage or delete certain information through your account settings or contact us using the email address below. You may also contact us with questions or requests regarding your personal information.",
+      },
+      {
+        heading: "Information you enter about others",
+        body: "Notary Day may allow you to enter information about clients, signers, borrowers, or other individuals in connection with your notarial and scheduling activities. You are responsible for ensuring that you have an appropriate reason and, where required, authorization to collect and use that information through the service. You should not enter information that is unnecessary for the intended purpose of the service.",
+      },
+      {
+        heading: "Children's privacy",
+        body: "Notary Day is intended for professional use by adults and is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided personal information to us, please contact us so we can take appropriate action.",
+      },
+      {
+        heading: "Changes to this Privacy Policy",
+        body: "We may update this Privacy Policy as the service, our practices, or applicable requirements change. We will update the date shown at the top of this policy when changes are made. Where required, we will provide additional notice of material changes.",
       },
       {
         heading: "Contact",
-        body: `Questions about this policy? Email ${site.supportEmail}.`,
+        body: `Questions about this Privacy Policy or requests regarding your personal information? Email ${site.supportEmail}.`,
       },
     ],
   },
+
   terms: {
     title: "Terms of Service",
-    updated: "Last updated: August 2026",
+    updated: "Last updated: September 2026",
     intro:
-      'These Terms of Service ("Terms") govern your use of the Notary Day service operated by Notary Day at notaryday.app. By creating an account or using the service, you agree to these Terms.',
+      'These Terms of Service ("Terms") govern your use of the Notary Day service operated by Notary Day at notaryday.app. By creating an account or using the service, you agree to these Terms. If you do not agree to these Terms, you should not use the service.',
+
     sections: [
       {
         heading: "1. The service",
-        body: "Notary Day is a scheduling and record-keeping tool for mobile notaries and loan signing agents. It provides job scheduling, profitability checks, route planning, invoicing, and reporting features.",
+        body: "Notary Day is a scheduling, route-planning, profitability, and record-keeping tool for mobile notaries and loan signing agents. Features may include job scheduling, profitability checks, route planning, invoicing, reporting, reminders, public booking pages, and related functionality. Features may change, be added, or be removed as the service develops.",
       },
       {
         heading: "2. Your account",
-        body: "You are responsible for maintaining the confidentiality of your credentials and for all activity under your account. You must provide accurate information and keep it current.",
+        body: "You are responsible for maintaining the confidentiality of your account credentials and for activity conducted through your account. You must provide accurate information and keep it reasonably current. You must notify us if you believe your account has been accessed without authorization. You may not share or transfer your account in a way that violates these Terms or applicable law.",
       },
       {
-        heading: "3. Acceptable use",
-        body: "You agree not to misuse the service: no reselling the service, no unlawful activity, no attempts to interfere with the service or its data, and no use that violates the rights of others.",
+        heading: "3. Information and user content",
+        body: "You retain responsibility for the information, records, documents, and other content you enter into Notary Day. You represent that you have the right and appropriate authorization to collect, use, and store information about clients, signers, borrowers, or other individuals through the service. You must not use Notary Day to store information that is unlawful to collect or that is unnecessary for your intended use of the service.",
       },
       {
-        heading: "4. Professional responsibility",
-        body: "Notary Day is a tool. You remain responsible for complying with the laws and regulations that apply to notaries and loan signing agents in your state, including notarial journal requirements and the performance of your notarial duties.",
+        heading: "4. Acceptable use",
+        body: "You agree not to misuse the service, including by attempting to gain unauthorized access, interfering with the service or its data, introducing malicious code, reverse engineering or circumventing security controls, reselling the service without permission, using the service for unlawful purposes, or violating the rights of others.",
       },
       {
-        heading: "5. Subscriptions & billing",
-        body: "The Free plan has no charge. Pro is billed monthly or annually as selected at checkout, payable to our payment provider. You may cancel at any time and access continues until the end of the paid period. Fees are non-refundable except where required by law.",
+        heading: "5. Professional responsibility",
+        body: "Notary Day is a software tool and does not provide legal, notarial, tax, financial, or professional advice. You remain responsible for complying with the laws, regulations, and professional requirements that apply to you, including applicable notarial journal, identification, record-keeping, privacy, and document-handling requirements in your jurisdiction. Notary Day does not determine whether a particular notarial act or procedure is legally permitted.",
       },
       {
-        heading: "6. Cancellation & data",
-        body: "When you cancel, your data remains intact and you move to the Free plan. You may export or delete your data at any time.",
+        heading: "6. Subscriptions and billing",
+        body: "The Free plan is provided at no charge. Pro plans are billed monthly or annually as selected at checkout and are processed by our payment provider. You may cancel a paid subscription at any time. Cancellation stops future renewal, and access to paid features generally continues until the end of the applicable paid billing period. Fees are non-refundable except where required by law or expressly stated otherwise.",
       },
       {
-        heading: "7. Intellectual property",
-        body: "The service, including its software, design, and content, is owned by Notary Day. You may not copy or reproduce it except as permitted by these Terms.",
+        heading: "7. Cancellation and account deletion",
+        body: "Canceling a paid subscription does not delete your account or data. When you cancel a subscription, your account may move to the Free plan after the paid period ends and your data remains available subject to the limits of that plan. You may export your data or request account deletion at any time. When an account deletion request is made, the account is soft-deleted and retained for up to 90 days before permanent deletion. During this period, the account is not available for normal use and may be recoverable where supported by the service. After the 90-day period, the account and associated personal data are permanently deleted, subject to our Privacy Policy and information we are required or permitted to retain.",
       },
       {
-        heading: "8. Limitation of liability",
-        body: 'The service is provided "as is" and "as available". To the maximum extent permitted by law, Notary Day is not liable for indirect, incidental, or consequential damages, or for any decisions you make based on information in the service.',
+        heading: "8. Third-party services",
+        body: "Notary Day may rely on third-party services for functions such as hosting, payments, email delivery, geocoding, routing, analytics, and AI or document processing. Your use of features that depend on third-party services may also be subject to the applicable third party's terms and policies. We are not responsible for the availability or independent practices of third-party services.",
       },
       {
-        heading: "9. Changes to the service or Terms",
-        body: "We may update the service and these Terms over time. Material changes will be reflected here, and continued use of the service after changes take effect constitutes acceptance.",
+        heading: "9. Intellectual property",
+        body: "The Notary Day service, including its software, design, branding, and original content, is owned by or licensed to Notary Day and is protected by applicable intellectual property laws. Except as expressly permitted by these Terms, you may not copy, modify, distribute, reproduce, reverse engineer, or create derivative works from the service.",
       },
       {
-        heading: "10. Contact",
+        heading: "10. Disclaimer of warranties",
+        body: 'The service is provided "as is" and "as available" to the maximum extent permitted by law. We do not guarantee that the service will always be available, uninterrupted, error-free, or suitable for every particular purpose. Information, calculations, estimates, routes, profitability figures, and other outputs provided by the service are tools to assist you and should be independently reviewed before being relied upon.',
+      },
+      {
+        heading: "11. Limitation of liability",
+        body: "To the maximum extent permitted by law, Notary Day will not be liable for indirect, incidental, special, consequential, or punitive damages, or for losses resulting from your use of or inability to use the service, including decisions made based on information or calculations provided by the service. Nothing in these Terms excludes liability that cannot legally be excluded or limited.",
+      },
+      {
+        heading: "12. Changes to the service or Terms",
+        body: "We may update, modify, suspend, or discontinue parts of the service from time to time. We may also update these Terms as the service develops or as legal requirements change. Material changes will be reflected here or communicated through the service where appropriate. Continued use of the service after updated Terms become effective constitutes acceptance of the revised Terms to the extent permitted by law.",
+      },
+      {
+        heading: "13. Termination",
+        body: "We may suspend or terminate an account where we reasonably believe the account is being used in violation of these Terms, applicable law, or in a way that threatens the security or integrity of the service. Where appropriate, we will provide notice and an opportunity to address the issue. Termination does not eliminate obligations that by their nature should survive termination.",
+      },
+      {
+        heading: "14. Contact",
         body: `Questions about these Terms? Email ${site.supportEmail}.`,
       },
     ],

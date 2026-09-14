@@ -103,8 +103,14 @@ export default function LoginPage() {
       </div>
 
       {/* Left Panel - Desktop */}
-      <div className="hidden lg:flex w-[46%] bg-navy p-12 lg:p-20 flex-col justify-center relative overflow-hidden text-white/90">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="hidden lg:flex w-[46%] bg-gradient-to-br from-navy via-navy-active to-navy p-12 lg:p-20 flex-col justify-center relative overflow-hidden text-white/90">
+        {/* Gradient orbs */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue/15 rounded-full -translate-y-1/2 translate-x-1/2 blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: "4s" }} />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber/8 rounded-full translate-y-1/2 -translate-x-1/2 blur-[100px] pointer-events-none animate-pulse" style={{ animationDuration: "5s", animationDelay: "1s" }} />
+        
+        {/* Radial gradient overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,99,235,0.12),transparent_50%)]" />
+        
         <div className="max-w-md relative z-10">
           <div className="font-sora font-extrabold text-[32px] lg:text-[40px] leading-[1.1] mb-6 tracking-tight">
             Good to see you <br /> again
@@ -119,7 +125,7 @@ export default function LoginPage() {
               "CITT checks run instantly on login",
               "All your data stays private, always",
             ].map((text, i) => (
-              <div key={i} className="flex items-center gap-4">
+              <div key={i} className="flex items-center gap-4 transition-all duration-200 hover:translate-x-1" style={{ transitionDelay: `${i * 50}ms` }}>
                 <div className="w-6 h-6 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0">
                   <CheckCircle2 className="w-4 h-4 text-teal" />
                 </div>
@@ -133,8 +139,17 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 bg-white flex flex-col items-center justify-center p-6 lg:p-20 overflow-y-auto">
-        <div className="w-full max-w-[400px]">
+      <div className="relative flex-1 bg-gradient-to-br from-white via-blue-50/10 to-slate-50/20 flex flex-col items-center justify-center p-6 lg:p-20 overflow-y-auto">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230F2C4E' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}
+        />
+        
+        <div className="relative w-full max-w-[400px] bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-8 lg:p-10">
+          {/* Subtle glow effect */}
+          <div className="absolute -inset-[1px] bg-gradient-to-br from-blue/10 to-transparent rounded-2xl -z-10 blur-sm opacity-50" />
           <div className="mb-10 text-center lg:text-left">
             <h1 className="font-sora font-extrabold text-3xl text-navy mb-3 tracking-tight">
               Welcome back
